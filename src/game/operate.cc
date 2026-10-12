@@ -3233,7 +3233,8 @@ int GetCommunicationContext(uint32 CharacterID, uint32 StatementID,
 				|| Statement->Channel == CHANNEL_GAMECHAT
 				|| Statement->Channel == CHANNEL_TRADE
 				|| Statement->Channel == CHANNEL_RLCHAT
-				|| Statement->Channel == CHANNEL_HELP;
+				|| Statement->Channel == CHANNEL_HELP
+				|| Statement->Channel == CHANNEL_LOOT;
 
 		if(!ChannelMode || !ReportableChannel){
 			error("GetCommunicationContext: Äußerung dürfte nicht gemeldet werden.\n");
@@ -3408,6 +3409,7 @@ bool ChannelAvailable(int ChannelID, uint32 CharacterID){
 		case CHANNEL_TRADE:          return true;
 		case CHANNEL_RLCHAT:         return true;
 		case CHANNEL_HELP:           return true;
+		case CHANNEL_LOOT:           return true;
 		default:{
 			if(ChannelID >= FIRST_PRIVATE_CHANNEL){
 				TChannel *Chan = Channel.at(ChannelID);
@@ -3448,6 +3450,7 @@ const char *GetChannelName(int ChannelID, uint32 CharacterID){
 		case CHANNEL_TRADE:          return "Trade";
 		case CHANNEL_RLCHAT:         return "RL-Chat";
 		case CHANNEL_HELP:           return "Help";
+		case CHANNEL_LOOT:           return "Loot";
 		default:{
 			if(ChannelID >= FIRST_PRIVATE_CHANNEL){
 				snprintf(ChannelName, sizeof(ChannelName), "%s's Channel",

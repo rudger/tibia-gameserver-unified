@@ -1497,9 +1497,17 @@ void SendChannels(TConnection *Connection){
 		NumAvailable -= 1;
 	}
 
-	for(int Channel = 0; Channel < Channels; Channel += 1){
+	for(int Index = 0; Index < Channels; Index += 1){
 		if(NumAvailable <= 0){
 			break;
+		}
+
+		// NOTE: Show the Loot channel right under RL-Chat, before Help.
+		int Channel = Index;
+		if(Index == CHANNEL_HELP){
+			Channel = CHANNEL_LOOT;
+		}else if(Index == CHANNEL_LOOT){
+			Channel = CHANNEL_HELP;
 		}
 
 		if(Available[Channel]){

@@ -530,6 +530,7 @@ static const char *GetStatementOutputChannel(int Mode, int Channel){
 				case CHANNEL_TRADE:			Result = "Trade Channel"; break;
 				case CHANNEL_RLCHAT:		Result = "Reallife Chat"; break;
 				case CHANNEL_HELP:			Result = "Help Channel"; break;
+				case CHANNEL_LOOT:			Result = "Loot Channel"; break;
 				default:					Result = "Private Chat Channel"; break;
 			}
 			break;
