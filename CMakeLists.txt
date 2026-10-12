@@ -67,7 +67,31 @@ if(WIN32)
         NO_DEFAULT_PATH
     )
 
-    target_link_libraries(tibia-server PRIVATE ws2_32 mpir)
+    target_link_libraries(tibia-server PRIVATE ws2_32)
+
+    # MPIR is optional too: src/crypto/crypto.cc uses its built-in big number
+    # code (Uint1024.hh) when mpir.h is not found.
+    find_path(MPIR_INCLUDE_DIR NAMES mpir.h
+        PATHS
+            "D:/vcpkg/installed/x64-windows/include"
+            "C:/vcpkg/installed/x64-windows/include"
+        NO_DEFAULT_PATH
+    )
+    if(MPIR_INCLUDE_DIR)
+        find_library(MPIR_LIBRARY NAMES mpir
+            PATHS
+                "${CMAKE_SOURCE_DIR}"
+                "D:/vcpkg/installed/x64-windows/lib"
+                "C:/vcpkg/installed/x64-windows/lib"
+            NO_DEFAULT_PATH
+        )
+    endif()
+    if(MPIR_INCLUDE_DIR AND MPIR_LIBRARY)
+        message(STATUS "MPIR: ${MPIR_LIBRARY}")
+        target_link_libraries(tibia-server PRIVATE "${MPIR_LIBRARY}")
+    else()
+        message(STATUS "MPIR not found: using the built-in RSA big number code.")
+    endif()
     if(MYSQL_INCLUDE_DIR AND MYSQL_LIBRARY)
         message(STATUS "MySQL/MariaDB support: ${MYSQL_INCLUDE_DIR}")
         target_include_directories(tibia-server PRIVATE "${MYSQL_INCLUDE_DIR}")
