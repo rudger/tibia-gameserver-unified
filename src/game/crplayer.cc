@@ -43,6 +43,7 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 	this->TradePartner = 0;
 	this->TradeAccepted = false;
 	this->OldState = 0;
+	this->OldFoodMinutes = -1;
 	this->Request = 0;
 	this->RequestTimestamp = 0;
 	this->RequestProcessingGamemaster = 0;
@@ -1252,6 +1253,16 @@ void TPlayer::CheckState(void){
 			SendPlayerState(this->Connection, State);
 			this->OldState = State;
 		}
+
+		// The food time in the skills window shows minutes, update it when the
+		// minute changes even if hit points and mana are already full.
+		if(SendFoodTime && this->Skills[SKILL_FED] != NULL){
+			int FoodMinutes = this->Skills[SKILL_FED]->TimerValue() / 60;
+			if(FoodMinutes != this->OldFoodMinutes){
+				this->OldFoodMinutes = FoodMinutes;
+				SendPlayerData(this->Connection);
+			}
+		}
 	}
 }
 
@@ -1262,6 +1273,7 @@ void TPlayer::SyncState(void){
 	// in the player constructor if `TPlayer::CheckState` is called from within
 	// any helper function before `TConnection::EnterGame` (see `BeginSendData`).
 	this->OldState = 0;
+	this->OldFoodMinutes = -1;
 	this->CheckState();
 }
 

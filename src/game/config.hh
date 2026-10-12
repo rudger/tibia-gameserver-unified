@@ -78,6 +78,7 @@ extern int RateManaRegen;
 // Gameplay / Item Consumption & QoL
 extern bool LearnSpells;
 extern bool RemoveChargesFromRunes;
+extern bool SendFoodTime;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;
 extern bool RemoveWeaponCharges;

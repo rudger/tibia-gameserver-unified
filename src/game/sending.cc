@@ -1232,6 +1232,15 @@ void SendPlayerData(TConnection *Connection){
 	SendByte(Connection, (uint8)MagicLevel);
 	SendByte(Connection, (uint8)MagicLevelPercent);
 	SendByte(Connection, (uint8)SoulPoints);
+	if(SendFoodTime){
+		// NOTE: Not part of the 7.72 protocol. The Forgotten Client reads it
+		// with GameRegenerationTime, the original client would disconnect.
+		int FoodTime = 0;
+		if(Player->Skills[SKILL_FED] != NULL){
+			FoodTime = std::max<int>(Player->Skills[SKILL_FED]->TimerValue(), 0);
+		}
+		SendWord(Connection, (uint16)std::min<int>(FoodTime, UINT16_MAX));
+	}
 	FinishSendData(Connection);
 }
 

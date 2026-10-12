@@ -908,6 +908,7 @@ struct TPlayer: TCreature {
 	uint32 TradePartner;
 	bool TradeAccepted;
 	int OldState;
+	int OldFoodMinutes;
 	uint32 Request;
 	int RequestTimestamp;
 	uint32 RequestProcessingGamemaster;
