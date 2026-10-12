@@ -30,7 +30,6 @@ if(WIN32)
     if(EXISTS "D:/vcpkg/installed/x64-windows/include")
         target_include_directories(tibia-server PRIVATE
             "D:/vcpkg/installed/x64-windows/include"
-            "D:/vcpkg/installed/x64-windows/include/mysql"
         )
         target_link_directories(tibia-server PRIVATE
             "D:/vcpkg/installed/x64-windows/lib"
@@ -38,14 +37,45 @@ if(WIN32)
     elseif(EXISTS "C:/vcpkg/installed/x64-windows/include")
         target_include_directories(tibia-server PRIVATE
             "C:/vcpkg/installed/x64-windows/include"
-            "C:/vcpkg/installed/x64-windows/include/mysql"
         )
         target_link_directories(tibia-server PRIVATE
             "C:/vcpkg/installed/x64-windows/lib"
         )
     endif()
 
-    target_link_libraries(tibia-server PRIVATE ws2_32 mpir libmariadb)
+    # MySQL/MariaDB is optional: without it the server builds with SQLite only.
+    # Point MYSQL_ROOT to a MariaDB Connector/C install to use another location.
+    set(MYSQL_ROOT "" CACHE PATH "MariaDB Connector/C or MySQL install directory")
+    find_path(MYSQL_INCLUDE_DIR NAMES mysql.h
+        PATHS
+            "${MYSQL_ROOT}/include"
+            "${MYSQL_ROOT}/include/mysql"
+            "D:/vcpkg/installed/x64-windows/include/mysql"
+            "C:/vcpkg/installed/x64-windows/include/mysql"
+            "C:/Program Files/MariaDB/MariaDB Connector C 64-bit/include"
+            "C:/Program Files/MariaDB/MariaDB Connector C/include"
+        NO_DEFAULT_PATH
+    )
+    find_library(MYSQL_LIBRARY NAMES libmariadb mariadb libmysql
+        PATHS
+            "${MYSQL_ROOT}/lib"
+            "${MYSQL_ROOT}/lib/mariadb"
+            "D:/vcpkg/installed/x64-windows/lib"
+            "C:/vcpkg/installed/x64-windows/lib"
+            "C:/Program Files/MariaDB/MariaDB Connector C 64-bit/lib"
+            "C:/Program Files/MariaDB/MariaDB Connector C/lib"
+        NO_DEFAULT_PATH
+    )
+
+    target_link_libraries(tibia-server PRIVATE ws2_32 mpir)
+    if(MYSQL_INCLUDE_DIR AND MYSQL_LIBRARY)
+        message(STATUS "MySQL/MariaDB support: ${MYSQL_INCLUDE_DIR}")
+        target_include_directories(tibia-server PRIVATE "${MYSQL_INCLUDE_DIR}")
+        target_link_libraries(tibia-server PRIVATE "${MYSQL_LIBRARY}")
+    else()
+        message(WARNING "MySQL/MariaDB headers or library not found: building with SQLite only (db_type = \"sqlite\").")
+        target_compile_definitions(tibia-server PRIVATE TIBIA_NO_MYSQL=1)
+    endif()
     target_compile_definitions(tibia-server PRIVATE _CRT_SECURE_NO_WARNINGS WIN32_LEAN_AND_MEAN OS_WINDOWS=1)
 else()
     find_package(MySQL QUIET)
