@@ -605,6 +605,7 @@ struct TCreature: TSkillBase {
 	uint32 NextChainCreature;
 	char Name[31];
 	char Murderer[31];
+	uint32 LootReceiver;
 	TOutfit OrgOutfit;
 	TOutfit Outfit;
 	int startx;

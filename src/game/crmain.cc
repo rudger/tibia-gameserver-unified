@@ -129,6 +129,7 @@ TCreature::TCreature(void) :
 	this->NextChainCreature =  0;
 	this->Name[0] = 0;
 	this->Murderer[0] = 0;
+	this->LootReceiver = 0;
 	this->OrgOutfit = {};
 	this->Outfit = {};
 	this->startx = 0;
@@ -169,6 +170,59 @@ TCreature::TCreature(void) :
 	for(int i = 0; i < NARRAY(this->Skills); i += 1){
 		this->NewSkill((uint16)i, this);
 	}
+}
+
+static void AppendLoot(char *Text, int TextSize, Object Con, bool *First){
+	Object Obj = GetFirstContainerObject(Con);
+	while(Obj != NONE){
+		const char *Name = GetName(Obj);
+		int Len = (int)strlen(Text);
+		if(Len + (int)strlen(Name) + 6 >= TextSize){
+			if(Len + 4 < TextSize){
+				strcat(Text, "...");
+			}
+			return;
+		}
+
+		if(!*First){
+			strcat(Text, ", ");
+		}
+		strcat(Text, Name);
+		*First = false;
+
+		if(Obj.getObjectType().getFlag(CONTAINER)){
+			AppendLoot(Text, TextSize, Obj, First);
+		}
+		Obj = Obj.getNextObject();
+	}
+}
+
+// Sends "Loot of a rat: 3 gold coins, a cheese." to the Loot channel of the
+// player, if the player has the channel open.
+static void SendLootMessage(uint32 PlayerID, int Race, Object Corpse){
+	TPlayer *Player = GetPlayer(PlayerID);
+	if(Player == NULL || Player->Connection == NULL
+			|| !ChannelSubscribed(CHANNEL_LOOT, PlayerID)){
+		return;
+	}
+
+	char Text[256];
+	if(RaceData[Race].Article[0] != 0){
+		snprintf(Text, sizeof(Text), "Loot of %s %s: ", RaceData[Race].Article, RaceData[Race].Name);
+	}else{
+		snprintf(Text, sizeof(Text), "Loot of %s: ", RaceData[Race].Name);
+	}
+
+	bool First = true;
+	if(Corpse.getObjectType().getFlag(CONTAINER)){
+		AppendLoot(Text, (int)sizeof(Text) - 1, Corpse, &First);
+	}
+
+	if(First){
+		strcat(Text, "nothing");
+	}
+	strcat(Text, ".");
+	SendTalk(Player->Connection, 0, "", TALK_CHANNEL_CALL, CHANNEL_LOOT, Text);
 }
 
 TCreature::~TCreature(void){
@@ -252,6 +306,10 @@ TCreature::~TCreature(void){
 
 			if(this->Type == PLAYER && this->LoseInventory != LOSE_INVENTORY_ALL){
 				((TPlayer*)this)->SaveInventory();
+			}
+
+			if(this->Type != PLAYER && this->LootReceiver != 0){
+				SendLootMessage(this->LootReceiver, this->Race, Corpse);
 			}
 		}catch(RESULT r){
 			error("TCreature::~TCreature: Kann Leiche/Inventory nicht ablegen (Exc %d, Pos [%d,%d,%d], %s).\n",
@@ -824,6 +882,12 @@ int TCreature::Damage(TCreature *Attacker, int Damage, int DamageType){
 		}else{
 			AddKillStatistics(Attacker->Race, this->Race);
 			strcpy(this->Murderer, Attacker->Name);
+
+			// NOTE: The player that killed a monster (or owns the killing summon)
+			// gets the loot message in the Loot channel.
+			if(this->Type != PLAYER && Responsible->Type == PLAYER){
+				this->LootReceiver = Responsible->ID;
+			}
 
 			if(Responsible->Type == PLAYER){
 				MurdererID = Responsible->ID;
