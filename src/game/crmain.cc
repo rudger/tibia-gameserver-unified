@@ -197,12 +197,11 @@ static void AppendLoot(char *Text, int TextSize, Object Con, bool *First){
 	}
 }
 
-// Sends "Loot of a rat: 3 gold coins, a cheese." to the Loot channel of the
-// player, if the player has the channel open.
+// Sends "Loot of a rat: 3 gold coins, a cheese." to the player as a green
+// info message, and to the Loot channel if the player has it open.
 static void SendLootMessage(uint32 PlayerID, int Race, Object Corpse){
 	TPlayer *Player = GetPlayer(PlayerID);
-	if(Player == NULL || Player->Connection == NULL
-			|| !ChannelSubscribed(CHANNEL_LOOT, PlayerID)){
+	if(Player == NULL || Player->Connection == NULL){
 		return;
 	}
 
@@ -222,7 +221,10 @@ static void SendLootMessage(uint32 PlayerID, int Race, Object Corpse){
 		strcat(Text, "nothing");
 	}
 	strcat(Text, ".");
-	SendTalk(Player->Connection, 0, "", TALK_CHANNEL_CALL, CHANNEL_LOOT, Text);
+	SendMessage(Player->Connection, TALK_INFO_MESSAGE, "%s", Text);
+	if(ChannelSubscribed(CHANNEL_LOOT, PlayerID)){
+		SendTalk(Player->Connection, 0, "", TALK_CHANNEL_CALL, CHANNEL_LOOT, Text);
+	}
 }
 
 TCreature::~TCreature(void){
