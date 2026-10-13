@@ -397,7 +397,8 @@ static void SendHotkeyUseMessage(TConnection *Connection, TPlayer *Player,
 	if(Count <= 1){
 		SendMessage(Connection, TALK_INFO_MESSAGE, "Using the last %s...", Type.getName(-1));
 	}else{
-		SendMessage(Connection, TALK_INFO_MESSAGE, "Using one of %d %s...", Count, Type.getName(Count));
+		// NOTE: `getName(Count)` already includes the number ("5 sudden death runes").
+		SendMessage(Connection, TALK_INFO_MESSAGE, "Using one of %s...", Type.getName(Count));
 	}
 }
 
