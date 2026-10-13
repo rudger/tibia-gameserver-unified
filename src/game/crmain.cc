@@ -17,6 +17,9 @@ static matrix<uint32> *FirstChainCreature;
 static vector<TCreature*> CreatureList(0, 10000, 1000, NULL);
 static int FirstFreeCreature;
 static uint32 NextCreatureID;
+// NOTE: NPCs get their own ID range so clients can tell them apart from
+// monsters (players < 0x40000000, monsters < 0x80000000, NPCs above that).
+static uint32 NextNPCID;
 
 static int KilledCreatures[MAX_RACES];
 static int KilledPlayers[MAX_RACES];
@@ -354,7 +357,7 @@ void TCreature::SetID(uint32 CharacterID){
 	if(CharacterID == 0){
 		bool Found = false;
 		for(int Attempts = 0; Attempts < 16; Attempts += 1){
-			CreatureID = NextCreatureID++;
+			CreatureID = (this->Type == NPC ? NextNPCID++ : NextCreatureID++);
 			if(GetCreature(CreatureID) == NULL){
 				Found = true;
 				break;
@@ -2305,6 +2308,7 @@ void ProcessMonsterRaids(void){
 // =============================================================================
 void InitCr(void){
 	NextCreatureID = 0x40000000;
+	NextNPCID = 0x80000000;
 	FirstFreeCreature = 0;
 	FirstChainCreature = new matrix<uint32>(
 				SectorXMin * 2, SectorXMax * 2 + 1,
