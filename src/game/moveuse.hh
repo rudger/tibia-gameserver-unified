@@ -168,6 +168,7 @@ bool HandleEvent(MoveUseEventType EventType, Object User, Object Obj1, Object Ob
 void UseContainer(uint32 CreatureID, Object Con, int NextContainerNr);
 void UseChest(uint32 CreatureID, Object Chest);
 void UseLiquidContainer(uint32 CreatureID, Object Obj, Object Dest);
+void UseFilledVial(uint32 CreatureID, Object Obj, Object Dest);
 void UseFood(uint32 CreatureID, Object Obj);
 void UseTextObject(uint32 CreatureID, Object Obj);
 void UseAnnouncer(uint32 CreatureID, Object Obj);

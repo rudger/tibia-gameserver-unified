@@ -53,6 +53,36 @@ uint8 GetLiquidColor(int LiquidType){
 	return LiquidColor;
 }
 
+// NOTE: Filled vials are separate stackable objects, one per liquid: TypeID
+// FILLED_VIAL_FIRST + LiquidType - 1 ("a vial of water" ... "a vial of
+// lemonade"). The empty vial stays the liquid container VIAL_TYPEID. When the
+// filled vial objects don't exist in objects.srv, vials work like before.
+static const int VIAL_TYPEID = 2874;
+static const int FILLED_VIAL_FIRST = 5091;
+
+ObjectType GetVialType(void){
+	return ObjectType(VIAL_TYPEID);
+}
+
+ObjectType GetFilledVialType(int LiquidType){
+	int TypeID = FILLED_VIAL_FIRST + LiquidType - 1;
+	if(LiquidType <= LIQUID_NONE || LiquidType > LIQUID_LEMONADE
+			|| !ObjectTypeExists(TypeID)
+			|| !ObjectType(TypeID).getFlag(CUMULATIVE)){
+		return ObjectType(0);
+	}
+	return ObjectType(TypeID);
+}
+
+int GetFilledVialLiquid(ObjectType Type){
+	int LiquidType = Type.TypeID - FILLED_VIAL_FIRST + 1;
+	if(LiquidType <= LIQUID_NONE || LiquidType > LIQUID_LEMONADE
+			|| GetFilledVialType(LiquidType) != Type){
+		return LIQUID_NONE;
+	}
+	return LiquidType;
+}
+
 // NOTE: The value sent to the client for fluid containers and pools. Normally
 // the liquid color (7.72), with `send_liquid_type` the liquid type numbered
 // like later clients (The Forgotten Client: GameNewFluids), so the client can

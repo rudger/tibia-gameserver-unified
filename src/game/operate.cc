@@ -2533,6 +2533,8 @@ void Use(uint32 CreatureID, Object Obj1, Object Obj2, uint8 Info){
 		UseChest(CreatureID, Obj1);
 	}else if(ObjType1.getFlag(LIQUIDCONTAINER)){
 		UseLiquidContainer(CreatureID, Obj1, Obj2);
+	}else if(GetFilledVialLiquid(ObjType1) != LIQUID_NONE){
+		UseFilledVial(CreatureID, Obj1, Obj2);
 	}else if(ObjType1.getFlag(FOOD)){
 		UseFood(CreatureID, Obj1);
 	}else if(ObjType1.getFlag(WRITE) || ObjType1.getFlag(WRITEONCE)){

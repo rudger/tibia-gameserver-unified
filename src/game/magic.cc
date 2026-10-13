@@ -4493,7 +4493,22 @@ void DrinkPotion(uint32 CreatureID, Object Obj){
 		throw ERROR;
 	}
 
-	int LiquidType = (int)Obj.getAttribute(CONTAINERLIQUIDTYPE);
+	DrinkPotionLiquid(CreatureID, (int)Obj.getAttribute(CONTAINERLIQUIDTYPE));
+
+	if(RemoveChargesFromVials){
+		Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
+	}
+}
+
+// NOTE: The effect of drinking a potion, also used by the stackable filled
+// vials (see `UseFilledVial`).
+void DrinkPotionLiquid(uint32 CreatureID, int LiquidType){
+	TPlayer *Player = GetPlayer(CreatureID);
+	if(Player == NULL){
+		error("DrinkPotionLiquid: Kreatur existiert nicht.\n");
+		throw ERROR;
+	}
+
 	if(LiquidType == LIQUID_MANA){
 		int Amount = ComputeDamage(NULL, 0, 100, 50);
 		RefreshMana(Player, 0, 0, Amount);
@@ -4501,12 +4516,8 @@ void DrinkPotion(uint32 CreatureID, Object Obj){
 		int Amount = ComputeDamage(NULL, 0, 50, 25);
 		Heal(Player, 0, 0, Amount);
 	}else{
-		error("DrinkPotion: Objekt enthält keinen Zaubertrank.\n");
+		error("DrinkPotionLiquid: Flüssigkeit %d ist kein Zaubertrank.\n", LiquidType);
 		throw ERROR;
-	}
-
-	if(RemoveChargesFromVials){
-		Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
 	}
 }
 

@@ -649,6 +649,15 @@ TBehaviourNode *TBehaviourDatabase::readTerm(TReadScriptFile *Script){
 	return Node;
 }
 
+// NOTE: NPC scripts trade filled vials as "vial" plus the liquid in `Data`.
+// Those are separate stackable objects now (see `GetFilledVialType`).
+static ObjectType GetNpcFilledVialType(int TypeID, int Data){
+	if(Data != LIQUID_NONE && TypeID == GetVialType().TypeID){
+		return GetFilledVialType(Data);
+	}
+	return ObjectType(0);
+}
+
 // NOTE: The price the NPC actually uses. `rate_npc_rune_price` multiplies the
 // script price when the traded object is a spell rune.
 static int GetNpcPrice(TNPC *Npc){
@@ -796,7 +805,12 @@ int TBehaviourDatabase::evaluate(TNPC *Npc, TBehaviourNode *Node, int *Parameter
 
 		case BEHAVIOUR_NODE_COUNT:{
 			int TypeID = this->evaluate(Npc, Node->Left, Parameters);
-			Result = CountInventoryObjects(InterlocutorID, TypeID, Npc->Data);
+			ObjectType FilledType = GetNpcFilledVialType(TypeID, Npc->Data);
+			if(!FilledType.isMapContainer()){
+				Result = CountInventoryObjects(InterlocutorID, FilledType, 0);
+			}else{
+				Result = CountInventoryObjects(InterlocutorID, TypeID, Npc->Data);
+			}
 			break;
 		}
 
@@ -1878,6 +1892,11 @@ void TNPC::GiveTo(ObjectType Type, int Amount){
 		return;
 	}
 
+	ObjectType FilledType = GetNpcFilledVialType(Type.TypeID, this->Data);
+	if(!FilledType.isMapContainer()){
+		Type = FilledType;
+	}
+
 	Log("npc", "%s -> %u: %d %s\n", this->Name, this->Interlocutor, Amount, Type.getName(1));
 
 	// NOTE: NPC scripts sell runes with charges (`Data`). Stackable runes have
@@ -1902,6 +1921,13 @@ void TNPC::GiveTo(ObjectType Type, int Amount){
 
 void TNPC::GetFrom(ObjectType Type, int Amount){
 	if(Amount > 0){
+		ObjectType FilledType = GetNpcFilledVialType(Type.TypeID, this->Data);
+		if(!FilledType.isMapContainer()){
+			Log("npc", "%s <- %u: %d %s\n", this->Name, this->Interlocutor, Amount, FilledType.getName(1));
+			DeleteAtCreature(this->Interlocutor, FilledType, Amount, 0);
+			return;
+		}
+
 		Log("npc", "%s <- %u: %d %s\n", this->Name, this->Interlocutor, Amount, Type.getName(1));
 		DeleteAtCreature(this->Interlocutor, Type, Amount, this->Data);
 	}

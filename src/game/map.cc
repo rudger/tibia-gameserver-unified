@@ -3,6 +3,7 @@
 #include "config.hh"
 #include "enums.hh"
 #include "houses.hh"
+#include "info.hh"
 #include "script.hh"
 #include <filesystem>
 #include <chrono>
@@ -899,10 +900,21 @@ void LoadObjects(TReadStream *Stream, Object Con){
 					Obj.setAttribute((INSTANCEATTRIBUTE)Attribute, Value);
 				}
 			}else{
+				// NOTE: Filled vials are separate stackable objects now. A
+				// saved vial with a liquid becomes one of those.
+				ObjectType ObjType = Obj.getObjectType();
+				if(ObjType == GetVialType()){
+					ObjectType FilledType = GetFilledVialType((int)Obj.getAttribute(CONTAINERLIQUIDTYPE));
+					if(!FilledType.isMapContainer()){
+						Obj.setObjectType(FilledType);
+						Obj.setAttribute(AMOUNT, 1);
+						ObjType = FilledType;
+					}
+				}
+
 				// NOTE: Objects that became cumulative (e.g. stackable runes)
 				// have no saved amount yet. A rune becomes a stack of its
 				// charges, anything else a stack of one.
-				ObjectType ObjType = Obj.getObjectType();
 				if(ObjType.getFlag(CUMULATIVE) && Obj.getAttribute(AMOUNT) == 0){
 					uint32 Amount = 1;
 					if(ObjType.getFlag(RUNE) && Obj.getAttribute(CHARGES) > 1){

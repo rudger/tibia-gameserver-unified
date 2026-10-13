@@ -213,6 +213,7 @@ int GetSpellLevel(int SpellNr);
 int CheckForSpell(uint32 CreatureID, const char *Text);
 void UseMagicItem(uint32 CreatureID, Object Obj, Object Dest);
 void DrinkPotion(uint32 CreatureID, Object Obj);
+void DrinkPotionLiquid(uint32 CreatureID, int LiquidType);
 
 void InitMagic(void);
 void ExitMagic(void);

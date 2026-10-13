@@ -1699,6 +1699,149 @@ void UseChest(uint32 CreatureID, Object Chest){
 	Player->SetQuestValue(QuestNr, 1);
 }
 
+// NOTE: Puts a liquid into a liquid container. An empty vial becomes the
+// stackable filled vial of that liquid (see `GetFilledVialType`).
+static void SetContainerLiquid(Object Obj, int LiquidType){
+	if(LiquidType != LIQUID_NONE && Obj.getObjectType() == GetVialType()){
+		ObjectType FilledType = GetFilledVialType(LiquidType);
+		if(!FilledType.isMapContainer()){
+			Change(Obj, FilledType, 0);
+			return;
+		}
+	}
+
+	Change(Obj, CONTAINERLIQUIDTYPE, (uint32)LiquidType);
+}
+
+// NOTE: Drinks a liquid and returns whether the container is emptied by it.
+static bool DrinkLiquid(uint32 CreatureID, TPlayer *Player, int LiquidType){
+	bool Empty = true;
+	switch(LiquidType){
+		case LIQUID_NONE:{
+			Empty = false;
+			break;
+		}
+
+		case LIQUID_WINE:
+		case LIQUID_BEER:{
+			int DrunkLevel = Player->Skills[SKILL_DRUNKEN]->TimerValue();
+			if(DrunkLevel < 5){
+				Player->SetTimer(SKILL_DRUNKEN, (DrunkLevel + 1), 120, 120, -1);
+			}
+			Talk(CreatureID, TALK_SAY, NULL, "Aah...", false);
+			break;
+		}
+
+		case LIQUID_SLIME:{
+			Player->Damage(NULL, 200, DAMAGE_POISON_PERIODIC);
+			Talk(CreatureID, TALK_SAY, NULL, "Urgh!", false);
+			break;
+		}
+
+		case LIQUID_URINE:{
+			Talk(CreatureID, TALK_SAY, NULL, "Urgh!", false);
+			break;
+		}
+
+		case LIQUID_MANA:
+		case LIQUID_LIFE:{
+			DrinkPotionLiquid(CreatureID, LiquidType);
+			Talk(CreatureID, TALK_SAY, NULL, "Aaaah...", false);
+			Empty = RemoveChargesFromVials;
+			break;
+		}
+
+		case LIQUID_LEMONADE:{
+			Talk(CreatureID, TALK_SAY, NULL, "Mmmh.", false);
+			break;
+		}
+
+		default:{
+			Talk(CreatureID, TALK_SAY, NULL, "Gulp.", false);
+			break;
+		}
+	}
+	return Empty;
+}
+
+// NOTE: Picks the user as the target of a liquid when the destination is the
+// field the user stands on (drink instead of spilling it).
+static Object GetLiquidTarget(uint32 CreatureID, Object Dest){
+	if(!Dest.getObjectType().isCreatureContainer()){
+		Object Help = GetFirstContainerObject(Dest.getContainer());
+		while(Help != NONE){
+			if(Help.getObjectType().isCreatureContainer() && Help.getCreatureID() == CreatureID){
+				return Help;
+			}
+			Help = Help.getNextObject();
+		}
+	}
+	return Dest;
+}
+
+// NOTE: Uses up one filled vial of a stack: the stack loses one and the user
+// gets an empty vial back.
+static void ConsumeFilledVial(uint32 CreatureID, Object Obj){
+	uint32 Amount = Obj.getAttribute(AMOUNT);
+	if(Amount > 1){
+		Change(Obj, AMOUNT, Amount - 1);
+		CreateAtCreature(CreatureID, GetVialType(), 0);
+	}else{
+		Change(Obj, GetVialType(), 0);
+	}
+}
+
+void UseFilledVial(uint32 CreatureID, Object Obj, Object Dest){
+	if(!Obj.exists() || !Dest.exists()){
+		error("UseFilledVial: Übergebenes Objekt existiert nicht.\n");
+		throw ERROR;
+	}
+
+	int LiquidType = GetFilledVialLiquid(Obj.getObjectType());
+	if(LiquidType == LIQUID_NONE){
+		error("UseFilledVial: Übergebenes Objekt ist keine gefüllte Phiole.\n");
+		throw ERROR;
+	}
+
+	// NOTE: Transfer liquid to another (empty) container.
+	ObjectType DestType = Dest.getObjectType();
+	if(DestType.getFlag(LIQUIDCONTAINER)
+			&& Dest.getAttribute(CONTAINERLIQUIDTYPE) == LIQUID_NONE){
+		SetContainerLiquid(Dest, LiquidType);
+		ConsumeFilledVial(CreatureID, Obj);
+		return;
+	}
+
+	Dest = GetLiquidTarget(CreatureID, Dest);
+	DestType = Dest.getObjectType();
+
+	// NOTE: Spill liquid.
+	if(!DestType.isCreatureContainer() || Dest.getCreatureID() != CreatureID){
+		int DestX, DestY, DestZ;
+		GetObjectCoordinates(Dest, &DestX, &DestY, &DestZ);
+		if(!CoordinateFlag(DestX, DestY, DestZ, BANK)
+		|| CoordinateFlag(DestX, DestY, DestZ, UNLAY)){
+			throw NOROOM;
+		}
+
+		ConsumeFilledVial(CreatureID, Obj);
+		CreatePool(GetMapContainer(DestX, DestY, DestZ),
+				GetSpecialObject(BLOOD_POOL), LiquidType);
+		return;
+	}
+
+	// NOTE: Drink liquid.
+	TPlayer *Player = GetPlayer(CreatureID);
+	if(Player == NULL){
+		error("UseFilledVial: Spieler %d existiert nicht.\n", CreatureID);
+		throw ERROR;
+	}
+
+	if(DrinkLiquid(CreatureID, Player, LiquidType)){
+		ConsumeFilledVial(CreatureID, Obj);
+	}
+}
+
 void UseLiquidContainer(uint32 CreatureID, Object Obj, Object Dest){
 	if(!Obj.exists()){
 		error("UseLiquidContainer: Übergebenes Objekt Obj existiert nicht.\n");
@@ -1723,15 +1866,15 @@ void UseLiquidContainer(uint32 CreatureID, Object Obj, Object Dest){
 	// NOTE(fusion): Fill liquid container.
 	if(DestType.getFlag(LIQUIDSOURCE) && LiquidType == LIQUID_NONE){
 		int DestLiquidType = (int)DestType.getAttribute(SOURCELIQUIDTYPE);
-		Change(Obj, CONTAINERLIQUIDTYPE, DestLiquidType);
+		SetContainerLiquid(Obj, DestLiquidType);
 		return;
 	}
 
 	// NOTE(fusion): Transfer liquid to another container.
 	if(DestType.getFlag(LIQUIDCONTAINER) && LiquidType != LIQUID_NONE
 			&& Dest.getAttribute(CONTAINERLIQUIDTYPE) == LIQUID_NONE){
-		Change(Dest, CONTAINERLIQUIDTYPE, LiquidType);
 		Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
+		SetContainerLiquid(Dest, LiquidType);
 		return;
 	}
 
@@ -1777,54 +1920,8 @@ void UseLiquidContainer(uint32 CreatureID, Object Obj, Object Dest){
 		throw ERROR;
 	}
 
-	switch(LiquidType){
-		case LIQUID_NONE:{
-			// no-op
-			break;
-		}
-
-		case LIQUID_WINE:
-		case LIQUID_BEER:{
-			Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
-			int DrunkLevel = Player->Skills[SKILL_DRUNKEN]->TimerValue();
-			if(DrunkLevel < 5){
-				Player->SetTimer(SKILL_DRUNKEN, (DrunkLevel + 1), 120, 120, -1);
-			}
-			Talk(CreatureID, TALK_SAY, NULL, "Aah...", false);
-			break;
-		}
-
-		case LIQUID_SLIME:{
-			Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
-			Player->Damage(NULL, 200, DAMAGE_POISON_PERIODIC);
-			Talk(CreatureID, TALK_SAY, NULL, "Urgh!", false);
-			break;
-		}
-
-		case LIQUID_URINE:{
-			Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
-			Talk(CreatureID, TALK_SAY, NULL, "Urgh!", false);
-			break;
-		}
-
-		case LIQUID_MANA:
-		case LIQUID_LIFE:{
-			DrinkPotion(CreatureID, Obj);
-			Talk(CreatureID, TALK_SAY, NULL, "Aaaah...", false);
-			break;
-		}
-
-		case LIQUID_LEMONADE:{
-			Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
-			Talk(CreatureID, TALK_SAY, NULL, "Mmmh.", false);
-			break;
-		}
-
-		default:{
-			Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
-			Talk(CreatureID, TALK_SAY, NULL, "Gulp.", false);
-			break;
-		}
+	if(DrinkLiquid(CreatureID, Player, LiquidType)){
+		Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
 	}
 }
 

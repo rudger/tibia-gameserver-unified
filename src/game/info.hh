@@ -7,6 +7,9 @@
 const char *GetLiquidName(int LiquidType);
 uint8 GetLiquidColor(int LiquidType);
 uint8 GetClientLiquid(int LiquidType);
+ObjectType GetVialType(void);
+ObjectType GetFilledVialType(int LiquidType);
+int GetFilledVialLiquid(ObjectType Type);
 const char *GetName(Object Obj);
 const char *GetInfo(Object Obj);
 int GetWeight(Object Obj, int Count);
