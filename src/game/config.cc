@@ -150,6 +150,12 @@ int  SoulRegenIntervalPromoted;
 int  HouseBuyLevel;
 bool HouseOnlyPremium;
 
+// Network & Server Customization
+int  LoginPort;
+char WorldAddress[64];
+char MotdText[256];
+bool FreePremium;
+
 static char PasswordKey[9] = "Pm-,o%yD";
 
 static void DisguisePassword(char *Password, char *Key){
@@ -268,6 +274,11 @@ void ReadConfig(void){
 	HouseBuyLevel = 1;
 	HouseOnlyPremium = true;
 
+	LoginPort = 7171;
+	strncpy(WorldAddress, "127.0.0.1", sizeof(WorldAddress) - 1);
+	strncpy(MotdText, "Welcome to Tibia 7.72!", sizeof(MotdText) - 1);
+	FreePremium = false;
+
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
 		".tibia",
@@ -321,7 +332,7 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "gameport") == 0 || strcmp(Identifier, "game_port") == 0){
 			GamePort = Script.readNumber();
 		}else if(strcmp(Identifier, "loginport") == 0 || strcmp(Identifier, "login_port") == 0){
-			Script.readNumber();
+			LoginPort = Script.readNumber();
 		}else if(strcmp(Identifier, "adminport") == 0 || strcmp(Identifier, "admin_port") == 0){
 			AdminPort = Script.readNumber();
 		}else if(strcmp(Identifier, "adminaddress") == 0 || strcmp(Identifier, "admin_address") == 0){
@@ -329,7 +340,7 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "bindaddress") == 0 || strcmp(Identifier, "bind_address") == 0){
 			strncpy(GameAddress, Script.readString(), sizeof(GameAddress) - 1);
 		}else if(strcmp(Identifier, "worldaddress") == 0 || strcmp(Identifier, "world_address") == 0){
-			Script.readString();
+			strncpy(WorldAddress, Script.readString(), sizeof(WorldAddress) - 1);
 		}else if(strcmp(Identifier, "maxplayers") == 0 || strcmp(Identifier, "max_players") == 0){
 			MaxPlayers = Script.readNumber();
 		}else if(strcmp(Identifier, "maxconnections") == 0 || strcmp(Identifier, "max_connections") == 0){
@@ -480,6 +491,9 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "house_only_premium") == 0 || strcmp(Identifier, "houseonlypremium") == 0){
 			const char *val = Script.readIdentifier();
 			HouseOnlyPremium = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "free_premium") == 0 || strcmp(Identifier, "freepremium") == 0 || strcmp(Identifier, "all_premium") == 0){
+			const char *val = Script.readIdentifier();
+			FreePremium = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "world_type") == 0 || strcmp(Identifier, "worldtype") == 0){
 			const char *val = Script.readString();
 			if(val && val[0] != 0){
@@ -494,7 +508,7 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "rsakeyfile") == 0 || strcmp(Identifier, "rsa_key_file") == 0){
 			Script.readString();
 		}else if(strcmp(Identifier, "motd") == 0){
-			Script.readString();
+			strncpy(MotdText, Script.readString(), sizeof(MotdText) - 1);
 		}else if(strcmp(Identifier, "querymanagerport") == 0){
 			QueryManagerPort = Script.readNumber();
 		}else if(strcmp(Identifier, "querymanageraddress") == 0){

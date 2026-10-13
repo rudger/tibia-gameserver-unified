@@ -142,7 +142,7 @@ void TCombat::CheckCombatValues(void){
 			|| OldWand != this->Wand
 			|| OldAmmo != this->Ammo
 			|| OldFist != this->Fist){
-		this->DelayAttack(2000);
+		this->DelayAttack(AttackInterval);
 	}
 }
 
@@ -936,18 +936,20 @@ void TCombat::DistributeExperiencePoints(uint32 Exp){
 			if(Attacker->Type == PLAYER){
 				// NOTE(fusion): Enable soul regeneration.
 				int AttackerLevel = Attacker->Skills[SKILL_LEVEL]->Get();
-				if(Amount >= AttackerLevel){
+				if(Amount >= AttackerLevel && EnableSoulPoints){
 					int Interval = SoulRegenInterval;
 					if(((TPlayer*)Attacker)->GetActivePromotion()){
 						Interval = SoulRegenIntervalPromoted;
 					}
 
-					int Count = Attacker->Skills[SKILL_SOUL]->TimerValue() % Interval;
-					if(Count == 0){
-						Count = Interval;
-					}
+					if(Interval > 0){
+						int Count = Attacker->Skills[SKILL_SOUL]->TimerValue() % Interval;
+						if(Count == 0){
+							Count = Interval;
+						}
 
-					Attacker->SetTimer(SKILL_SOUL, (240 / Interval), Count, Interval, -1);
+						Attacker->SetTimer(SKILL_SOUL, (240 / Interval), Count, Interval, -1);
+					}
 				}
 			}
 

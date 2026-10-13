@@ -338,12 +338,12 @@ void TPlayer::Death(void){
 	TCreature::Death();
 
 	if(WorldType == PVP_ENFORCED || ExperienceByKillingPlayers){
-		int Percent = (PVPEnforcedExpPercent > 0) ? PVPEnforcedExpPercent : 5;
+		int Percent = (PVPEnforcedExpPercent >= 0) ? PVPEnforcedExpPercent : 5;
 		this->Combat.DistributeExperiencePoints((this->Skills[SKILL_LEVEL]->Exp * Percent) / 100);
 	}
 
 	// TODO(fusion): Probably related to blessings?
-	int BaseLoss = (DeathLosePercent > 0) ? DeathLosePercent : 10;
+	int BaseLoss = (DeathLosePercent >= 0) ? DeathLosePercent : 10;
 	int LossPercent = (this->GetActivePromotion() ? (BaseLoss * 7 / 10) : BaseLoss);
 	for(int QuestNr = 101; QuestNr <= 105; QuestNr += 1){
 		if(this->GetQuestValue(QuestNr) != 0){

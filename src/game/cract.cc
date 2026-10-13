@@ -431,7 +431,7 @@ void TCreature::Move(Object Obj, int DestX, int DestY, int DestZ, uint8 Count){
 
 	ObjectType ObjType = Obj.getObjectType();
 	if(ObjType.isCreatureContainer()){
-		this->Combat.DelayAttack(2000);
+		this->Combat.DelayAttack(AttackInterval);
 	}
 
 	int MoveCount = (int)Count;
@@ -1339,6 +1339,10 @@ void TCreature::NotifyGo(void){
 	int OrigY = this->posy;
 	int OrigZ = this->posz;
 	bool DiagonalMove = (DestX != OrigX && DestY != OrigY && DestZ == OrigZ);
+
+	if(this->Type == PLAYER && OrigZ != DestZ && StairJumpExhaustion > 0){
+		this->Combat.DelayAttack(StairJumpExhaustion);
+	}
 
 	// IMPORTANT(fusion): `SendFloors` and `SendRow` will use the current creature
 	// position to know where to pull fields from, so we need to keep them updated

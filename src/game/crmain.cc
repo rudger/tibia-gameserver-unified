@@ -592,7 +592,7 @@ int TCreature::Damage(TCreature *Attacker, int Damage, int DamageType){
 					&& (ObjType.getAttribute(PROTECTIONDAMAGETYPES) & DamageType) != 0){
 				int DamageReduction = ObjType.getAttribute(DAMAGEREDUCTION);
 				Damage = (Damage * (100 - DamageReduction)) / 100;
-				if(ObjType.getFlag(WEAROUT)){
+				if(RemoveWeaponCharges && ObjType.getFlag(WEAROUT)){
 					// TODO(fusion): Ugh... The try..catch block might be used only
 					// when changing the object's type.
 					try{

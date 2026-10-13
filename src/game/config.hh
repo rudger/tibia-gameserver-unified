@@ -122,6 +122,12 @@ extern int  SoulRegenIntervalPromoted;
 extern int  HouseBuyLevel;
 extern bool HouseOnlyPremium;
 
+// Network & Server Customization
+extern int  LoginPort;
+extern char WorldAddress[64];
+extern char MotdText[256];
+extern bool FreePremium;
+
 void ReadConfig(void);
 
 #endif //TIBIA_CONFIG_HH_

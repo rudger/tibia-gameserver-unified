@@ -1962,7 +1962,7 @@ void SummonCreature(TCreature *Actor, int ManaPoints, int Race, bool God){
 			throw NOTACCESSIBLE;
 		}
 
-		if(Actor->SummonedCreatures >= 2){
+		if(Actor->SummonedCreatures >= MaxSummonsPerPlayer){
 			throw TOOMANYSLAVES;
 		}
 	}
