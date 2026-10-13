@@ -1232,6 +1232,15 @@ void SendPlayerData(TConnection *Connection){
 	SendByte(Connection, (uint8)MagicLevel);
 	SendByte(Connection, (uint8)MagicLevelPercent);
 	SendByte(Connection, (uint8)SoulPoints);
+	if(SendStamina){
+		// NOTE: Not part of the 7.72 protocol. Stamina in minutes, The Forgotten
+		// Client reads it with GameStamina.
+		int Stamina = 0;
+		if(Player->Skills[SKILL_STAMINA] != NULL){
+			Stamina = std::max<int>(Player->Skills[SKILL_STAMINA]->Act, 0);
+		}
+		SendWord(Connection, (uint16)std::min<int>(Stamina, UINT16_MAX));
+	}
 	if(SendFoodTime){
 		// NOTE: Not part of the 7.72 protocol. The Forgotten Client reads it
 		// with GameRegenerationTime, the original client would disconnect.

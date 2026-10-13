@@ -859,6 +859,9 @@ struct TPlayer: TCreature {
 	void CheckOutfit(void);
 	void CheckState(void);
 	void SyncState(void);
+	void LoginStamina(time_t LastLogoutTime);
+	void CheckStamina(void);
+	int GetStaminaExpPercent(void);
 	void AddBuddy(const char *Name);
 	void RemoveBuddy(uint32 CharacterID);
 	void SendBuddies(void);
@@ -910,6 +913,8 @@ struct TPlayer: TCreature {
 	bool TradeAccepted;
 	int OldState;
 	int OldFoodMinutes;
+	uint32 StaminaCombatRound;
+	uint32 StaminaNextRound;
 	uint32 Request;
 	int RequestTimestamp;
 	uint32 RequestProcessingGamemaster;

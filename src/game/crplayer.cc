@@ -44,6 +44,8 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 	this->TradeAccepted = false;
 	this->OldState = 0;
 	this->OldFoodMinutes = -1;
+	this->StaminaCombatRound = 0;
+	this->StaminaNextRound = 0;
 	this->Request = 0;
 	this->RequestTimestamp = 0;
 	this->RequestProcessingGamemaster = 0;
@@ -140,6 +142,10 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 			int Count = (Timer + Interval - 1) % Interval;
 			this->SetTimer(SKILL_SOUL, Cycle, Count, Interval, -1);
 		}
+	}
+
+	if(SendStamina){
+		this->LoginStamina(PlayerData->LastLogoutTime);
 	}
 
 	// TODO(fusion): Handle login after death?
@@ -1270,6 +1276,80 @@ void TPlayer::CheckState(void){
 	}
 }
 
+// Stamina (send_stamina)
+// =============================================================================
+// NOTE: Stamina works like in 8.6: at most 42:00 hours, one minute is used per
+// minute of fighting monsters and it regenerates while logged out.
+static const int STAMINA_MAX = 2520;			// 42:00 hours
+static const int STAMINA_BONUS = 2400;			// 40:00 hours, premium bonus above
+static const int STAMINA_LOW = 840;				// 14:00 hours, half experience below
+
+void TPlayer::LoginStamina(time_t LastLogoutTime){
+	TSkill *Stamina = this->Skills[SKILL_STAMINA];
+	if(Stamina == NULL){
+		return;
+	}
+
+	// NOTE: First login with stamina: start full.
+	if(Stamina->Max != STAMINA_MAX){
+		Stamina->Max = STAMINA_MAX;
+		Stamina->Min = 0;
+		Stamina->Act = STAMINA_MAX;
+	}else if(LastLogoutTime > 0){
+		// NOTE: Regeneration starts after 10 minutes offline: one minute per
+		// three minutes up to 40:00 hours, one minute per ten minutes above.
+		int Minutes = (int)((time(NULL) - LastLogoutTime) / 60) - 10;
+		int Act = std::max<int>(Stamina->Act, 0);
+		if(Minutes > 0 && Act < STAMINA_BONUS){
+			int Gain = std::min<int>(STAMINA_BONUS - Act, Minutes / 3);
+			Act += Gain;
+			Minutes -= Gain * 3;
+		}
+
+		if(Minutes > 0 && Act >= STAMINA_BONUS){
+			Act += Minutes / 10;
+		}
+
+		Stamina->Act = std::min<int>(Act, STAMINA_MAX);
+	}
+
+	this->StaminaCombatRound = 0;
+	this->StaminaNextRound = RoundNr + 60;
+}
+
+void TPlayer::CheckStamina(void){
+	TSkill *Stamina = this->Skills[SKILL_STAMINA];
+	if(Stamina == NULL || RoundNr < this->StaminaNextRound){
+		return;
+	}
+
+	this->StaminaNextRound = RoundNr + 60;
+	if(this->StaminaCombatRound != 0
+			&& (RoundNr - this->StaminaCombatRound) < 60
+			&& Stamina->Act > 0){
+		Stamina->Act -= 1;
+		if(this->Connection != NULL){
+			SendPlayerData(this->Connection);
+		}
+	}
+}
+
+int TPlayer::GetStaminaExpPercent(void){
+	TSkill *Stamina = this->Skills[SKILL_STAMINA];
+	if(!SendStamina || Stamina == NULL){
+		return 100;
+	}
+
+	if(Stamina->Act <= 0){
+		return 0;
+	}else if(Stamina->Act < STAMINA_LOW){
+		return 50;
+	}else if(Stamina->Act >= STAMINA_BONUS && CheckRight(this->ID, PREMIUM_ACCOUNT)){
+		return 150;
+	}
+	return 100;
+}
+
 void TPlayer::SyncState(void){
 	// NOTE(fusion): This is only called after a new connection is established,
 	// when we know that the current client state is ZERO but `OldState` may not.
@@ -1278,6 +1358,8 @@ void TPlayer::SyncState(void){
 	// any helper function before `TConnection::EnterGame` (see `BeginSendData`).
 	this->OldState = 0;
 	this->OldFoodMinutes = -1;
+	this->StaminaCombatRound = 0;
+	this->StaminaNextRound = 0;
 	this->CheckState();
 }
 

@@ -932,6 +932,11 @@ void TCombat::DistributeExperiencePoints(uint32 Exp){
 			print(3, "%s erhält %d EXP.\n", Attacker->Name, Amount);
 		}
 
+		// NOTE: Stamina changes the experience from monsters.
+		if(Amount > 0 && Master->Type != PLAYER && Attacker->Type == PLAYER){
+			Amount = (Amount * ((TPlayer*)Attacker)->GetStaminaExpPercent()) / 100;
+		}
+
 		if(Amount > 0){
 			if(Attacker->Type == PLAYER){
 				// NOTE(fusion): Enable soul regeneration.

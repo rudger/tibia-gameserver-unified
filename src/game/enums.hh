@@ -582,6 +582,7 @@ enum Skill: int {
 	SKILL_DRUNKEN			= 20,
 	SKILL_MANASHIELD		= 21,
 	SKILL_SOUL				= 22,
+	SKILL_STAMINA			= 23,	// Stamina in minutes (send_stamina).
 };
 
 enum Skull: int {

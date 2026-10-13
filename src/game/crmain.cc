@@ -292,7 +292,14 @@ TCreature::~TCreature(void){
 				Change(Corpse, TEXTSTRING, AddDynamicString(Help));
 			}
 
-			if(this->LoseInventory != LOSE_INVENTORY_NONE){
+			// NOTE: Without stamina the killer gets no loot from monsters.
+			bool NoLoot = false;
+			if(SendStamina && this->Type != PLAYER && this->LootReceiver != 0){
+				TPlayer *Receiver = GetPlayer(this->LootReceiver);
+				NoLoot = (Receiver != NULL && Receiver->GetStaminaExpPercent() == 0);
+			}
+
+			if(this->LoseInventory != LOSE_INVENTORY_NONE && !NoLoot){
 				for(int Position = INVENTORY_FIRST;
 						Position <= INVENTORY_LAST;
 						Position += 1){
@@ -570,6 +577,15 @@ int TCreature::Damage(TCreature *Attacker, int Damage, int DamageType){
 
 		if(this->Type == PLAYER && Responsible->Type == PLAYER){
 			((TPlayer*)Responsible)->RecordAttack(this->ID);
+		}
+
+		// NOTE: Fighting monsters uses stamina (see `TPlayer::CheckStamina`).
+		if(SendStamina){
+			if(this->Type == MONSTER && Responsible->Type == PLAYER){
+				((TPlayer*)Responsible)->StaminaCombatRound = RoundNr;
+			}else if(this->Type == PLAYER && Responsible->Type == MONSTER){
+				((TPlayer*)this)->StaminaCombatRound = RoundNr;
+			}
 		}
 	}
 
@@ -1268,6 +1284,9 @@ void ProcessCreatures(void){
 		if(Creature->Type == PLAYER){
 			if(Creature->Connection != NULL){
 				((TPlayer*)Creature)->CheckState();
+				if(SendStamina){
+					((TPlayer*)Creature)->CheckStamina();
+				}
 			}
 
 			if(Creature->EarliestLogoutRound != 0 && Creature->EarliestLogoutRound <= RoundNr){
