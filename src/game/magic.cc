@@ -4165,6 +4165,17 @@ static void DeleteRune(Object Obj){
 		return;
 	}
 
+	// NOTE: Stackable (cumulative) runes lose one rune of the stack per use.
+	if(Obj.getObjectType().getFlag(CUMULATIVE)){
+		uint32 Amount = Obj.getAttribute(AMOUNT);
+		if(Amount > 1){
+			Change(Obj, AMOUNT, Amount - 1);
+		}else{
+			Delete(Obj, -1);
+		}
+		return;
+	}
+
 	// TODO(fusion): Should probably check if object is a rune?
 	uint32 Charges = Obj.getAttribute(CHARGES);
 	if(Charges > 1){

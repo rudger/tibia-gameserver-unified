@@ -899,6 +899,17 @@ void LoadObjects(TReadStream *Stream, Object Con){
 					Obj.setAttribute((INSTANCEATTRIBUTE)Attribute, Value);
 				}
 			}else{
+				// NOTE: Objects that became cumulative (e.g. stackable runes)
+				// have no saved amount yet. A rune becomes a stack of its
+				// charges, anything else a stack of one.
+				ObjectType ObjType = Obj.getObjectType();
+				if(ObjType.getFlag(CUMULATIVE) && Obj.getAttribute(AMOUNT) == 0){
+					uint32 Amount = 1;
+					if(ObjType.getFlag(RUNE) && Obj.getAttribute(CHARGES) > 1){
+						Amount = std::min<uint32>(Obj.getAttribute(CHARGES), 100);
+					}
+					Obj.setAttribute(AMOUNT, Amount);
+				}
 				Obj = NONE;
 			}
 		}

@@ -2071,8 +2071,11 @@ void Look(uint32 CreatureID, Object Obj){
 			strcat(Description, Help);
 			strcat(Description, "\"-spell");
 
-			snprintf(Help, sizeof(Help), " (%ux)", Obj.getAttribute(CHARGES));
-			strcat(Description, Help);
+			// NOTE: Stackable runes have no charges, the amount is in the name.
+			if(!ObjType.getFlag(CUMULATIVE)){
+				snprintf(Help, sizeof(Help), " (%ux)", Obj.getAttribute(CHARGES));
+				strcat(Description, Help);
+			}
 		}
 
 		if(ObjType.getFlag(BED)){
