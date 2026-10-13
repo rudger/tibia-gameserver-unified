@@ -408,7 +408,7 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
-	if(!CheckSpecialCoordinates(CL_CMD_USE_OBJECT, ObjX, ObjY, ObjZ, false)){
+	if(!CheckSpecialCoordinates(CL_CMD_USE_OBJECT, ObjX, ObjY, ObjZ, true)){
 		return;
 	}
 
@@ -455,7 +455,7 @@ void CUseTwoObjects(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
-	if(!CheckSpecialCoordinates(CL_CMD_USE_TWO_OBJECTS, ObjX1, ObjY1, ObjZ1, false)
+	if(!CheckSpecialCoordinates(CL_CMD_USE_TWO_OBJECTS, ObjX1, ObjY1, ObjZ1, true)
 	|| !CheckSpecialCoordinates(CL_CMD_USE_TWO_OBJECTS, ObjX2, ObjY2, ObjZ2, false)){
 		return;
 	}
@@ -501,7 +501,7 @@ void CUseOnCreature(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
-	if(!CheckSpecialCoordinates(CL_CMD_USE_ON_CREATURE, ObjX, ObjY, ObjZ, false)){
+	if(!CheckSpecialCoordinates(CL_CMD_USE_ON_CREATURE, ObjX, ObjY, ObjZ, true)){
 		return;
 	}
 

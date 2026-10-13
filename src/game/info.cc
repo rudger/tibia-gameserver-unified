@@ -406,7 +406,12 @@ Object GetObject(uint32 CreatureID, int x, int y, int z, int RNum, ObjectType Ty
 			if(Con != NONE){
 				Obj = GetContainerObject(Con, (z >= 0 && z < 254 ? z : RNum));
 			}
-		}else if(y != INVENTORY_ANY){
+		}else if(y == INVENTORY_ANY){
+			// NOTE: Hotkeys ("use object", "use on yourself", "use on target")
+			// don't send a position, just the object type. Use the first object
+			// of that type the player carries, like in later clients.
+			Obj = GetInventoryObject(CreatureID, Type, (uint32)RNum);
+		}else{
 			error("GetObject: Ungültiger ContainerCode x=%d,y=%d,z=%d,RNum=%d,Type=%d.\n",
 					x, y, z, RNum, Type.TypeID);
 		}
