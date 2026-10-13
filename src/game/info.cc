@@ -396,6 +396,83 @@ Object GetContainer(uint32 CreatureID, int x, int y, int z){
 	}
 }
 
+// NOTE: Hotkeys send the object type plus the value the client knows: the
+// liquid COLOR for fluid containers (see `GetLiquidColor`), not the liquid type.
+static bool IsHotkeyObject(Object Obj, ObjectType Type, uint32 Value){
+	ObjectType ObjType = Obj.getObjectType();
+	if(ObjType != Type){
+		return false;
+	}
+
+	if(ObjType.getFlag(LIQUIDCONTAINER)){
+		return GetLiquidColor((int)Obj.getAttribute(CONTAINERLIQUIDTYPE)) == Value;
+	}
+
+	if(ObjType.getFlag(KEY)){
+		return Obj.getAttribute(KEYNUMBER) == Value;
+	}
+
+	return true;
+}
+
+static Object FindHotkeyObject(Object Obj, ObjectType Type, uint32 Value){
+	while(Obj != NONE){
+		if(IsHotkeyObject(Obj, Type, Value)){
+			return Obj;
+		}
+
+		if(Obj.getObjectType().getFlag(CONTAINER)){
+			Object Result = FindHotkeyObject(GetFirstContainerObject(Obj), Type, Value);
+			if(Result != NONE){
+				return Result;
+			}
+		}
+
+		Obj = Obj.getNextObject();
+	}
+	return NONE;
+}
+
+static int CountHotkeyObjects(Object Obj, ObjectType Type, uint32 Value){
+	int Count = 0;
+	while(Obj != NONE){
+		if(IsHotkeyObject(Obj, Type, Value)){
+			if(Obj.getObjectType().getFlag(CUMULATIVE)){
+				Count += (int)Obj.getAttribute(AMOUNT);
+			}else{
+				Count += 1;
+			}
+		}
+
+		if(Obj.getObjectType().getFlag(CONTAINER)){
+			Count += CountHotkeyObjects(GetFirstContainerObject(Obj), Type, Value);
+		}
+
+		Obj = Obj.getNextObject();
+	}
+	return Count;
+}
+
+// NOTE: Searches the body slots and everything inside them, including closed
+// containers. The body slot chain holds one container object per slot.
+Object GetHotkeyObject(uint32 CreatureID, ObjectType Type, uint32 Value){
+	TCreature *Creature = GetCreature(CreatureID);
+	if(Creature == NULL || Creature->CrObject == NONE){
+		return NONE;
+	}
+
+	return FindHotkeyObject(GetFirstContainerObject(Creature->CrObject), Type, Value);
+}
+
+int CountHotkeyObjects(uint32 CreatureID, ObjectType Type, uint32 Value){
+	TCreature *Creature = GetCreature(CreatureID);
+	if(Creature == NULL || Creature->CrObject == NONE){
+		return 0;
+	}
+
+	return CountHotkeyObjects(GetFirstContainerObject(Creature->CrObject), Type, Value);
+}
+
 Object GetObject(uint32 CreatureID, int x, int y, int z, int RNum, ObjectType Type){
 	Object Obj = NONE;
 	if(x == 0xFFFF){ // SPECIAL_COORDINATE ?
@@ -410,7 +487,7 @@ Object GetObject(uint32 CreatureID, int x, int y, int z, int RNum, ObjectType Ty
 			// NOTE: Hotkeys ("use object", "use on yourself", "use on target")
 			// don't send a position, just the object type. Use the first object
 			// of that type the player carries, like in later clients.
-			Obj = GetInventoryObject(CreatureID, Type, (uint32)RNum);
+			Obj = GetHotkeyObject(CreatureID, Type, (uint32)RNum);
 		}else{
 			error("GetObject: Ungültiger ContainerCode x=%d,y=%d,z=%d,RNum=%d,Type=%d.\n",
 					x, y, z, RNum, Type.TypeID);

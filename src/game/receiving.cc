@@ -389,11 +389,11 @@ static void SendHotkeyUseMessage(TConnection *Connection, TPlayer *Player,
 		return;
 	}
 
-	if(GetInventoryObject(Player->ID, Type, (uint32)RNum) == NONE){
+	if(GetHotkeyObject(Player->ID, Type, (uint32)RNum) == NONE){
 		return;
 	}
 
-	int Count = CountInventoryObjects(Player->ID, Type, (uint32)RNum);
+	int Count = CountHotkeyObjects(Player->ID, Type, (uint32)RNum);
 	if(Count <= 1){
 		SendMessage(Connection, TALK_INFO_MESSAGE, "Using the last %s...", Type.getName(-1));
 	}else{
