@@ -53,6 +53,39 @@ uint8 GetLiquidColor(int LiquidType){
 	return LiquidColor;
 }
 
+// NOTE: The value sent to the client for fluid containers and pools. Normally
+// the liquid color (7.72), with `send_liquid_type` the liquid type numbered
+// like later clients (The Forgotten Client: GameNewFluids), so the client can
+// tell e.g. mana fluid and wine apart (hotkeys).
+uint8 GetClientLiquid(int LiquidType){
+	if(!SendLiquidType){
+		return GetLiquidColor(LiquidType);
+	}
+
+	uint8 Fluid;
+	switch(LiquidType){
+		case LIQUID_NONE:		Fluid = 0; break;
+		case LIQUID_WATER:		Fluid = 1; break;
+		case LIQUID_MANA:		Fluid = 2; break;
+		case LIQUID_BEER:		Fluid = 3; break;
+		case LIQUID_OIL:		Fluid = 4; break;
+		case LIQUID_BLOOD:		Fluid = 5; break;
+		case LIQUID_SLIME:		Fluid = 6; break;
+		case LIQUID_MUD:		Fluid = 7; break;
+		case LIQUID_LEMONADE:	Fluid = 8; break;
+		case LIQUID_MILK:		Fluid = 9; break;
+		case LIQUID_WINE:		Fluid = 10; break;
+		case LIQUID_LIFE:		Fluid = 11; break;
+		case LIQUID_URINE:		Fluid = 12; break;
+		default:{
+			error("GetClientLiquid: Ungültiger Flüssigkeitstyp %d\n", LiquidType);
+			Fluid = 0;
+			break;
+		}
+	}
+	return Fluid;
+}
+
 const char *GetName(Object Obj){
 	char ObjectName[50] = {};
 	ObjectType ObjType = Obj.getObjectType();
@@ -396,8 +429,8 @@ Object GetContainer(uint32 CreatureID, int x, int y, int z){
 	}
 }
 
-// NOTE: Hotkeys send the object type plus the value the client knows: the
-// liquid COLOR for fluid containers (see `GetLiquidColor`), not the liquid type.
+// NOTE: Hotkeys send the object type plus the value the client knows for fluid
+// containers: the liquid color, or the liquid type (see `GetClientLiquid`).
 static bool IsHotkeyObject(Object Obj, ObjectType Type, uint32 Value){
 	ObjectType ObjType = Obj.getObjectType();
 	if(ObjType != Type){
@@ -405,7 +438,7 @@ static bool IsHotkeyObject(Object Obj, ObjectType Type, uint32 Value){
 	}
 
 	if(ObjType.getFlag(LIQUIDCONTAINER)){
-		return GetLiquidColor((int)Obj.getAttribute(CONTAINERLIQUIDTYPE)) == Value;
+		return GetClientLiquid((int)Obj.getAttribute(CONTAINERLIQUIDTYPE)) == Value;
 	}
 
 	if(ObjType.getFlag(KEY)){

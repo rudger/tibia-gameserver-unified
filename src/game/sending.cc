@@ -178,12 +178,12 @@ static void SendItem(TConnection *Connection, Object Obj){
 
 	if(ObjType.getFlag(LIQUIDCONTAINER)){
 		int LiquidType = (int)Obj.getAttribute(CONTAINERLIQUIDTYPE);
-		SendByte(Connection, GetLiquidColor(LiquidType));
+		SendByte(Connection, GetClientLiquid(LiquidType));
 	}
 
 	if(ObjType.getFlag(LIQUIDPOOL)){
 		int LiquidType = (int)Obj.getAttribute(POOLLIQUIDTYPE);
-		SendByte(Connection, GetLiquidColor(LiquidType));
+		SendByte(Connection, GetClientLiquid(LiquidType));
 	}
 
 	if(ObjType.getFlag(CUMULATIVE)){
