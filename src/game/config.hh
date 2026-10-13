@@ -88,6 +88,11 @@ extern bool RemoveWeaponCharges;
 extern bool FreeCapacity;
 extern bool AlwaysLight;
 extern int  MaxSummonsPerPlayer;
+extern int  RateConjureRune;
+extern int  RateConjureAmmo;
+extern int  RateConjureFood;
+extern int  RateNpcRunePrice;
+extern bool RequireWormsForFishing;
 
 // Gameplay / Combat & Timers
 extern int AttackInterval;

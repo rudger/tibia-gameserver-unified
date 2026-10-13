@@ -2,6 +2,7 @@
 #include "script.hh"
 #include <filesystem>
 #include <cstring>
+#include <algorithm>
 
 static void NormalizeDataPath(char *Path, const char *SubDir){
 	namespace fs = std::filesystem;
@@ -116,6 +117,11 @@ bool RemoveWeaponCharges;
 bool FreeCapacity;
 bool AlwaysLight;
 int  MaxSummonsPerPlayer;
+int  RateConjureRune;
+int  RateConjureAmmo;
+int  RateConjureFood;
+int  RateNpcRunePrice;
+bool RequireWormsForFishing;
 
 // Gameplay / Combat & Timers
 int AttackInterval;
@@ -245,6 +251,11 @@ void ReadConfig(void){
 	FreeCapacity = false;
 	AlwaysLight = false;
 	MaxSummonsPerPlayer = 2;
+	RateConjureRune = 1;
+	RateConjureAmmo = 1;
+	RateConjureFood = 1;
+	RateNpcRunePrice = 1;
+	RequireWormsForFishing = true;
 
 	AttackInterval = 2000;
 	DefenseInterval = 2000;
@@ -439,6 +450,17 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "always_light") == 0 || strcmp(Identifier, "alwayslight") == 0 || strcmp(Identifier, "ambient_light") == 0){
 			const char *val = Script.readIdentifier();
 			AlwaysLight = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "rate_conjure_rune") == 0 || strcmp(Identifier, "rateconjurerune") == 0){
+			RateConjureRune = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "rate_conjure_ammo") == 0 || strcmp(Identifier, "rateconjureammo") == 0){
+			RateConjureAmmo = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "rate_conjure_food") == 0 || strcmp(Identifier, "rateconjurefood") == 0){
+			RateConjureFood = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "rate_npc_rune_price") == 0 || strcmp(Identifier, "ratenpcruneprice") == 0){
+			RateNpcRunePrice = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "require_worms_for_fishing") == 0 || strcmp(Identifier, "requirewormsforfishing") == 0){
+			const char *val = Script.readIdentifier();
+			RequireWormsForFishing = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "max_summons_per_player") == 0 || strcmp(Identifier, "maxsummonsperplayer") == 0){
 			MaxSummonsPerPlayer = Script.readNumber();
 		}else if(strcmp(Identifier, "attack_interval") == 0 || strcmp(Identifier, "attackinterval") == 0 || strcmp(Identifier, "attack_speed") == 0){

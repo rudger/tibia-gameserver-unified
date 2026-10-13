@@ -649,6 +649,17 @@ TBehaviourNode *TBehaviourDatabase::readTerm(TReadScriptFile *Script){
 	return Node;
 }
 
+// NOTE: The price the NPC actually uses. `rate_npc_rune_price` multiplies the
+// script price when the traded object is a spell rune.
+static int GetNpcPrice(TNPC *Npc){
+	int Price = Npc->Price;
+	if(RateNpcRunePrice > 1 && ObjectTypeExists(Npc->TypeID)
+			&& ObjectType(Npc->TypeID).getFlag(RUNE)){
+		Price *= RateNpcRunePrice;
+	}
+	return Price;
+}
+
 int TBehaviourDatabase::evaluate(TNPC *Npc, TBehaviourNode *Node, int *Parameters){
 	if(Npc == NULL){
 		error("TBehaviourDatabase::evaluate: NPC existiert nicht.\n");
@@ -759,7 +770,7 @@ int TBehaviourDatabase::evaluate(TNPC *Npc, TBehaviourNode *Node, int *Parameter
 		}
 
 		case BEHAVIOUR_NODE_PRICE:{
-			Result = Npc->Price;
+			Result = GetNpcPrice(Npc);
 			break;
 		}
 
@@ -924,7 +935,7 @@ static bool FormatNpcResponse(char *Buffer, int BufferSize,
 			switch(Template[ReadPos + 1]){
 				case 'N': strcpy(Help, Interlocutor->Name); break;
 				case 'A': sprintf(Help, "%d", Npc->Amount); break;
-				case 'P': sprintf(Help, "%d", Npc->Price); break;
+				case 'P': sprintf(Help, "%d", GetNpcPrice(Npc)); break;
 				case 'T':{
 					int Hour, Minute;
 					GetTime(&Hour, &Minute);
@@ -1185,8 +1196,8 @@ void TBehaviourDatabase::react(TNPC *Npc, const char *Text, SITUATION Situation)
 				case BEHAVIOUR_ACTION_FUNCTION0:{
 					int FunctionNr = Action->Number;
 					switch(FunctionNr){
-						case 1: Npc->GiveMoney(Npc->Price); break;
-						case 2: Npc->GetMoney(Npc->Price); break;
+						case 1: Npc->GiveMoney(GetNpcPrice(Npc)); break;
+						case 2: Npc->GetMoney(GetNpcPrice(Npc)); break;
 						case 3:{
 							if(Situation == BUSY){
 								Npc->Enqueue(InterlocutorID, Text);
@@ -1868,6 +1879,12 @@ void TNPC::GiveTo(ObjectType Type, int Amount){
 	}
 
 	Log("npc", "%s -> %u: %d %s\n", this->Name, this->Interlocutor, Amount, Type.getName(1));
+
+	// NOTE: NPC scripts sell runes with charges (`Data`). Stackable runes have
+	// no charges, so the player gets one rune per charge instead.
+	if(Type.getFlag(CUMULATIVE) && Type.getFlag(RUNE) && this->Data > 1){
+		Amount *= this->Data;
+	}
 
 	if(Type.getFlag(CUMULATIVE)){
 		while(Amount > 0){

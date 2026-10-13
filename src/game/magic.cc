@@ -1894,7 +1894,8 @@ void CreateFood(TCreature *Actor, int ManaPoints, int SoulPoints){
 
 	CheckMana(Actor, ManaPoints, SoulPoints, 1000);
 
-	int Count = (rand() % 2) + 1;
+	// NOTE: `rate_conjure_food` multiplies the food per cast.
+	int Count = ((rand() % 2) + 1) * RateConjureFood;
 	for(int i = 0; i < Count; i += 1){
 		uint8 Group, Number;
 		switch(rand() % 7){
@@ -1934,6 +1935,8 @@ void CreateArrows(TCreature *Actor, int ManaPoints, int SoulPoints, int ArrowTyp
 		}
 	}
 
+	// NOTE: `rate_conjure_ammo` multiplies the ammunition per cast.
+	Count = std::min<int>(Count * RateConjureAmmo, 100);
 	CreateAtCreature(Actor->ID, GetNewObjectType(94, Number), Count);
 	GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, EFFECT_MAGIC_BLUE);
 }
@@ -3717,7 +3720,8 @@ static void RuneSpell(uint32 CreatureID, int SpellNr){
 	uint8 RuneNr = SpellList[SpellNr].RuneNr;
 	int ManaPoints = SpellList[SpellNr].Mana;
 	int SoulPoints = SpellList[SpellNr].SoulPoints;
-	int Amount = SpellList[SpellNr].Amount;
+	// NOTE: `rate_conjure_rune` multiplies the runes (or charges) per cast.
+	int Amount = std::min<int>(SpellList[SpellNr].Amount * RateConjureRune, 100);
 
 	if(RuneGr == 0){
 		error("RuneSpell: Spell %d ist Runenspruch, hat aber keine Rune.\n", SpellNr);

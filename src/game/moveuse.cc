@@ -83,6 +83,14 @@ bool Compare(int Value1, int Operator, int Value2){
 	return Result;
 }
 
+// NOTE: Worms are only used by the fishing rules in moveuse.dat. With
+// `require_worms_for_fishing = false` players fish without a worm and keep
+// their worms.
+static const int WORM_TYPEID = 3492;
+static bool IsIgnoredFishingWorm(ObjectType Type){
+	return !RequireWormsForFishing && Type.TypeID == WORM_TYPEID;
+}
+
 bool CheckCondition(MoveUseEventType EventType, TMoveUseCondition *Condition,
 		Object User, Object Obj1, Object Obj2, Object *Temp){
 	bool Result = false;
@@ -297,7 +305,7 @@ bool CheckCondition(MoveUseEventType EventType, TMoveUseCondition *Condition,
 			int Count = Condition->Parameters[2];
 			if(Obj.getObjectType().isCreatureContainer()){
 				*Temp = GetInventoryObject(Obj.getCreatureID(), Type, Count);
-				Result = (*Temp != NONE);
+				Result = (*Temp != NONE || IsIgnoredFishingWorm(Type));
 			}
 			break;
 		}
@@ -1410,7 +1418,9 @@ void ExecuteAction(MoveUseEventType EventType, TMoveUseAction *Action,
 				ObjectType Type = Action->Parameters[1];
 				int Value = Action->Parameters[2];
 				if(Obj.getObjectType().isCreatureContainer()){
-					DeleteAtCreature(Obj.getCreatureID(), Type, 1, Value);
+					if(!IsIgnoredFishingWorm(Type)){
+						DeleteAtCreature(Obj.getCreatureID(), Type, 1, Value);
+					}
 				}else{
 					throw ERROR;
 				}
