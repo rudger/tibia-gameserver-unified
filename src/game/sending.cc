@@ -1343,6 +1343,24 @@ void SendClearTarget(TConnection *Connection){
 	FinishSendData(Connection);
 }
 
+// NOTE: Not part of the 7.72 protocol. With send_message_level the level of
+// the speaking player follows the name, as in 7.80+ (GameMessageLevel in The
+// Forgotten Client). Non-players get level 0, which the client does not show.
+static void SendSpeakerLevel(TConnection *Connection, const char *Sender){
+	if(!SendMessageLevel){
+		return;
+	}
+
+	int Level = 0;
+	if(Sender != NULL && Sender[0] != 0){
+		TPlayer *Speaker = GetPlayer(Sender);
+		if(Speaker != NULL && Speaker->Skills[SKILL_LEVEL] != NULL){
+			Level = Speaker->Skills[SKILL_LEVEL]->Get();
+		}
+	}
+	SendWord(Connection, (uint16)Level);
+}
+
 void SendTalk(TConnection *Connection, uint32 StatementID,
 		const char *Sender, int Mode, const char *Text, int Data){
 	if(Mode != TALK_PRIVATE_MESSAGE
@@ -1372,6 +1390,7 @@ void SendTalk(TConnection *Connection, uint32 StatementID,
 	SendByte(Connection, SV_CMD_TALK);
 	SendQuad(Connection, StatementID);
 	SendString(Connection, Sender);
+	SendSpeakerLevel(Connection, Sender);
 	SendByte(Connection, (uint8)Mode);
 	if(Mode == TALK_GAMEMASTER_REQUEST){
 		SendQuad(Connection, (uint32)Data);
@@ -1408,8 +1427,10 @@ void SendTalk(TConnection *Connection, uint32 StatementID,
 	SendQuad(Connection, StatementID);
 	if(Mode != TALK_ANONYMOUS_CHANNELCALL){
 		SendString(Connection, Sender);
+		SendSpeakerLevel(Connection, Sender);
 	}else{
 		SendString(Connection, "");
+		SendSpeakerLevel(Connection, "");
 	}
 	SendByte(Connection, (uint8)Mode);
 	SendWord(Connection, (uint16)Channel);
@@ -1445,6 +1466,7 @@ void SendTalk(TConnection *Connection, uint32 StatementID,
 	SendByte(Connection, SV_CMD_TALK);
 	SendQuad(Connection, StatementID);
 	SendString(Connection, Sender);
+	SendSpeakerLevel(Connection, Sender);
 	SendByte(Connection, (uint8)Mode);
 	SendWord(Connection, (uint16)x);
 	SendWord(Connection, (uint16)y);
