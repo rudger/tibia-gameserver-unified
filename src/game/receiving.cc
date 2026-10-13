@@ -381,6 +381,26 @@ void CRejectTrade(TConnection *Connection, TReadBuffer *Buffer){
 	}
 }
 
+// NOTE: Like later clients, show "Using one of 5 sudden death runes..." when
+// an object is used through a hotkey (no position, just the object type).
+static void SendHotkeyUseMessage(TConnection *Connection, TPlayer *Player,
+		int ObjX, int ObjY, ObjectType Type, uint8 RNum){
+	if(ObjX != 0xFFFF || ObjY != INVENTORY_ANY || Type.isMapContainer()){
+		return;
+	}
+
+	if(GetInventoryObject(Player->ID, Type, (uint32)RNum) == NONE){
+		return;
+	}
+
+	int Count = CountInventoryObjects(Player->ID, Type, (uint32)RNum);
+	if(Count <= 1){
+		SendMessage(Connection, TALK_INFO_MESSAGE, "Using the last %s...", Type.getName(-1));
+	}else{
+		SendMessage(Connection, TALK_INFO_MESSAGE, "Using one of %d %s...", Count, Type.getName(Count));
+	}
+}
+
 void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 	if(Connection == NULL){
 		error("CUseObject: Connection ist NULL.\n");
@@ -415,6 +435,8 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 	if(ObjX != 0xFFFF && !CheckVisibility(CL_CMD_USE_OBJECT, Connection, ObjX, ObjY, ObjZ)){
 		return;
 	}
+
+	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
 	try{
 		Player->ToDoWait(100);
@@ -464,6 +486,8 @@ void CUseTwoObjects(TConnection *Connection, TReadBuffer *Buffer){
 	|| (ObjX2 != 0xFFFF && !CheckVisibility(CL_CMD_USE_TWO_OBJECTS, Connection, ObjX2, ObjY2, ObjZ2))){
 		return;
 	}
+
+	SendHotkeyUseMessage(Connection, Player, ObjX1, ObjY1, Type1, RNum1);
 
 	try{
 		Player->ToDoWait(100);
@@ -534,6 +558,8 @@ void CUseOnCreature(TConnection *Connection, TReadBuffer *Buffer){
 		SendResult(Connection, NOTACCESSIBLE);
 		return;
 	}
+
+	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
 	try{
 		Player->ToDoWait(100);
