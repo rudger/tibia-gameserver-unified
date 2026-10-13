@@ -80,6 +80,7 @@ extern bool LearnSpells;
 extern bool RemoveChargesFromRunes;
 extern bool SendFoodTime;
 extern bool SendMessageLevel;
+extern bool SendPZIcon;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;
 extern bool RemoveWeaponCharges;

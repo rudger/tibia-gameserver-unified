@@ -1437,6 +1437,11 @@ void TCreature::NotifyGo(void){
 				((TPlayer*)this)->RejectTrade();
 			}
 		}
+
+		// NOTE: Update the protection zone icon right away.
+		if(SendPZIcon && this->Connection != NULL){
+			((TPlayer*)this)->CheckState();
+		}
 	}
 
 	int Waypoints = 0;

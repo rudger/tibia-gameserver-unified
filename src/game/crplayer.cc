@@ -1213,7 +1213,7 @@ void TPlayer::CheckOutfit(void){
 
 void TPlayer::CheckState(void){
 	if(this->Connection != NULL){
-		uint8 State = 0;
+		uint16 State = 0;
 
 		if(this->Skills[SKILL_POISON]->TimerValue() > 0){
 			State |= 0x01;
@@ -1247,6 +1247,10 @@ void TPlayer::CheckState(void){
 
 		if(RoundNr < this->EarliestLogoutRound){
 			State |= 0x80;
+		}
+
+		if(SendPZIcon && IsProtectionZone(this->posx, this->posy, this->posz)){
+			State |= 0x4000;
 		}
 
 		if(State != this->OldState){

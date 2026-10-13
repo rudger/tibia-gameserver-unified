@@ -1324,13 +1324,18 @@ void SendPlayerSkills(TConnection *Connection){
 	FinishSendData(Connection);
 }
 
-void SendPlayerState(TConnection *Connection, uint8 State){
+void SendPlayerState(TConnection *Connection, uint16 State){
 	if(!BeginSendData(Connection)){
 		return;
 	}
 
 	SendByte(Connection, SV_CMD_PLAYER_STATE);
-	SendByte(Connection, State);
+	if(SendPZIcon){
+		// NOTE: Two bytes, like 8.x clients (0x4000 = in protection zone).
+		SendWord(Connection, State);
+	}else{
+		SendByte(Connection, (uint8)State);
+	}
 	FinishSendData(Connection);
 }
 
