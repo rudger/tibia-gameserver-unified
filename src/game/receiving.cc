@@ -1449,13 +1449,7 @@ void CSetOutfit(TConnection *Connection, TReadBuffer *Buffer){
 	NewOutfit.OutfitID = Buffer->readWord();
 	Buffer->readBytes(NewOutfit.Colors, sizeof(NewOutfit.Colors));
 
-	int FirstOutfit = (Player->Sex == 1) ? 128 : 136;
-	int LastOutfit  = (Player->Sex == 1) ? 131 : 139;
-	if(CheckRight(Player->ID, PREMIUM_ACCOUNT)){
-		LastOutfit += 3;
-	}
-
-	if(NewOutfit.OutfitID < FirstOutfit || NewOutfit.OutfitID > LastOutfit){
+	if(!IsOutfitAllowed(Player, NewOutfit.OutfitID, true)){
 		if(Player->Sex == 1){
 			print(3, "CSetOutfit: Ungültiges Outfit %d für Männer.\n", NewOutfit.OutfitID);
 		}else{

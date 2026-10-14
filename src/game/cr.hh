@@ -1011,6 +1011,17 @@ void ExitNonplayer(void);
 // =============================================================================
 int GetNumberOfPlayers(void);
 TPlayer *GetPlayer(uint32 CharacterID);
+
+struct TOutfitEntry {
+	int OutfitID;
+	const char *Name;
+	int Sex;			// 1 = male, 2 = female
+	bool Premium;
+};
+
+int GetOutfitCount(void);
+const TOutfitEntry *GetOutfitEntry(int Index);
+bool IsOutfitAllowed(TPlayer *Player, int OutfitID, bool CheckPremium);
 TPlayer *GetPlayer(const char *Name);
 bool IsPlayerOnline(const char *Name);
 int IdentifyPlayer(const char *Name, bool ExactMatch, bool IgnoreGamemasters, TPlayer **OutPlayer);

@@ -83,6 +83,7 @@ extern bool SendMessageLevel;
 extern bool SendPZIcon;
 extern bool SendLiquidType;
 extern bool SendStamina;
+extern bool SendOutfitList;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;
 extern bool RemoveWeaponCharges;

@@ -1181,6 +1181,90 @@ void TPlayer::SetQuestValue(int QuestNr, int Value){
 	this->QuestValues[QuestNr] = Value;
 }
 
+// Outfits
+// =============================================================================
+// NOTE: With `send_outfit_list` the outfit window gets this list (in this
+// order) instead of a range. 255-268 are the 7.92 versions of the old outfits
+// (128-134 and 136-142), the others are the 7.92 outfits themselves.
+static const TOutfitEntry OutfitList[] = {
+	{128, "Citizen",			1, false},
+	{255, "Citizen (new)",		1, false},
+	{129, "Hunter",				1, false},
+	{256, "Hunter (new)",		1, false},
+	{130, "Mage",				1, false},
+	{257, "Mage (new)",			1, false},
+	{131, "Knight",				1, false},
+	{258, "Knight (new)",		1, false},
+	{132, "Nobleman",			1, true},
+	{259, "Nobleman (new)",		1, true},
+	{133, "Summoner",			1, true},
+	{260, "Summoner (new)",		1, true},
+	{134, "Warrior",			1, true},
+	{261, "Warrior (new)",		1, true},
+	{143, "Barbarian",			1, true},
+	{144, "Druid",				1, true},
+	{145, "Wizard",				1, true},
+	{146, "Oriental",			1, true},
+	{151, "Pirate",				1, true},
+	{152, "Assassin",			1, true},
+	{153, "Beggar",				1, true},
+	{154, "Shaman",				1, true},
+
+	{136, "Citizen",			2, false},
+	{262, "Citizen (new)",		2, false},
+	{137, "Hunter",				2, false},
+	{263, "Hunter (new)",		2, false},
+	{138, "Mage",				2, false},
+	{264, "Mage (new)",			2, false},
+	{139, "Knight",				2, false},
+	{265, "Knight (new)",		2, false},
+	{140, "Noblewoman",			2, true},
+	{266, "Noblewoman (new)",	2, true},
+	{141, "Summoner",			2, true},
+	{267, "Summoner (new)",		2, true},
+	{142, "Warrior",			2, true},
+	{268, "Warrior (new)",		2, true},
+	{147, "Barbarian",			2, true},
+	{148, "Druid",				2, true},
+	{149, "Wizard",				2, true},
+	{150, "Oriental",			2, true},
+	{155, "Pirate",				2, true},
+	{156, "Assassin",			2, true},
+	{157, "Beggar",				2, true},
+	{158, "Shaman",				2, true},
+};
+
+int GetOutfitCount(void){
+	return NARRAY(OutfitList);
+}
+
+const TOutfitEntry *GetOutfitEntry(int Index){
+	if(Index < 0 || Index >= NARRAY(OutfitList)){
+		return NULL;
+	}
+	return &OutfitList[Index];
+}
+
+bool IsOutfitAllowed(TPlayer *Player, int OutfitID, bool CheckPremium){
+	bool Premium = !CheckPremium || CheckRight(Player->ID, PREMIUM_ACCOUNT);
+	if(!SendOutfitList){
+		int FirstOutfit = (Player->Sex == 1) ? 128 : 136;
+		int LastOutfit  = (Player->Sex == 1) ? 131 : 139;
+		if(Premium){
+			LastOutfit += 3;
+		}
+		return OutfitID >= FirstOutfit && OutfitID <= LastOutfit;
+	}
+
+	for(int i = 0; i < NARRAY(OutfitList); i += 1){
+		const TOutfitEntry *Entry = &OutfitList[i];
+		if(Entry->OutfitID == OutfitID && Entry->Sex == Player->Sex){
+			return Premium || !Entry->Premium;
+		}
+	}
+	return false;
+}
+
 void TPlayer::CheckOutfit(void){
 	if(CheckRight(this->ID, GAMEMASTER_OUTFIT)){
 		if(this->OrgOutfit.OutfitID == 75){
@@ -1193,7 +1277,7 @@ void TPlayer::CheckOutfit(void){
 		this->OrgOutfit.Colors[2] = 0;
 		this->OrgOutfit.Colors[3] = 0;
 	}else if(this->Sex == 1){
-		if(this->OrgOutfit.OutfitID >= 128 && this->OrgOutfit.OutfitID <= 134){
+		if(IsOutfitAllowed(this, this->OrgOutfit.OutfitID, false)){
 			return;
 		}
 
@@ -1203,7 +1287,7 @@ void TPlayer::CheckOutfit(void){
 		this->OrgOutfit.Colors[2] = 58;
 		this->OrgOutfit.Colors[3] = 76;
 	}else{
-		if(this->OrgOutfit.OutfitID >= 136 && this->OrgOutfit.OutfitID <= 142){
+		if(IsOutfitAllowed(this, this->OrgOutfit.OutfitID, false)){
 			return;
 		}
 

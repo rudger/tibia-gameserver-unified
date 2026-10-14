@@ -112,6 +112,7 @@ bool SendMessageLevel;
 bool SendPZIcon;
 bool SendLiquidType;
 bool SendStamina;
+bool SendOutfitList;
 bool RemoveChargesFromVials;
 bool RemoveWeaponAmmunition;
 bool RemoveWeaponCharges;
@@ -247,6 +248,7 @@ void ReadConfig(void){
 	SendPZIcon = false;
 	SendLiquidType = false;
 	SendStamina = false;
+	SendOutfitList = false;
 	RemoveChargesFromVials = true;
 	RemoveWeaponAmmunition = true;
 	RemoveWeaponCharges = true;
@@ -425,6 +427,9 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "send_message_level") == 0 || strcmp(Identifier, "sendmessagelevel") == 0){
 			const char *val = Script.readIdentifier();
 			SendMessageLevel = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "send_outfit_list") == 0 || strcmp(Identifier, "sendoutfitlist") == 0){
+			const char *val = Script.readIdentifier();
+			SendOutfitList = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "send_stamina") == 0 || strcmp(Identifier, "sendstamina") == 0){
 			const char *val = Script.readIdentifier();
 			SendStamina = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));

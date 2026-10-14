@@ -1730,16 +1730,38 @@ void SendOutfit(TConnection *Connection){
 		return;
 	}
 
-	uint16 FirstOutfit = (Player->Sex == 1) ? 128 : 136;
-	uint16 LastOutfit  = (Player->Sex == 1) ? 131 : 139;
-	if(CheckRight(Player->ID, PREMIUM_ACCOUNT)){
-		LastOutfit += 3;
-	}
-
 	SendByte(Connection, SV_CMD_OUTFIT);
 	SendOutfit(Connection, Player->OrgOutfit);
-	SendWord(Connection, FirstOutfit);
-	SendWord(Connection, LastOutfit);
+	if(SendOutfitList){
+		// NOTE: Not part of the 7.72 protocol. A list of outfits with names (and
+		// addons, always 0 for now), The Forgotten Client reads it with
+		// GameNewOutfitProtocol.
+		int Count = 0;
+		for(int i = 0; i < GetOutfitCount(); i += 1){
+			if(IsOutfitAllowed(Player, GetOutfitEntry(i)->OutfitID, true)){
+				Count += 1;
+			}
+		}
+
+		SendByte(Connection, (uint8)Count);
+		for(int i = 0; i < GetOutfitCount(); i += 1){
+			const TOutfitEntry *Entry = GetOutfitEntry(i);
+			if(IsOutfitAllowed(Player, Entry->OutfitID, true)){
+				SendWord(Connection, (uint16)Entry->OutfitID);
+				SendString(Connection, Entry->Name);
+				SendByte(Connection, 0);
+			}
+		}
+	}else{
+		uint16 FirstOutfit = (Player->Sex == 1) ? 128 : 136;
+		uint16 LastOutfit  = (Player->Sex == 1) ? 131 : 139;
+		if(CheckRight(Player->ID, PREMIUM_ACCOUNT)){
+			LastOutfit += 3;
+		}
+
+		SendWord(Connection, FirstOutfit);
+		SendWord(Connection, LastOutfit);
+	}
 	FinishSendData(Connection);
 }
 
