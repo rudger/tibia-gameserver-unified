@@ -2,6 +2,7 @@
 #include "script.hh"
 #include <filesystem>
 #include <cstring>
+#include <algorithm>
 
 static void NormalizeDataPath(char *Path, const char *SubDir){
 	namespace fs = std::filesystem;
@@ -106,12 +107,23 @@ int RateManaRegen;
 // Gameplay / Item Consumption & QoL
 bool LearnSpells;
 bool RemoveChargesFromRunes;
+bool SendFoodTime;
+bool SendMessageLevel;
+bool SendPZIcon;
+bool SendLiquidType;
+bool SendStamina;
+bool SendOutfitList;
 bool RemoveChargesFromVials;
 bool RemoveWeaponAmmunition;
 bool RemoveWeaponCharges;
 bool FreeCapacity;
 bool AlwaysLight;
 int  MaxSummonsPerPlayer;
+int  RateConjureRune;
+int  RateConjureAmmo;
+int  RateConjureFood;
+int  RateNpcRunePrice;
+bool RequireWormsForFishing;
 
 // Gameplay / Combat & Timers
 int AttackInterval;
@@ -145,6 +157,12 @@ int  SoulRegenIntervalPromoted;
 // Gameplay / Houses
 int  HouseBuyLevel;
 bool HouseOnlyPremium;
+
+// Network & Server Customization
+int  LoginPort;
+char WorldAddress[64];
+char MotdText[256];
+bool FreePremium;
 
 static char PasswordKey[9] = "Pm-,o%yD";
 
@@ -225,12 +243,23 @@ void ReadConfig(void){
 
 	LearnSpells = true;
 	RemoveChargesFromRunes = true;
+	SendFoodTime = false;
+	SendMessageLevel = false;
+	SendPZIcon = false;
+	SendLiquidType = false;
+	SendStamina = false;
+	SendOutfitList = false;
 	RemoveChargesFromVials = true;
 	RemoveWeaponAmmunition = true;
 	RemoveWeaponCharges = true;
 	FreeCapacity = false;
 	AlwaysLight = false;
 	MaxSummonsPerPlayer = 2;
+	RateConjureRune = 1;
+	RateConjureAmmo = 1;
+	RateConjureFood = 1;
+	RateNpcRunePrice = 1;
+	RequireWormsForFishing = true;
 
 	AttackInterval = 2000;
 	DefenseInterval = 2000;
@@ -259,6 +288,11 @@ void ReadConfig(void){
 
 	HouseBuyLevel = 1;
 	HouseOnlyPremium = true;
+
+	LoginPort = 7171;
+	strncpy(WorldAddress, "127.0.0.1", sizeof(WorldAddress) - 1);
+	strncpy(MotdText, "Welcome to Tibia 7.72!", sizeof(MotdText) - 1);
+	FreePremium = false;
 
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
@@ -313,7 +347,7 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "gameport") == 0 || strcmp(Identifier, "game_port") == 0){
 			GamePort = Script.readNumber();
 		}else if(strcmp(Identifier, "loginport") == 0 || strcmp(Identifier, "login_port") == 0){
-			Script.readNumber();
+			LoginPort = Script.readNumber();
 		}else if(strcmp(Identifier, "adminport") == 0 || strcmp(Identifier, "admin_port") == 0){
 			AdminPort = Script.readNumber();
 		}else if(strcmp(Identifier, "adminaddress") == 0 || strcmp(Identifier, "admin_address") == 0){
@@ -321,7 +355,7 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "bindaddress") == 0 || strcmp(Identifier, "bind_address") == 0){
 			strncpy(GameAddress, Script.readString(), sizeof(GameAddress) - 1);
 		}else if(strcmp(Identifier, "worldaddress") == 0 || strcmp(Identifier, "world_address") == 0){
-			Script.readString();
+			strncpy(WorldAddress, Script.readString(), sizeof(WorldAddress) - 1);
 		}else if(strcmp(Identifier, "maxplayers") == 0 || strcmp(Identifier, "max_players") == 0){
 			MaxPlayers = Script.readNumber();
 		}else if(strcmp(Identifier, "maxconnections") == 0 || strcmp(Identifier, "max_connections") == 0){
@@ -390,6 +424,24 @@ void ReadConfig(void){
 			}else{
 				LearnSpells = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 			}
+		}else if(strcmp(Identifier, "send_message_level") == 0 || strcmp(Identifier, "sendmessagelevel") == 0){
+			const char *val = Script.readIdentifier();
+			SendMessageLevel = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "send_outfit_list") == 0 || strcmp(Identifier, "sendoutfitlist") == 0){
+			const char *val = Script.readIdentifier();
+			SendOutfitList = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "send_stamina") == 0 || strcmp(Identifier, "sendstamina") == 0){
+			const char *val = Script.readIdentifier();
+			SendStamina = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "send_liquid_type") == 0 || strcmp(Identifier, "sendliquidtype") == 0){
+			const char *val = Script.readIdentifier();
+			SendLiquidType = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "send_pz_icon") == 0 || strcmp(Identifier, "sendpzicon") == 0){
+			const char *val = Script.readIdentifier();
+			SendPZIcon = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "send_food_time") == 0 || strcmp(Identifier, "sendfoodtime") == 0){
+			const char *val = Script.readIdentifier();
+			SendFoodTime = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "remove_charges_from_runes") == 0 || strcmp(Identifier, "removechargesfromrunes") == 0){
 			const char *val = Script.readIdentifier();
 			RemoveChargesFromRunes = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
@@ -408,6 +460,17 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "always_light") == 0 || strcmp(Identifier, "alwayslight") == 0 || strcmp(Identifier, "ambient_light") == 0){
 			const char *val = Script.readIdentifier();
 			AlwaysLight = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "rate_conjure_rune") == 0 || strcmp(Identifier, "rateconjurerune") == 0){
+			RateConjureRune = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "rate_conjure_ammo") == 0 || strcmp(Identifier, "rateconjureammo") == 0){
+			RateConjureAmmo = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "rate_conjure_food") == 0 || strcmp(Identifier, "rateconjurefood") == 0){
+			RateConjureFood = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "rate_npc_rune_price") == 0 || strcmp(Identifier, "ratenpcruneprice") == 0){
+			RateNpcRunePrice = std::max(Script.readNumber(), 1);
+		}else if(strcmp(Identifier, "require_worms_for_fishing") == 0 || strcmp(Identifier, "requirewormsforfishing") == 0){
+			const char *val = Script.readIdentifier();
+			RequireWormsForFishing = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "max_summons_per_player") == 0 || strcmp(Identifier, "maxsummonsperplayer") == 0){
 			MaxSummonsPerPlayer = Script.readNumber();
 		}else if(strcmp(Identifier, "attack_interval") == 0 || strcmp(Identifier, "attackinterval") == 0 || strcmp(Identifier, "attack_speed") == 0){
@@ -460,6 +523,9 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "house_only_premium") == 0 || strcmp(Identifier, "houseonlypremium") == 0){
 			const char *val = Script.readIdentifier();
 			HouseOnlyPremium = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "free_premium") == 0 || strcmp(Identifier, "freepremium") == 0 || strcmp(Identifier, "all_premium") == 0){
+			const char *val = Script.readIdentifier();
+			FreePremium = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "world_type") == 0 || strcmp(Identifier, "worldtype") == 0){
 			const char *val = Script.readString();
 			if(val && val[0] != 0){
@@ -474,7 +540,7 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "rsakeyfile") == 0 || strcmp(Identifier, "rsa_key_file") == 0){
 			Script.readString();
 		}else if(strcmp(Identifier, "motd") == 0){
-			Script.readString();
+			strncpy(MotdText, Script.readString(), sizeof(MotdText) - 1);
 		}else if(strcmp(Identifier, "querymanagerport") == 0){
 			QueryManagerPort = Script.readNumber();
 		}else if(strcmp(Identifier, "querymanageraddress") == 0){

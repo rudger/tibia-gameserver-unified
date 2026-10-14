@@ -1894,7 +1894,8 @@ void CreateFood(TCreature *Actor, int ManaPoints, int SoulPoints){
 
 	CheckMana(Actor, ManaPoints, SoulPoints, 1000);
 
-	int Count = (rand() % 2) + 1;
+	// NOTE: `rate_conjure_food` multiplies the food per cast.
+	int Count = ((rand() % 2) + 1) * RateConjureFood;
 	for(int i = 0; i < Count; i += 1){
 		uint8 Group, Number;
 		switch(rand() % 7){
@@ -1934,6 +1935,8 @@ void CreateArrows(TCreature *Actor, int ManaPoints, int SoulPoints, int ArrowTyp
 		}
 	}
 
+	// NOTE: `rate_conjure_ammo` multiplies the ammunition per cast.
+	Count = std::min<int>(Count * RateConjureAmmo, 100);
 	CreateAtCreature(Actor->ID, GetNewObjectType(94, Number), Count);
 	GraphicalEffect(Actor->posx, Actor->posy, Actor->posz, EFFECT_MAGIC_BLUE);
 }
@@ -1962,7 +1965,7 @@ void SummonCreature(TCreature *Actor, int ManaPoints, int Race, bool God){
 			throw NOTACCESSIBLE;
 		}
 
-		if(Actor->SummonedCreatures >= 2){
+		if(Actor->SummonedCreatures >= MaxSummonsPerPlayer){
 			throw TOOMANYSLAVES;
 		}
 	}
@@ -3717,7 +3720,8 @@ static void RuneSpell(uint32 CreatureID, int SpellNr){
 	uint8 RuneNr = SpellList[SpellNr].RuneNr;
 	int ManaPoints = SpellList[SpellNr].Mana;
 	int SoulPoints = SpellList[SpellNr].SoulPoints;
-	int Amount = SpellList[SpellNr].Amount;
+	// NOTE: `rate_conjure_rune` multiplies the runes (or charges) per cast.
+	int Amount = std::min<int>(SpellList[SpellNr].Amount * RateConjureRune, 100);
 
 	if(RuneGr == 0){
 		error("RuneSpell: Spell %d ist Runenspruch, hat aber keine Rune.\n", SpellNr);
@@ -4165,6 +4169,17 @@ static void DeleteRune(Object Obj){
 		return;
 	}
 
+	// NOTE: Stackable (cumulative) runes lose one rune of the stack per use.
+	if(Obj.getObjectType().getFlag(CUMULATIVE)){
+		uint32 Amount = Obj.getAttribute(AMOUNT);
+		if(Amount > 1){
+			Change(Obj, AMOUNT, Amount - 1);
+		}else{
+			Delete(Obj, -1);
+		}
+		return;
+	}
+
 	// TODO(fusion): Should probably check if object is a rune?
 	uint32 Charges = Obj.getAttribute(CHARGES);
 	if(Charges > 1){
@@ -4478,7 +4493,22 @@ void DrinkPotion(uint32 CreatureID, Object Obj){
 		throw ERROR;
 	}
 
-	int LiquidType = (int)Obj.getAttribute(CONTAINERLIQUIDTYPE);
+	DrinkPotionLiquid(CreatureID, (int)Obj.getAttribute(CONTAINERLIQUIDTYPE));
+
+	if(RemoveChargesFromVials){
+		Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
+	}
+}
+
+// NOTE: The effect of drinking a potion, also used by the stackable filled
+// vials (see `UseFilledVial`).
+void DrinkPotionLiquid(uint32 CreatureID, int LiquidType){
+	TPlayer *Player = GetPlayer(CreatureID);
+	if(Player == NULL){
+		error("DrinkPotionLiquid: Kreatur existiert nicht.\n");
+		throw ERROR;
+	}
+
 	if(LiquidType == LIQUID_MANA){
 		int Amount = ComputeDamage(NULL, 0, 100, 50);
 		RefreshMana(Player, 0, 0, Amount);
@@ -4486,12 +4516,8 @@ void DrinkPotion(uint32 CreatureID, Object Obj){
 		int Amount = ComputeDamage(NULL, 0, 50, 25);
 		Heal(Player, 0, 0, Amount);
 	}else{
-		error("DrinkPotion: Objekt enthält keinen Zaubertrank.\n");
+		error("DrinkPotionLiquid: Flüssigkeit %d ist kein Zaubertrank.\n", LiquidType);
 		throw ERROR;
-	}
-
-	if(RemoveChargesFromVials){
-		Change(Obj, CONTAINERLIQUIDTYPE, LIQUID_NONE);
 	}
 }
 

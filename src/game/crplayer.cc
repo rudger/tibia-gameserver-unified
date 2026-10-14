@@ -43,6 +43,9 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 	this->TradePartner = 0;
 	this->TradeAccepted = false;
 	this->OldState = 0;
+	this->OldFoodMinutes = -1;
+	this->StaminaCombatRound = 0;
+	this->StaminaNextRound = 0;
 	this->Request = 0;
 	this->RequestTimestamp = 0;
 	this->RequestProcessingGamemaster = 0;
@@ -139,6 +142,10 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 			int Count = (Timer + Interval - 1) % Interval;
 			this->SetTimer(SKILL_SOUL, Cycle, Count, Interval, -1);
 		}
+	}
+
+	if(SendStamina){
+		this->LoginStamina(PlayerData->LastLogoutTime);
 	}
 
 	// TODO(fusion): Handle login after death?
@@ -337,12 +344,12 @@ void TPlayer::Death(void){
 	TCreature::Death();
 
 	if(WorldType == PVP_ENFORCED || ExperienceByKillingPlayers){
-		int Percent = (PVPEnforcedExpPercent > 0) ? PVPEnforcedExpPercent : 5;
+		int Percent = (PVPEnforcedExpPercent >= 0) ? PVPEnforcedExpPercent : 5;
 		this->Combat.DistributeExperiencePoints((this->Skills[SKILL_LEVEL]->Exp * Percent) / 100);
 	}
 
 	// TODO(fusion): Probably related to blessings?
-	int BaseLoss = (DeathLosePercent > 0) ? DeathLosePercent : 10;
+	int BaseLoss = (DeathLosePercent >= 0) ? DeathLosePercent : 10;
 	int LossPercent = (this->GetActivePromotion() ? (BaseLoss * 7 / 10) : BaseLoss);
 	for(int QuestNr = 101; QuestNr <= 105; QuestNr += 1){
 		if(this->GetQuestValue(QuestNr) != 0){
@@ -1174,6 +1181,90 @@ void TPlayer::SetQuestValue(int QuestNr, int Value){
 	this->QuestValues[QuestNr] = Value;
 }
 
+// Outfits
+// =============================================================================
+// NOTE: With `send_outfit_list` the outfit window gets this list (in this
+// order) instead of a range. 255-268 are the 7.92 versions of the old outfits
+// (128-134 and 136-142), the others are the 7.92 outfits themselves.
+static const TOutfitEntry OutfitList[] = {
+	{128, "Citizen",			1, false},
+	{255, "Citizen (new)",		1, false},
+	{129, "Hunter",				1, false},
+	{256, "Hunter (new)",		1, false},
+	{130, "Mage",				1, false},
+	{257, "Mage (new)",			1, false},
+	{131, "Knight",				1, false},
+	{258, "Knight (new)",		1, false},
+	{132, "Nobleman",			1, true},
+	{259, "Nobleman (new)",		1, true},
+	{133, "Summoner",			1, true},
+	{260, "Summoner (new)",		1, true},
+	{134, "Warrior",			1, true},
+	{261, "Warrior (new)",		1, true},
+	{143, "Barbarian",			1, true},
+	{144, "Druid",				1, true},
+	{145, "Wizard",				1, true},
+	{146, "Oriental",			1, true},
+	{151, "Pirate",				1, true},
+	{152, "Assassin",			1, true},
+	{153, "Beggar",				1, true},
+	{154, "Shaman",				1, true},
+
+	{136, "Citizen",			2, false},
+	{262, "Citizen (new)",		2, false},
+	{137, "Hunter",				2, false},
+	{263, "Hunter (new)",		2, false},
+	{138, "Mage",				2, false},
+	{264, "Mage (new)",			2, false},
+	{139, "Knight",				2, false},
+	{265, "Knight (new)",		2, false},
+	{140, "Noblewoman",			2, true},
+	{266, "Noblewoman (new)",	2, true},
+	{141, "Summoner",			2, true},
+	{267, "Summoner (new)",		2, true},
+	{142, "Warrior",			2, true},
+	{268, "Warrior (new)",		2, true},
+	{147, "Barbarian",			2, true},
+	{148, "Druid",				2, true},
+	{149, "Wizard",				2, true},
+	{150, "Oriental",			2, true},
+	{155, "Pirate",				2, true},
+	{156, "Assassin",			2, true},
+	{157, "Beggar",				2, true},
+	{158, "Shaman",				2, true},
+};
+
+int GetOutfitCount(void){
+	return NARRAY(OutfitList);
+}
+
+const TOutfitEntry *GetOutfitEntry(int Index){
+	if(Index < 0 || Index >= NARRAY(OutfitList)){
+		return NULL;
+	}
+	return &OutfitList[Index];
+}
+
+bool IsOutfitAllowed(TPlayer *Player, int OutfitID, bool CheckPremium){
+	bool Premium = !CheckPremium || CheckRight(Player->ID, PREMIUM_ACCOUNT);
+	if(!SendOutfitList){
+		int FirstOutfit = (Player->Sex == 1) ? 128 : 136;
+		int LastOutfit  = (Player->Sex == 1) ? 131 : 139;
+		if(Premium){
+			LastOutfit += 3;
+		}
+		return OutfitID >= FirstOutfit && OutfitID <= LastOutfit;
+	}
+
+	for(int i = 0; i < NARRAY(OutfitList); i += 1){
+		const TOutfitEntry *Entry = &OutfitList[i];
+		if(Entry->OutfitID == OutfitID && Entry->Sex == Player->Sex){
+			return Premium || !Entry->Premium;
+		}
+	}
+	return false;
+}
+
 void TPlayer::CheckOutfit(void){
 	if(CheckRight(this->ID, GAMEMASTER_OUTFIT)){
 		if(this->OrgOutfit.OutfitID == 75){
@@ -1186,7 +1277,7 @@ void TPlayer::CheckOutfit(void){
 		this->OrgOutfit.Colors[2] = 0;
 		this->OrgOutfit.Colors[3] = 0;
 	}else if(this->Sex == 1){
-		if(this->OrgOutfit.OutfitID >= 128 && this->OrgOutfit.OutfitID <= 134){
+		if(IsOutfitAllowed(this, this->OrgOutfit.OutfitID, false)){
 			return;
 		}
 
@@ -1196,7 +1287,7 @@ void TPlayer::CheckOutfit(void){
 		this->OrgOutfit.Colors[2] = 58;
 		this->OrgOutfit.Colors[3] = 76;
 	}else{
-		if(this->OrgOutfit.OutfitID >= 136 && this->OrgOutfit.OutfitID <= 142){
+		if(IsOutfitAllowed(this, this->OrgOutfit.OutfitID, false)){
 			return;
 		}
 
@@ -1212,7 +1303,7 @@ void TPlayer::CheckOutfit(void){
 
 void TPlayer::CheckState(void){
 	if(this->Connection != NULL){
-		uint8 State = 0;
+		uint16 State = 0;
 
 		if(this->Skills[SKILL_POISON]->TimerValue() > 0){
 			State |= 0x01;
@@ -1248,11 +1339,99 @@ void TPlayer::CheckState(void){
 			State |= 0x80;
 		}
 
+		if(SendPZIcon && IsProtectionZone(this->posx, this->posy, this->posz)){
+			State |= 0x4000;
+		}
+
 		if(State != this->OldState){
 			SendPlayerState(this->Connection, State);
 			this->OldState = State;
 		}
+
+		// The food time in the skills window shows minutes, update it when the
+		// minute changes even if hit points and mana are already full.
+		if(SendFoodTime && this->Skills[SKILL_FED] != NULL){
+			int FoodMinutes = this->Skills[SKILL_FED]->TimerValue() / 60;
+			if(FoodMinutes != this->OldFoodMinutes){
+				this->OldFoodMinutes = FoodMinutes;
+				SendPlayerData(this->Connection);
+			}
+		}
 	}
+}
+
+// Stamina (send_stamina)
+// =============================================================================
+// NOTE: Stamina works like in 8.6: at most 42:00 hours, one minute is used per
+// minute of fighting monsters and it regenerates while logged out.
+static const int STAMINA_MAX = 2520;			// 42:00 hours
+static const int STAMINA_BONUS = 2400;			// 40:00 hours, premium bonus above
+static const int STAMINA_LOW = 840;				// 14:00 hours, half experience below
+
+void TPlayer::LoginStamina(time_t LastLogoutTime){
+	TSkill *Stamina = this->Skills[SKILL_STAMINA];
+	if(Stamina == NULL){
+		return;
+	}
+
+	// NOTE: First login with stamina: start full.
+	if(Stamina->Max != STAMINA_MAX){
+		Stamina->Max = STAMINA_MAX;
+		Stamina->Min = 0;
+		Stamina->Act = STAMINA_MAX;
+	}else if(LastLogoutTime > 0){
+		// NOTE: Regeneration starts after 10 minutes offline: one minute per
+		// three minutes up to 40:00 hours, one minute per ten minutes above.
+		int Minutes = (int)((time(NULL) - LastLogoutTime) / 60) - 10;
+		int Act = std::max<int>(Stamina->Act, 0);
+		if(Minutes > 0 && Act < STAMINA_BONUS){
+			int Gain = std::min<int>(STAMINA_BONUS - Act, Minutes / 3);
+			Act += Gain;
+			Minutes -= Gain * 3;
+		}
+
+		if(Minutes > 0 && Act >= STAMINA_BONUS){
+			Act += Minutes / 10;
+		}
+
+		Stamina->Act = std::min<int>(Act, STAMINA_MAX);
+	}
+
+	this->StaminaCombatRound = 0;
+	this->StaminaNextRound = RoundNr + 60;
+}
+
+void TPlayer::CheckStamina(void){
+	TSkill *Stamina = this->Skills[SKILL_STAMINA];
+	if(Stamina == NULL || RoundNr < this->StaminaNextRound){
+		return;
+	}
+
+	this->StaminaNextRound = RoundNr + 60;
+	if(this->StaminaCombatRound != 0
+			&& (RoundNr - this->StaminaCombatRound) < 60
+			&& Stamina->Act > 0){
+		Stamina->Act -= 1;
+		if(this->Connection != NULL){
+			SendPlayerData(this->Connection);
+		}
+	}
+}
+
+int TPlayer::GetStaminaExpPercent(void){
+	TSkill *Stamina = this->Skills[SKILL_STAMINA];
+	if(!SendStamina || Stamina == NULL){
+		return 100;
+	}
+
+	if(Stamina->Act <= 0){
+		return 0;
+	}else if(Stamina->Act < STAMINA_LOW){
+		return 50;
+	}else if(Stamina->Act >= STAMINA_BONUS && CheckRight(this->ID, PREMIUM_ACCOUNT)){
+		return 150;
+	}
+	return 100;
 }
 
 void TPlayer::SyncState(void){
@@ -1262,6 +1441,9 @@ void TPlayer::SyncState(void){
 	// in the player constructor if `TPlayer::CheckState` is called from within
 	// any helper function before `TConnection::EnterGame` (see `BeginSendData`).
 	this->OldState = 0;
+	this->OldFoodMinutes = -1;
+	this->StaminaCombatRound = 0;
+	this->StaminaNextRound = 0;
 	this->CheckState();
 }
 

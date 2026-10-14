@@ -86,10 +86,12 @@ int main(int argc, char **argv){
 	}
 	std::cout << DatabaseGetDriverName() << " [done]\n";
 
-	// 4. Start Login Server on port 7171
-	int loginPort = 7171;
+	// 4. Start Login Server on configured port
+	int loginPort = (LoginPort > 0 ? LoginPort : 7171);
+	const char *bindIP = (GameAddress[0] ? GameAddress : "0.0.0.0");
+	const char *motd = (MotdText[0] ? MotdText : "Welcome to Tibia 7.72!");
 	std::cout << ":: Starting Login Server on port " << loginPort << "... " << std::flush;
-	if(!LoginServerStart(loginPort, "0.0.0.0", "Welcome to Tibia 7.72!")){
+	if(!LoginServerStart(loginPort, bindIP, motd)){
 		std::cout << "[failed]\n";
 		std::cerr << "> ERROR: Failed to start Login Server on port " << loginPort << "\n";
 	} else {

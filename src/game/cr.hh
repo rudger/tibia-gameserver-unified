@@ -605,6 +605,7 @@ struct TCreature: TSkillBase {
 	uint32 NextChainCreature;
 	char Name[31];
 	char Murderer[31];
+	uint32 LootReceiver;
 	TOutfit OrgOutfit;
 	TOutfit Outfit;
 	int startx;
@@ -858,6 +859,9 @@ struct TPlayer: TCreature {
 	void CheckOutfit(void);
 	void CheckState(void);
 	void SyncState(void);
+	void LoginStamina(time_t LastLogoutTime);
+	void CheckStamina(void);
+	int GetStaminaExpPercent(void);
 	void AddBuddy(const char *Name);
 	void RemoveBuddy(uint32 CharacterID);
 	void SendBuddies(void);
@@ -908,6 +912,9 @@ struct TPlayer: TCreature {
 	uint32 TradePartner;
 	bool TradeAccepted;
 	int OldState;
+	int OldFoodMinutes;
+	uint32 StaminaCombatRound;
+	uint32 StaminaNextRound;
 	uint32 Request;
 	int RequestTimestamp;
 	uint32 RequestProcessingGamemaster;
@@ -1004,6 +1011,17 @@ void ExitNonplayer(void);
 // =============================================================================
 int GetNumberOfPlayers(void);
 TPlayer *GetPlayer(uint32 CharacterID);
+
+struct TOutfitEntry {
+	int OutfitID;
+	const char *Name;
+	int Sex;			// 1 = male, 2 = female
+	bool Premium;
+};
+
+int GetOutfitCount(void);
+const TOutfitEntry *GetOutfitEntry(int Index);
+bool IsOutfitAllowed(TPlayer *Player, int OutfitID, bool CheckPremium);
 TPlayer *GetPlayer(const char *Name);
 bool IsPlayerOnline(const char *Name);
 int IdentifyPlayer(const char *Name, bool ExactMatch, bool IgnoreGamemasters, TPlayer **OutPlayer);

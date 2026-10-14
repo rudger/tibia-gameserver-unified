@@ -2071,8 +2071,11 @@ void Look(uint32 CreatureID, Object Obj){
 			strcat(Description, Help);
 			strcat(Description, "\"-spell");
 
-			snprintf(Help, sizeof(Help), " (%ux)", Obj.getAttribute(CHARGES));
-			strcat(Description, Help);
+			// NOTE: Stackable runes have no charges, the amount is in the name.
+			if(!ObjType.getFlag(CUMULATIVE)){
+				snprintf(Help, sizeof(Help), " (%ux)", Obj.getAttribute(CHARGES));
+				strcat(Description, Help);
+			}
 		}
 
 		if(ObjType.getFlag(BED)){
@@ -2530,6 +2533,8 @@ void Use(uint32 CreatureID, Object Obj1, Object Obj2, uint8 Info){
 		UseChest(CreatureID, Obj1);
 	}else if(ObjType1.getFlag(LIQUIDCONTAINER)){
 		UseLiquidContainer(CreatureID, Obj1, Obj2);
+	}else if(GetFilledVialLiquid(ObjType1) != LIQUID_NONE){
+		UseFilledVial(CreatureID, Obj1, Obj2);
 	}else if(ObjType1.getFlag(FOOD)){
 		UseFood(CreatureID, Obj1);
 	}else if(ObjType1.getFlag(WRITE) || ObjType1.getFlag(WRITEONCE)){
@@ -3233,7 +3238,8 @@ int GetCommunicationContext(uint32 CharacterID, uint32 StatementID,
 				|| Statement->Channel == CHANNEL_GAMECHAT
 				|| Statement->Channel == CHANNEL_TRADE
 				|| Statement->Channel == CHANNEL_RLCHAT
-				|| Statement->Channel == CHANNEL_HELP;
+				|| Statement->Channel == CHANNEL_HELP
+				|| Statement->Channel == CHANNEL_LOOT;
 
 		if(!ChannelMode || !ReportableChannel){
 			error("GetCommunicationContext: Äußerung dürfte nicht gemeldet werden.\n");
@@ -3408,6 +3414,7 @@ bool ChannelAvailable(int ChannelID, uint32 CharacterID){
 		case CHANNEL_TRADE:          return true;
 		case CHANNEL_RLCHAT:         return true;
 		case CHANNEL_HELP:           return true;
+		case CHANNEL_LOOT:           return true;
 		default:{
 			if(ChannelID >= FIRST_PRIVATE_CHANNEL){
 				TChannel *Chan = Channel.at(ChannelID);
@@ -3448,6 +3455,7 @@ const char *GetChannelName(int ChannelID, uint32 CharacterID){
 		case CHANNEL_TRADE:          return "Trade";
 		case CHANNEL_RLCHAT:         return "RL-Chat";
 		case CHANNEL_HELP:           return "Help";
+		case CHANNEL_LOOT:           return "Loot";
 		default:{
 			if(ChannelID >= FIRST_PRIVATE_CHANNEL){
 				snprintf(ChannelName, sizeof(ChannelName), "%s's Channel",

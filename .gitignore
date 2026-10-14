@@ -89,3 +89,4 @@ $RECYCLE.BIN/
 .*.swp
 .*.swo
 *.bak
+*.pyc

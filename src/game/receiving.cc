@@ -381,6 +381,27 @@ void CRejectTrade(TConnection *Connection, TReadBuffer *Buffer){
 	}
 }
 
+// NOTE: Like later clients, show "Using one of 5 sudden death runes..." when
+// an object is used through a hotkey (no position, just the object type).
+static void SendHotkeyUseMessage(TConnection *Connection, TPlayer *Player,
+		int ObjX, int ObjY, ObjectType Type, uint8 RNum){
+	if(ObjX != 0xFFFF || ObjY != INVENTORY_ANY || Type.isMapContainer()){
+		return;
+	}
+
+	if(GetHotkeyObject(Player->ID, Type, (uint32)RNum) == NONE){
+		return;
+	}
+
+	int Count = CountHotkeyObjects(Player->ID, Type, (uint32)RNum);
+	if(Count <= 1){
+		SendMessage(Connection, TALK_INFO_MESSAGE, "Using the last %s...", Type.getName(-1));
+	}else{
+		// NOTE: `getName(Count)` already includes the number ("5 sudden death runes").
+		SendMessage(Connection, TALK_INFO_MESSAGE, "Using one of %s...", Type.getName(Count));
+	}
+}
+
 void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 	if(Connection == NULL){
 		error("CUseObject: Connection ist NULL.\n");
@@ -408,13 +429,15 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
-	if(!CheckSpecialCoordinates(CL_CMD_USE_OBJECT, ObjX, ObjY, ObjZ, false)){
+	if(!CheckSpecialCoordinates(CL_CMD_USE_OBJECT, ObjX, ObjY, ObjZ, true)){
 		return;
 	}
 
 	if(ObjX != 0xFFFF && !CheckVisibility(CL_CMD_USE_OBJECT, Connection, ObjX, ObjY, ObjZ)){
 		return;
 	}
+
+	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
 	try{
 		Player->ToDoWait(100);
@@ -455,7 +478,7 @@ void CUseTwoObjects(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
-	if(!CheckSpecialCoordinates(CL_CMD_USE_TWO_OBJECTS, ObjX1, ObjY1, ObjZ1, false)
+	if(!CheckSpecialCoordinates(CL_CMD_USE_TWO_OBJECTS, ObjX1, ObjY1, ObjZ1, true)
 	|| !CheckSpecialCoordinates(CL_CMD_USE_TWO_OBJECTS, ObjX2, ObjY2, ObjZ2, false)){
 		return;
 	}
@@ -464,6 +487,8 @@ void CUseTwoObjects(TConnection *Connection, TReadBuffer *Buffer){
 	|| (ObjX2 != 0xFFFF && !CheckVisibility(CL_CMD_USE_TWO_OBJECTS, Connection, ObjX2, ObjY2, ObjZ2))){
 		return;
 	}
+
+	SendHotkeyUseMessage(Connection, Player, ObjX1, ObjY1, Type1, RNum1);
 
 	try{
 		Player->ToDoWait(100);
@@ -501,7 +526,7 @@ void CUseOnCreature(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
-	if(!CheckSpecialCoordinates(CL_CMD_USE_ON_CREATURE, ObjX, ObjY, ObjZ, false)){
+	if(!CheckSpecialCoordinates(CL_CMD_USE_ON_CREATURE, ObjX, ObjY, ObjZ, true)){
 		return;
 	}
 
@@ -534,6 +559,8 @@ void CUseOnCreature(TConnection *Connection, TReadBuffer *Buffer){
 		SendResult(Connection, NOTACCESSIBLE);
 		return;
 	}
+
+	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
 	try{
 		Player->ToDoWait(100);
@@ -1422,13 +1449,7 @@ void CSetOutfit(TConnection *Connection, TReadBuffer *Buffer){
 	NewOutfit.OutfitID = Buffer->readWord();
 	Buffer->readBytes(NewOutfit.Colors, sizeof(NewOutfit.Colors));
 
-	int FirstOutfit = (Player->Sex == 1) ? 128 : 136;
-	int LastOutfit  = (Player->Sex == 1) ? 131 : 139;
-	if(CheckRight(Player->ID, PREMIUM_ACCOUNT)){
-		LastOutfit += 3;
-	}
-
-	if(NewOutfit.OutfitID < FirstOutfit || NewOutfit.OutfitID > LastOutfit){
+	if(!IsOutfitAllowed(Player, NewOutfit.OutfitID, true)){
 		if(Player->Sex == 1){
 			print(3, "CSetOutfit: Ungültiges Outfit %d für Männer.\n", NewOutfit.OutfitID);
 		}else{

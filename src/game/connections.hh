@@ -280,7 +280,7 @@ void SendEditText(TConnection *Connection, Object Obj);
 void SendEditList(TConnection *Connection, uint8 Type, uint32 ID, const char *Text);
 void SendPlayerData(TConnection *Connection);
 void SendPlayerSkills(TConnection *Connection);
-void SendPlayerState(TConnection *Connection, uint8 State);
+void SendPlayerState(TConnection *Connection, uint16 State);
 void SendClearTarget(TConnection *Connection);
 void SendTalk(TConnection *Connection, uint32 StatementID,
 		const char *Sender, int Mode, const char *Text, int Data);

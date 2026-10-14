@@ -1,6 +1,19 @@
 #include "db_driver.hh"
 #include "db_common.hh"
 
+#if defined(TIBIA_NO_MYSQL)
+#include <cstdio>
+#include <memory>
+
+// NOTE: Built without the MySQL/MariaDB client library (see CMakeLists.txt).
+std::unique_ptr<IDatabaseDriver> CreateMySQLDriver(const char *host, int port, const char *user, const char *pass, const char *db, bool autoReconnect){
+	(void)host; (void)port; (void)user; (void)pass; (void)db; (void)autoReconnect;
+	fprintf(stderr, "MySQL/MariaDB support is not compiled in. Use db_type = \"sqlite\" or rebuild with MariaDB Connector/C.\n");
+	return nullptr;
+}
+
+#else
+
 #if defined(_WIN32)
 #include <winsock2.h>
 #include <windows.h>
@@ -1078,3 +1091,5 @@ public:
 std::unique_ptr<IDatabaseDriver> CreateMySQLDriver(const char *host, int port, const char *user, const char *pass, const char *db, bool autoReconnect){
 	return std::make_unique<MySQLDriver>(host, port, user, pass, db, autoReconnect);
 }
+
+#endif // TIBIA_NO_MYSQL

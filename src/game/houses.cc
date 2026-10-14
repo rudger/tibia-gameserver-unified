@@ -293,10 +293,10 @@ void ShowSubownerList(uint16 HouseID, TPlayer *Player, char *Buffer){
 	}
 
 	print(3, "Editiere Untermieterliste von Haus %d.\n", HouseID);
-	sprintf(Buffer, "# Subowners of %s\n", House->Name);
-	for(int i = 0; i < House->Subowners; i += 1){
-		strcat(Buffer, House->Subowner.at(i)->Name);
-		strcat(Buffer, "\n");
+	int MaxLen = 4000;
+	int Written = snprintf(Buffer, MaxLen, "# Subowners of %s\n", House->Name);
+	for(int i = 0; i < House->Subowners && Written < MaxLen - 64; i += 1){
+		Written += snprintf(Buffer + Written, MaxLen - Written, "%s\n", House->Subowner.at(i)->Name);
 	}
 }
 
@@ -324,10 +324,10 @@ void ShowGuestList(uint16 HouseID, TPlayer *Player, char *Buffer){
 	}
 
 	print(3, "Editiere Gästeliste von Haus %d.\n", HouseID);
-	sprintf(Buffer, "# Guests of %s\n", House->Name);
-	for(int i = 0; i < House->Guests; i += 1){
-		strcat(Buffer, House->Guest.at(i)->Name);
-		strcat(Buffer, "\n");
+	int MaxLen = 4000;
+	int Written = snprintf(Buffer, MaxLen, "# Guests of %s\n", House->Name);
+	for(int i = 0; i < House->Guests && Written < MaxLen - 64; i += 1){
+		Written += snprintf(Buffer + Written, MaxLen - Written, "%s\n", House->Guest.at(i)->Name);
 	}
 }
 
@@ -1137,6 +1137,10 @@ bool TransferHouses(void){
 }
 
 bool EvictFreeAccounts(void){
+	if(!HouseOnlyPremium){
+		return true;
+	}
+
 	int NumberOfEvictions = Houses;
 	uint16 *HouseIDs      = (uint16*)alloca(NumberOfEvictions * sizeof(uint16));
 	uint32 *OwnerIDs      = (uint32*)alloca(NumberOfEvictions * sizeof(uint32));

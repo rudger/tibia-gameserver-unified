@@ -78,12 +78,23 @@ extern int RateManaRegen;
 // Gameplay / Item Consumption & QoL
 extern bool LearnSpells;
 extern bool RemoveChargesFromRunes;
+extern bool SendFoodTime;
+extern bool SendMessageLevel;
+extern bool SendPZIcon;
+extern bool SendLiquidType;
+extern bool SendStamina;
+extern bool SendOutfitList;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;
 extern bool RemoveWeaponCharges;
 extern bool FreeCapacity;
 extern bool AlwaysLight;
 extern int  MaxSummonsPerPlayer;
+extern int  RateConjureRune;
+extern int  RateConjureAmmo;
+extern int  RateConjureFood;
+extern int  RateNpcRunePrice;
+extern bool RequireWormsForFishing;
 
 // Gameplay / Combat & Timers
 extern int AttackInterval;
@@ -117,6 +128,12 @@ extern int  SoulRegenIntervalPromoted;
 // Gameplay / Houses
 extern int  HouseBuyLevel;
 extern bool HouseOnlyPremium;
+
+// Network & Server Customization
+extern int  LoginPort;
+extern char WorldAddress[64];
+extern char MotdText[256];
+extern bool FreePremium;
 
 void ReadConfig(void);
 

@@ -1,6 +1,8 @@
 #include "login_server.hh"
 #include "../crypto/crypto.hh"
 #include "../database/db.hh"
+#include "../database/db_common.hh"
+#include "../game/config.hh"
 
 #include <string>
 #include <vector>
@@ -125,6 +127,10 @@ static void HandleLoginRequest(socket_t ClientSock, const uint8 *Packet, int Pac
 	TBufferWriter Writer(ResponsePayload, sizeof(ResponsePayload));
 
 	if(LoginResult == 0){
+		if(FreePremium && PremiumDays < 365){
+			PremiumDays = 365;
+		}
+
 		// MOTD (Opcode 20 = 0x14)
 		if(!g_MotdText.empty()){
 			Writer.Write8(20);
@@ -137,7 +143,11 @@ static void HandleLoginRequest(socket_t ClientSock, const uint8 *Packet, int Pac
 		for(int i = 0; i < NumCharacters; i++){
 			Writer.WriteString(Characters[i].Name);
 			Writer.WriteString(Characters[i].WorldName);
-			Writer.Write32BE(Characters[i].WorldAddress);
+			uint32 Addr = Characters[i].WorldAddress;
+			if(WorldAddress[0] != 0 && strcmp(WorldAddress, "0.0.0.0") != 0 && strcmp(WorldAddress, "127.0.0.1") != 0){
+				Addr = DB_ParseIPv4(WorldAddress);
+			}
+			Writer.Write32BE(Addr);
 			Writer.Write16((uint16)Characters[i].WorldPort);
 		}
 		Writer.Write16((uint16)PremiumDays);

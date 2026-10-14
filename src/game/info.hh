@@ -6,6 +6,10 @@
 
 const char *GetLiquidName(int LiquidType);
 uint8 GetLiquidColor(int LiquidType);
+uint8 GetClientLiquid(int LiquidType);
+ObjectType GetVialType(void);
+ObjectType GetFilledVialType(int LiquidType);
+int GetFilledVialLiquid(ObjectType Type);
 const char *GetName(Object Obj);
 const char *GetInfo(Object Obj);
 int GetWeight(Object Obj, int Count);
@@ -24,6 +28,8 @@ Object GetContainer(uint32 CreatureID, int x, int y, int z);
 Object GetObject(uint32 CreatureID, int x, int y, int z, int RNum, ObjectType Type);
 Object GetRowObject(Object Obj, ObjectType Type, uint32 Value, bool Recurse);
 Object GetInventoryObject(uint32 CreatureID, ObjectType Type, uint32 Value);
+Object GetHotkeyObject(uint32 CreatureID, ObjectType Type, uint32 Value);
+int CountHotkeyObjects(uint32 CreatureID, ObjectType Type, uint32 Value);
 bool IsHeldByContainer(Object Obj, Object Con);
 int CountObjectsInContainer(Object Con);
 int CountObjects(Object Obj);

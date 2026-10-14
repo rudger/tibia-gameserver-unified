@@ -431,7 +431,7 @@ void TCreature::Move(Object Obj, int DestX, int DestY, int DestZ, uint8 Count){
 
 	ObjectType ObjType = Obj.getObjectType();
 	if(ObjType.isCreatureContainer()){
-		this->Combat.DelayAttack(2000);
+		this->Combat.DelayAttack(AttackInterval);
 	}
 
 	int MoveCount = (int)Count;
@@ -1340,6 +1340,10 @@ void TCreature::NotifyGo(void){
 	int OrigZ = this->posz;
 	bool DiagonalMove = (DestX != OrigX && DestY != OrigY && DestZ == OrigZ);
 
+	if(this->Type == PLAYER && OrigZ != DestZ && StairJumpExhaustion > 0){
+		this->Combat.DelayAttack(StairJumpExhaustion);
+	}
+
 	// IMPORTANT(fusion): `SendFloors` and `SendRow` will use the current creature
 	// position to know where to pull fields from, so we need to keep them updated
 	// as we go.
@@ -1436,6 +1440,11 @@ void TCreature::NotifyGo(void){
 				SendMessage(this->Connection, TALK_FAILURE_MESSAGE, "Trade cancelled.");
 				((TPlayer*)this)->RejectTrade();
 			}
+		}
+
+		// NOTE: Update the protection zone icon right away.
+		if(SendPZIcon && this->Connection != NULL){
+			((TPlayer*)this)->CheckState();
 		}
 	}
 

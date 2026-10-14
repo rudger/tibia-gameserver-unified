@@ -17,6 +17,9 @@ static matrix<uint32> *FirstChainCreature;
 static vector<TCreature*> CreatureList(0, 10000, 1000, NULL);
 static int FirstFreeCreature;
 static uint32 NextCreatureID;
+// NOTE: NPCs get their own ID range so clients can tell them apart from
+// monsters (players < 0x40000000, monsters < 0x80000000, NPCs above that).
+static uint32 NextNPCID;
 
 static int KilledCreatures[MAX_RACES];
 static int KilledPlayers[MAX_RACES];
@@ -129,6 +132,7 @@ TCreature::TCreature(void) :
 	this->NextChainCreature =  0;
 	this->Name[0] = 0;
 	this->Murderer[0] = 0;
+	this->LootReceiver = 0;
 	this->OrgOutfit = {};
 	this->Outfit = {};
 	this->startx = 0;
@@ -168,6 +172,61 @@ TCreature::TCreature(void) :
 
 	for(int i = 0; i < NARRAY(this->Skills); i += 1){
 		this->NewSkill((uint16)i, this);
+	}
+}
+
+static void AppendLoot(char *Text, int TextSize, Object Con, bool *First){
+	Object Obj = GetFirstContainerObject(Con);
+	while(Obj != NONE){
+		const char *Name = GetName(Obj);
+		int Len = (int)strlen(Text);
+		if(Len + (int)strlen(Name) + 6 >= TextSize){
+			if(Len + 4 < TextSize){
+				strcat(Text, "...");
+			}
+			return;
+		}
+
+		if(!*First){
+			strcat(Text, ", ");
+		}
+		strcat(Text, Name);
+		*First = false;
+
+		if(Obj.getObjectType().getFlag(CONTAINER)){
+			AppendLoot(Text, TextSize, Obj, First);
+		}
+		Obj = Obj.getNextObject();
+	}
+}
+
+// Sends "Loot of a rat: 3 gold coins, a cheese." to the player as a green
+// info message, and to the Loot channel if the player has it open.
+static void SendLootMessage(uint32 PlayerID, int Race, Object Corpse){
+	TPlayer *Player = GetPlayer(PlayerID);
+	if(Player == NULL || Player->Connection == NULL){
+		return;
+	}
+
+	char Text[256];
+	if(RaceData[Race].Article[0] != 0){
+		snprintf(Text, sizeof(Text), "Loot of %s %s: ", RaceData[Race].Article, RaceData[Race].Name);
+	}else{
+		snprintf(Text, sizeof(Text), "Loot of %s: ", RaceData[Race].Name);
+	}
+
+	bool First = true;
+	if(Corpse.getObjectType().getFlag(CONTAINER)){
+		AppendLoot(Text, (int)sizeof(Text) - 1, Corpse, &First);
+	}
+
+	if(First){
+		strcat(Text, "nothing");
+	}
+	strcat(Text, ".");
+	SendMessage(Player->Connection, TALK_INFO_MESSAGE, "%s", Text);
+	if(ChannelSubscribed(CHANNEL_LOOT, PlayerID)){
+		SendTalk(Player->Connection, 0, "", TALK_CHANNEL_CALL, CHANNEL_LOOT, Text);
 	}
 }
 
@@ -233,7 +292,14 @@ TCreature::~TCreature(void){
 				Change(Corpse, TEXTSTRING, AddDynamicString(Help));
 			}
 
-			if(this->LoseInventory != LOSE_INVENTORY_NONE){
+			// NOTE: Without stamina the killer gets no loot from monsters.
+			bool NoLoot = false;
+			if(SendStamina && this->Type != PLAYER && this->LootReceiver != 0){
+				TPlayer *Receiver = GetPlayer(this->LootReceiver);
+				NoLoot = (Receiver != NULL && Receiver->GetStaminaExpPercent() == 0);
+			}
+
+			if(this->LoseInventory != LOSE_INVENTORY_NONE && !NoLoot){
 				for(int Position = INVENTORY_FIRST;
 						Position <= INVENTORY_LAST;
 						Position += 1){
@@ -252,6 +318,10 @@ TCreature::~TCreature(void){
 
 			if(this->Type == PLAYER && this->LoseInventory != LOSE_INVENTORY_ALL){
 				((TPlayer*)this)->SaveInventory();
+			}
+
+			if(this->Type != PLAYER && this->LootReceiver != 0){
+				SendLootMessage(this->LootReceiver, this->Race, Corpse);
 			}
 		}catch(RESULT r){
 			error("TCreature::~TCreature: Kann Leiche/Inventory nicht ablegen (Exc %d, Pos [%d,%d,%d], %s).\n",
@@ -294,7 +364,7 @@ void TCreature::SetID(uint32 CharacterID){
 	if(CharacterID == 0){
 		bool Found = false;
 		for(int Attempts = 0; Attempts < 16; Attempts += 1){
-			CreatureID = NextCreatureID++;
+			CreatureID = (this->Type == NPC ? NextNPCID++ : NextCreatureID++);
 			if(GetCreature(CreatureID) == NULL){
 				Found = true;
 				break;
@@ -508,6 +578,15 @@ int TCreature::Damage(TCreature *Attacker, int Damage, int DamageType){
 		if(this->Type == PLAYER && Responsible->Type == PLAYER){
 			((TPlayer*)Responsible)->RecordAttack(this->ID);
 		}
+
+		// NOTE: Fighting monsters uses stamina (see `TPlayer::CheckStamina`).
+		if(SendStamina){
+			if(this->Type == MONSTER && Responsible->Type == PLAYER){
+				((TPlayer*)Responsible)->StaminaCombatRound = RoundNr;
+			}else if(this->Type == PLAYER && Responsible->Type == MONSTER){
+				((TPlayer*)this)->StaminaCombatRound = RoundNr;
+			}
+		}
 	}
 
 	if(this->Type == PLAYER){
@@ -529,7 +608,7 @@ int TCreature::Damage(TCreature *Attacker, int Damage, int DamageType){
 					&& (ObjType.getAttribute(PROTECTIONDAMAGETYPES) & DamageType) != 0){
 				int DamageReduction = ObjType.getAttribute(DAMAGEREDUCTION);
 				Damage = (Damage * (100 - DamageReduction)) / 100;
-				if(ObjType.getFlag(WEAROUT)){
+				if(RemoveWeaponCharges && ObjType.getFlag(WEAROUT)){
 					// TODO(fusion): Ugh... The try..catch block might be used only
 					// when changing the object's type.
 					try{
@@ -824,6 +903,12 @@ int TCreature::Damage(TCreature *Attacker, int Damage, int DamageType){
 		}else{
 			AddKillStatistics(Attacker->Race, this->Race);
 			strcpy(this->Murderer, Attacker->Name);
+
+			// NOTE: The player that killed a monster (or owns the killing summon)
+			// gets the loot message in the Loot channel.
+			if(this->Type != PLAYER && Responsible->Type == PLAYER){
+				this->LootReceiver = Responsible->ID;
+			}
 
 			if(Responsible->Type == PLAYER){
 				MurdererID = Responsible->ID;
@@ -1199,6 +1284,9 @@ void ProcessCreatures(void){
 		if(Creature->Type == PLAYER){
 			if(Creature->Connection != NULL){
 				((TPlayer*)Creature)->CheckState();
+				if(SendStamina){
+					((TPlayer*)Creature)->CheckStamina();
+				}
 			}
 
 			if(Creature->EarliestLogoutRound != 0 && Creature->EarliestLogoutRound <= RoundNr){
@@ -2239,6 +2327,7 @@ void ProcessMonsterRaids(void){
 // =============================================================================
 void InitCr(void){
 	NextCreatureID = 0x40000000;
+	NextNPCID = 0x80000000;
 	FirstFreeCreature = 0;
 	FirstChainCreature = new matrix<uint32>(
 				SectorXMin * 2, SectorXMax * 2 + 1,

@@ -53,6 +53,69 @@ uint8 GetLiquidColor(int LiquidType){
 	return LiquidColor;
 }
 
+// NOTE: Filled vials are separate stackable objects, one per liquid: TypeID
+// FILLED_VIAL_FIRST + LiquidType - 1 ("a vial of water" ... "a vial of
+// lemonade"). The empty vial stays the liquid container VIAL_TYPEID. When the
+// filled vial objects don't exist in objects.srv, vials work like before.
+static const int VIAL_TYPEID = 2874;
+static const int FILLED_VIAL_FIRST = 5091;
+
+ObjectType GetVialType(void){
+	return ObjectType(VIAL_TYPEID);
+}
+
+ObjectType GetFilledVialType(int LiquidType){
+	int TypeID = FILLED_VIAL_FIRST + LiquidType - 1;
+	if(LiquidType <= LIQUID_NONE || LiquidType > LIQUID_LEMONADE
+			|| !ObjectTypeExists(TypeID)
+			|| !ObjectType(TypeID).getFlag(CUMULATIVE)){
+		return ObjectType(0);
+	}
+	return ObjectType(TypeID);
+}
+
+int GetFilledVialLiquid(ObjectType Type){
+	int LiquidType = Type.TypeID - FILLED_VIAL_FIRST + 1;
+	if(LiquidType <= LIQUID_NONE || LiquidType > LIQUID_LEMONADE
+			|| GetFilledVialType(LiquidType) != Type){
+		return LIQUID_NONE;
+	}
+	return LiquidType;
+}
+
+// NOTE: The value sent to the client for fluid containers and pools. Normally
+// the liquid color (7.72), with `send_liquid_type` the liquid type numbered
+// like later clients (The Forgotten Client: GameNewFluids), so the client can
+// tell e.g. mana fluid and wine apart (hotkeys).
+uint8 GetClientLiquid(int LiquidType){
+	if(!SendLiquidType){
+		return GetLiquidColor(LiquidType);
+	}
+
+	uint8 Fluid;
+	switch(LiquidType){
+		case LIQUID_NONE:		Fluid = 0; break;
+		case LIQUID_WATER:		Fluid = 1; break;
+		case LIQUID_MANA:		Fluid = 2; break;
+		case LIQUID_BEER:		Fluid = 3; break;
+		case LIQUID_OIL:		Fluid = 4; break;
+		case LIQUID_BLOOD:		Fluid = 5; break;
+		case LIQUID_SLIME:		Fluid = 6; break;
+		case LIQUID_MUD:		Fluid = 7; break;
+		case LIQUID_LEMONADE:	Fluid = 8; break;
+		case LIQUID_MILK:		Fluid = 9; break;
+		case LIQUID_WINE:		Fluid = 10; break;
+		case LIQUID_LIFE:		Fluid = 11; break;
+		case LIQUID_URINE:		Fluid = 12; break;
+		default:{
+			error("GetClientLiquid: Ungültiger Flüssigkeitstyp %d\n", LiquidType);
+			Fluid = 0;
+			break;
+		}
+	}
+	return Fluid;
+}
+
 const char *GetName(Object Obj){
 	char ObjectName[50] = {};
 	ObjectType ObjType = Obj.getObjectType();
@@ -396,6 +459,83 @@ Object GetContainer(uint32 CreatureID, int x, int y, int z){
 	}
 }
 
+// NOTE: Hotkeys send the object type plus the value the client knows for fluid
+// containers: the liquid color, or the liquid type (see `GetClientLiquid`).
+static bool IsHotkeyObject(Object Obj, ObjectType Type, uint32 Value){
+	ObjectType ObjType = Obj.getObjectType();
+	if(ObjType != Type){
+		return false;
+	}
+
+	if(ObjType.getFlag(LIQUIDCONTAINER)){
+		return GetClientLiquid((int)Obj.getAttribute(CONTAINERLIQUIDTYPE)) == Value;
+	}
+
+	if(ObjType.getFlag(KEY)){
+		return Obj.getAttribute(KEYNUMBER) == Value;
+	}
+
+	return true;
+}
+
+static Object FindHotkeyObject(Object Obj, ObjectType Type, uint32 Value){
+	while(Obj != NONE){
+		if(IsHotkeyObject(Obj, Type, Value)){
+			return Obj;
+		}
+
+		if(Obj.getObjectType().getFlag(CONTAINER)){
+			Object Result = FindHotkeyObject(GetFirstContainerObject(Obj), Type, Value);
+			if(Result != NONE){
+				return Result;
+			}
+		}
+
+		Obj = Obj.getNextObject();
+	}
+	return NONE;
+}
+
+static int CountHotkeyObjects(Object Obj, ObjectType Type, uint32 Value){
+	int Count = 0;
+	while(Obj != NONE){
+		if(IsHotkeyObject(Obj, Type, Value)){
+			if(Obj.getObjectType().getFlag(CUMULATIVE)){
+				Count += (int)Obj.getAttribute(AMOUNT);
+			}else{
+				Count += 1;
+			}
+		}
+
+		if(Obj.getObjectType().getFlag(CONTAINER)){
+			Count += CountHotkeyObjects(GetFirstContainerObject(Obj), Type, Value);
+		}
+
+		Obj = Obj.getNextObject();
+	}
+	return Count;
+}
+
+// NOTE: Searches the body slots and everything inside them, including closed
+// containers. The body slot chain holds one container object per slot.
+Object GetHotkeyObject(uint32 CreatureID, ObjectType Type, uint32 Value){
+	TCreature *Creature = GetCreature(CreatureID);
+	if(Creature == NULL || Creature->CrObject == NONE){
+		return NONE;
+	}
+
+	return FindHotkeyObject(GetFirstContainerObject(Creature->CrObject), Type, Value);
+}
+
+int CountHotkeyObjects(uint32 CreatureID, ObjectType Type, uint32 Value){
+	TCreature *Creature = GetCreature(CreatureID);
+	if(Creature == NULL || Creature->CrObject == NONE){
+		return 0;
+	}
+
+	return CountHotkeyObjects(GetFirstContainerObject(Creature->CrObject), Type, Value);
+}
+
 Object GetObject(uint32 CreatureID, int x, int y, int z, int RNum, ObjectType Type){
 	Object Obj = NONE;
 	if(x == 0xFFFF){ // SPECIAL_COORDINATE ?
@@ -406,7 +546,12 @@ Object GetObject(uint32 CreatureID, int x, int y, int z, int RNum, ObjectType Ty
 			if(Con != NONE){
 				Obj = GetContainerObject(Con, (z >= 0 && z < 254 ? z : RNum));
 			}
-		}else if(y != INVENTORY_ANY){
+		}else if(y == INVENTORY_ANY){
+			// NOTE: Hotkeys ("use object", "use on yourself", "use on target")
+			// don't send a position, just the object type. Use the first object
+			// of that type the player carries, like in later clients.
+			Obj = GetHotkeyObject(CreatureID, Type, (uint32)RNum);
+		}else{
 			error("GetObject: Ungültiger ContainerCode x=%d,y=%d,z=%d,RNum=%d,Type=%d.\n",
 					x, y, z, RNum, Type.TypeID);
 		}
@@ -1300,6 +1445,10 @@ int GetInventoryWeight(uint32 CreatureID){
 }
 
 bool CheckRight(uint32 CharacterID, RIGHT Right){
+	if(FreePremium && Right == PREMIUM_ACCOUNT){
+		return true;
+	}
+
 	TPlayer *Player = GetPlayer(CharacterID);
 	if(Player == NULL){
 		error("CheckRight: Spieler existiert nicht; Right=%d.\n", Right);

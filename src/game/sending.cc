@@ -178,12 +178,12 @@ static void SendItem(TConnection *Connection, Object Obj){
 
 	if(ObjType.getFlag(LIQUIDCONTAINER)){
 		int LiquidType = (int)Obj.getAttribute(CONTAINERLIQUIDTYPE);
-		SendByte(Connection, GetLiquidColor(LiquidType));
+		SendByte(Connection, GetClientLiquid(LiquidType));
 	}
 
 	if(ObjType.getFlag(LIQUIDPOOL)){
 		int LiquidType = (int)Obj.getAttribute(POOLLIQUIDTYPE);
-		SendByte(Connection, GetLiquidColor(LiquidType));
+		SendByte(Connection, GetClientLiquid(LiquidType));
 	}
 
 	if(ObjType.getFlag(CUMULATIVE)){
@@ -1232,6 +1232,24 @@ void SendPlayerData(TConnection *Connection){
 	SendByte(Connection, (uint8)MagicLevel);
 	SendByte(Connection, (uint8)MagicLevelPercent);
 	SendByte(Connection, (uint8)SoulPoints);
+	if(SendStamina){
+		// NOTE: Not part of the 7.72 protocol. Stamina in minutes, The Forgotten
+		// Client reads it with GameStamina.
+		int Stamina = 0;
+		if(Player->Skills[SKILL_STAMINA] != NULL){
+			Stamina = std::max<int>(Player->Skills[SKILL_STAMINA]->Act, 0);
+		}
+		SendWord(Connection, (uint16)std::min<int>(Stamina, UINT16_MAX));
+	}
+	if(SendFoodTime){
+		// NOTE: Not part of the 7.72 protocol. The Forgotten Client reads it
+		// with GameRegenerationTime, the original client would disconnect.
+		int FoodTime = 0;
+		if(Player->Skills[SKILL_FED] != NULL){
+			FoodTime = std::max<int>(Player->Skills[SKILL_FED]->TimerValue(), 0);
+		}
+		SendWord(Connection, (uint16)std::min<int>(FoodTime, UINT16_MAX));
+	}
 	FinishSendData(Connection);
 }
 
@@ -1315,13 +1333,18 @@ void SendPlayerSkills(TConnection *Connection){
 	FinishSendData(Connection);
 }
 
-void SendPlayerState(TConnection *Connection, uint8 State){
+void SendPlayerState(TConnection *Connection, uint16 State){
 	if(!BeginSendData(Connection)){
 		return;
 	}
 
 	SendByte(Connection, SV_CMD_PLAYER_STATE);
-	SendByte(Connection, State);
+	if(SendPZIcon){
+		// NOTE: Two bytes, like 8.x clients (0x4000 = in protection zone).
+		SendWord(Connection, State);
+	}else{
+		SendByte(Connection, (uint8)State);
+	}
 	FinishSendData(Connection);
 }
 
@@ -1332,6 +1355,24 @@ void SendClearTarget(TConnection *Connection){
 
 	SendByte(Connection, SV_CMD_CLEAR_TARGET);
 	FinishSendData(Connection);
+}
+
+// NOTE: Not part of the 7.72 protocol. With send_message_level the level of
+// the speaking player follows the name, as in 7.80+ (GameMessageLevel in The
+// Forgotten Client). Non-players get level 0, which the client does not show.
+static void SendSpeakerLevel(TConnection *Connection, const char *Sender){
+	if(!SendMessageLevel){
+		return;
+	}
+
+	int Level = 0;
+	if(Sender != NULL && Sender[0] != 0){
+		TPlayer *Speaker = GetPlayer(Sender);
+		if(Speaker != NULL && Speaker->Skills[SKILL_LEVEL] != NULL){
+			Level = Speaker->Skills[SKILL_LEVEL]->Get();
+		}
+	}
+	SendWord(Connection, (uint16)Level);
 }
 
 void SendTalk(TConnection *Connection, uint32 StatementID,
@@ -1363,6 +1404,7 @@ void SendTalk(TConnection *Connection, uint32 StatementID,
 	SendByte(Connection, SV_CMD_TALK);
 	SendQuad(Connection, StatementID);
 	SendString(Connection, Sender);
+	SendSpeakerLevel(Connection, Sender);
 	SendByte(Connection, (uint8)Mode);
 	if(Mode == TALK_GAMEMASTER_REQUEST){
 		SendQuad(Connection, (uint32)Data);
@@ -1399,8 +1441,10 @@ void SendTalk(TConnection *Connection, uint32 StatementID,
 	SendQuad(Connection, StatementID);
 	if(Mode != TALK_ANONYMOUS_CHANNELCALL){
 		SendString(Connection, Sender);
+		SendSpeakerLevel(Connection, Sender);
 	}else{
 		SendString(Connection, "");
+		SendSpeakerLevel(Connection, "");
 	}
 	SendByte(Connection, (uint8)Mode);
 	SendWord(Connection, (uint16)Channel);
@@ -1436,6 +1480,7 @@ void SendTalk(TConnection *Connection, uint32 StatementID,
 	SendByte(Connection, SV_CMD_TALK);
 	SendQuad(Connection, StatementID);
 	SendString(Connection, Sender);
+	SendSpeakerLevel(Connection, Sender);
 	SendByte(Connection, (uint8)Mode);
 	SendWord(Connection, (uint16)x);
 	SendWord(Connection, (uint16)y);
@@ -1488,9 +1533,17 @@ void SendChannels(TConnection *Connection){
 		NumAvailable -= 1;
 	}
 
-	for(int Channel = 0; Channel < Channels; Channel += 1){
+	for(int Index = 0; Index < Channels; Index += 1){
 		if(NumAvailable <= 0){
 			break;
+		}
+
+		// NOTE: Show the Loot channel right under RL-Chat, before Help.
+		int Channel = Index;
+		if(Index == CHANNEL_HELP){
+			Channel = CHANNEL_LOOT;
+		}else if(Index == CHANNEL_LOOT){
+			Channel = CHANNEL_HELP;
 		}
 
 		if(Available[Channel]){
@@ -1677,16 +1730,38 @@ void SendOutfit(TConnection *Connection){
 		return;
 	}
 
-	uint16 FirstOutfit = (Player->Sex == 1) ? 128 : 136;
-	uint16 LastOutfit  = (Player->Sex == 1) ? 131 : 139;
-	if(CheckRight(Player->ID, PREMIUM_ACCOUNT)){
-		LastOutfit += 3;
-	}
-
 	SendByte(Connection, SV_CMD_OUTFIT);
 	SendOutfit(Connection, Player->OrgOutfit);
-	SendWord(Connection, FirstOutfit);
-	SendWord(Connection, LastOutfit);
+	if(SendOutfitList){
+		// NOTE: Not part of the 7.72 protocol. A list of outfits with names (and
+		// addons, always 0 for now), The Forgotten Client reads it with
+		// GameNewOutfitProtocol.
+		int Count = 0;
+		for(int i = 0; i < GetOutfitCount(); i += 1){
+			if(IsOutfitAllowed(Player, GetOutfitEntry(i)->OutfitID, true)){
+				Count += 1;
+			}
+		}
+
+		SendByte(Connection, (uint8)Count);
+		for(int i = 0; i < GetOutfitCount(); i += 1){
+			const TOutfitEntry *Entry = GetOutfitEntry(i);
+			if(IsOutfitAllowed(Player, Entry->OutfitID, true)){
+				SendWord(Connection, (uint16)Entry->OutfitID);
+				SendString(Connection, Entry->Name);
+				SendByte(Connection, 0);
+			}
+		}
+	}else{
+		uint16 FirstOutfit = (Player->Sex == 1) ? 128 : 136;
+		uint16 LastOutfit  = (Player->Sex == 1) ? 131 : 139;
+		if(CheckRight(Player->ID, PREMIUM_ACCOUNT)){
+			LastOutfit += 3;
+		}
+
+		SendWord(Connection, FirstOutfit);
+		SendWord(Connection, LastOutfit);
+	}
 	FinishSendData(Connection);
 }
 
