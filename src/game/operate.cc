@@ -1350,6 +1350,41 @@ void Move(uint32 CreatureID, Object Obj, Object Con, int Count, bool NoMerge, Ob
 		}
 	}
 
+	// NOTE: Moving a CUMULATIVE object into a container (anywhere, not onto a
+	// specific object) adds it to a stack of the same type in that container,
+	// like later clients: 50 + 12 gold coins become 62. When the stack doesn't
+	// have room for everything, it is filled up to 100 and the rest becomes a
+	// new stack.
+	if(!NoMerge && !ConType.isMapContainer() && !ConType.isBodyContainer()
+			&& ObjType.getFlag(CUMULATIVE)
+			&& OldCon != Con){
+		int MoveCount = (Count == -1 ? (int)Obj.getAttribute(AMOUNT) : Count);
+		Object Stack = GetFirstContainerObject(Con);
+		while(Stack != NONE){
+			if(Stack != Obj && Stack.getObjectType() == ObjType
+					&& (int)Stack.getAttribute(AMOUNT) < 100){
+				break;
+			}
+			Stack = Stack.getNextObject();
+		}
+
+		if(Stack != NONE){
+			int Room = 100 - (int)Stack.getAttribute(AMOUNT);
+			int MergeCount = std::min<int>(Room, MoveCount);
+			try{
+				Merge(CreatureID, Obj, Stack, MergeCount, Ignore);
+				if(MergeCount >= MoveCount){
+					return; // <-- EARLY RETURN, EVERYTHING WAS MERGED.
+				}
+				Count = MoveCount - MergeCount;
+			}catch(RESULT r){
+				if(r == DESTROYED){
+					throw;
+				}
+			}
+		}
+	}
+
 	// TODO(fusion): The only event inside `Merge` that could modify the object
 	// and still throw some non `DESTROYED` error is the separation event.
 	//	From what I've seen, it is used exclusively with non CUMULATIVE objects
