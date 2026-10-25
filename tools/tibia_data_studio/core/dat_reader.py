@@ -1,6 +1,6 @@
 """
-Parser do arquivo Tibia.dat (Formato Oficial Tibia 7.4 - 7.72)
-Carrega 100% das definições de itens, criaturas/outfits, efeitos e projéteis.
+Tibia.dat File Parser (Official Tibia 7.4 - 7.72 format)
+Loads 100% of item, creature/outfit, effect and projectile definitions.
 """
 
 import os
@@ -79,14 +79,14 @@ class DatReader:
             for item_id in range(min_id, max_id + 1):
                 thing = ThingType(id=item_id, category=cat_name)
                 
-                # Leitura de flags até encontrar 0xFF (Fim de Atributos)
+                # Read flags until 0xFF (End of Attributes)
                 while pos < len(data):
                     opt = data[pos]
                     pos += 1
                     if opt == 0xFF:
                         break
                     
-                    # Opcodes e parâmetros conforme o formato Tibia 7.72
+                    # Opcodes and parameters conforming to Tibia 7.72 format
                     if opt == 0:  # Ground (2 bytes: velocidade)
                         thing.flags["ground"] = struct.unpack_from("<H", data, pos)[0]
                         pos += 2

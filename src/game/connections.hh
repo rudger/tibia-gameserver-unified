@@ -229,6 +229,7 @@ struct TConnection {
 TConnection *AssignFreeConnection(void);
 TConnection *GetFirstConnection(void);
 TConnection *GetNextConnection(void);
+TConnection *GetConnectionByIndex(int index);
 void ProcessConnections(void);
 void InitConnections(void);
 void ExitConnections(void);

@@ -558,6 +558,13 @@ TConnection *GetNextConnection(void){
 	return NextConnection;
 }
 
+TConnection *GetConnectionByIndex(int index){
+	if(index < 0 || index >= MAX_CONNECTIONS){
+		return NULL;
+	}
+	return &Connections[index];
+}
+
 void ProcessConnections(void){
 	TConnection *Connection = GetFirstConnection();
 	while(Connection != NULL){

@@ -6,6 +6,9 @@ Fornece APIs REST de alto desempenho para Itens, Monstros, NPCs, MoveUse e Sprit
 import os
 import sys
 import json
+import random
+import re
+import difflib
 from io import BytesIO
 from flask import Flask, jsonify, request, send_file, render_template
 from PIL import Image
@@ -22,6 +25,7 @@ from core.npc_parser import NpcManager, NpcData
 from core.backup_manager import BackupManager
 from core.functions_doc import get_full_catalog
 from core.outfit_colorizer import colorize_tile, parse_outfit_colors
+from core.map_parser import MapManager
 
 app = Flask(__name__, static_folder="static", template_folder="templates")
 
@@ -33,6 +37,7 @@ moveuse_parser = MoveUseParser()
 monster_manager = MonsterManager()
 npc_manager = NpcManager()
 backup_mgr = BackupManager()
+map_manager = MapManager()
 
 CONFIG_FILE = os.path.join(BASE_DIR, "config.json")
 
@@ -59,7 +64,7 @@ def save_config_to_file():
         print(f"Erro ao salvar config.json: {e}")
 
 def auto_load_data():
-    """Carrega os dados padrão do servidor e do cliente Tibia"""
+    """Loads default server and Tibia client data"""
     load_saved_config()
     
     # Carrega dados do servidor
@@ -81,13 +86,18 @@ def auto_load_data():
         if os.path.exists(npc_path):
             npc_manager.load_all(npc_path)
 
+        # Carrega mapa, monsterhomes e casas
+        map_manager.load_all(data_path)
+        map_manager.objects_parser = objects_parser
+        map_manager.link_monsters(monster_manager.get_all_list())
+
     # Carrega arquivos do cliente (Tibia.spr e Tibia.dat)
     client_path = current_config["client_path"]
     if client_path and os.path.exists(client_path):
         load_client_files(client_path)
 
 def load_client_files(client_path: str):
-    # Procura Tibia.spr (com suporte a maiúsculas e minúsculas)
+    # Looks for Tibia.spr (case-insensitive)
     spr_path = os.path.join(client_path, "Tibia.spr")
     if not os.path.exists(spr_path):
         spr_path = os.path.join(client_path, "tibia.spr")
@@ -108,7 +118,7 @@ def load_client_files(client_path: str):
 def index():
     return render_template("index.html")
 
-# ----------------- CONFIGURAÇÕES & DIRETÓRIOS -----------------
+# ----------------- CONFIGURATION & DIRECTORIES -----------------
 
 @app.route("/api/config", methods=["GET"])
 def get_config():
@@ -123,6 +133,10 @@ def get_config():
         "monsters_count": len(monster_manager.monsters),
         "npcs_loaded": npc_manager.is_loaded,
         "npcs_count": len(npc_manager.npcs),
+        "map_loaded": map_manager.is_loaded,
+        "sectors_count": len(map_manager.sector_files),
+        "spawns_count": len(map_manager.spawns),
+        "houses_count": len(map_manager.houses),
         "spr_loaded": spr_reader.is_loaded,
         "spr_count": spr_reader.sprite_count,
         "dat_loaded": dat_reader.is_loaded,
@@ -155,6 +169,9 @@ def set_config_load():
             if os.path.exists(npc_path):
                 npc_manager.load_all(npc_path)
 
+            map_manager.load_all(data_path)
+            map_manager.link_monsters(monster_manager.get_all_list())
+
         if client_path:
             current_config["client_path"] = client_path
             if os.path.exists(client_path):
@@ -183,8 +200,8 @@ def get_sprite(sprite_id: int):
 
     return send_file(BytesIO(png_bytes), mimetype="image/png")
 
-def render_thing_composite(thing, zoom=1, anim=0, colors_str=""):
-    """Renderiza um item ou criatura compondo todos os seus tiles (ex: 64x64, 32x64) e aplicando colorização de outfit"""
+def render_thing_composite(thing, zoom=1, anim=0, colors_str="", custom_dir=None):
+    """Renders an item or creature by compositing all its tiles (e.g. 64x64, 32x64) and applying outfit colorization, direction and animation"""
     if not thing or not thing.sprites or not spr_reader.is_loaded:
         img = Image.new("RGBA", (32 * zoom, 32 * zoom), (30, 34, 42, 200))
         buf = BytesIO()
@@ -198,7 +215,13 @@ def render_thing_composite(thing, zoom=1, anim=0, colors_str=""):
     head, body, legs, feet = parse_outfit_colors(colors_str)
     has_mask = (thing.layers >= 2)
 
-    dir_x = 2 if thing.pattern_x >= 3 else 0
+    # Custom direction support (0: North, 1: East, 2: South, 3: West)
+    if custom_dir is not None and 0 <= custom_dir < thing.pattern_x:
+        dir_x = custom_dir
+    else:
+        dir_x = 2 if thing.pattern_x >= 3 else 0
+
+    anim_idx = anim % max(1, thing.animations)
 
     for w in range(width):
         for h in range(height):
@@ -206,9 +229,9 @@ def render_thing_composite(thing, zoom=1, anim=0, colors_str=""):
             py = (height - 1 - h) * 32
 
             if has_mask:
-                # Camada 0: Base, Camada 1: Máscara
-                spr_base_id = thing.get_sprite_index(w=w, h=h, l=0, x=dir_x, a=anim)
-                spr_mask_id = thing.get_sprite_index(w=w, h=h, l=1, x=dir_x, a=anim)
+                # Layer 0: Base, Layer 1: Mask
+                spr_base_id = thing.get_sprite_index(w=w, h=h, l=0, x=dir_x, a=anim_idx)
+                spr_mask_id = thing.get_sprite_index(w=w, h=h, l=1, x=dir_x, a=anim_idx)
                 
                 spr_base = spr_reader.get_sprite_image(spr_base_id) if spr_base_id else None
                 spr_mask = spr_reader.get_sprite_image(spr_mask_id) if spr_mask_id else None
@@ -221,7 +244,7 @@ def render_thing_composite(thing, zoom=1, anim=0, colors_str=""):
                         base_img.alpha_composite(spr_base, (px, py))
             else:
                 for l in range(thing.layers):
-                    sprite_id = thing.get_sprite_index(w=w, h=h, l=l, x=dir_x, a=anim)
+                    sprite_id = thing.get_sprite_index(w=w, h=h, l=l, x=dir_x, a=anim_idx)
                     if sprite_id and sprite_id > 0:
                         sprite_img = spr_reader.get_sprite_image(sprite_id)
                         base_img.alpha_composite(sprite_img, (px, py))
@@ -254,11 +277,32 @@ def get_outfit_sprite(look_type: int):
     zoom = int(request.args.get("zoom", 1))
     zoom = max(1, min(8, zoom))
     colors_str = request.args.get("colors", "")
+    
+    dir_param = request.args.get("dir", None)
+    anim_param = int(request.args.get("anim", 0))
+    custom_dir = int(dir_param) if dir_param is not None and dir_param.isdigit() else None
+
+    # Suporte a Outfits de Item (LookType = 0, com ItemID no colors_str ou ?item=ID)
+    # Ex: The Oracle (0, 2031), The Gatekeeper (0, 2031), Frans (0, 3114), Cobra (0, 2051)
+    item_id_param = request.args.get("item", None)
+    item_id = None
+    if item_id_param and item_id_param.isdigit():
+        item_id = int(item_id_param)
+    elif look_type == 0 and colors_str:
+        clean_colors = colors_str.strip()
+        if clean_colors.isdigit() and int(clean_colors) > 0:
+            item_id = int(clean_colors)
+
+    if item_id and dat_reader.is_loaded:
+        item = dat_reader.get_item(item_id)
+        if item:
+            png_bytes = render_thing_composite(item, zoom=zoom)
+            return send_file(BytesIO(png_bytes), mimetype="image/png")
 
     if dat_reader.is_loaded:
         creature = dat_reader.get_creature(look_type)
         if creature:
-            png_bytes = render_thing_composite(creature, zoom=zoom, colors_str=colors_str)
+            png_bytes = render_thing_composite(creature, zoom=zoom, anim=anim_param, colors_str=colors_str, custom_dir=custom_dir)
             return send_file(BytesIO(png_bytes), mimetype="image/png")
 
     img = Image.new("RGBA", (32 * zoom, 32 * zoom), (35, 40, 50, 200))
@@ -267,31 +311,31 @@ def get_outfit_sprite(look_type: int):
     return send_file(BytesIO(buf.getvalue()), mimetype="image/png")
 
 MAGIC_EFFECTS = [
-    {"id": 1, "name": "Draw Blood (Red Spark)", "desc": "Faísca vermelha de impacto físico / Red physical spark"},
-    {"id": 2, "name": "Lose Energy (Blue Spark)", "desc": "Faísca azul de impacto mágico / Blue energy spark"},
-    {"id": 3, "name": "Poff / Puff", "desc": "Fumaça azul/cinza de desaparecimento / Smoke puff"},
-    {"id": 4, "name": "Block (Yellow Spark)", "desc": "Faísca amarela de bloqueio em escudo / Yellow shield spark"},
-    {"id": 5, "name": "Magic Blue (Energy)", "desc": "Raio mágico azul / Teleport / Blue energy rays"},
-    {"id": 6, "name": "Magic Red (Fire)", "desc": "Chama mágica vermelha / Fogo / Red fire flare"},
-    {"id": 7, "name": "Magic Green (Poison)", "desc": "Brilho verde de veneno / Green poison spark"},
-    {"id": 8, "name": "Hit Area (Fire Area)", "desc": "Área de chamas e fogo / Fire area blast"},
-    {"id": 9, "name": "Teleport Yellow", "desc": "Explosão amarela de teleport / Yellow teleport flash"},
-    {"id": 10, "name": "Mort Area (Death / SD)", "desc": "Efeito de morte (Sudden Death) / Death damage area"},
-    {"id": 11, "name": "Sound Green (Music Notes)", "desc": "Notas musicais verdes / Green musical notes"},
-    {"id": 12, "name": "Sound Red (Music Notes)", "desc": "Notas musicais vermelhas / Red musical notes"},
-    {"id": 13, "name": "Poison Area", "desc": "Nuvem tóxica de veneno em área / Poison toxic cloud"},
-    {"id": 14, "name": "Yellow Energy", "desc": "Explosão amarela / Faísca de choque / Yellow spark wave"},
-    {"id": 15, "name": "Explosion", "desc": "Explosão de terra (Explosion rune) / Ground explosion"},
-    {"id": 16, "name": "Plant Attack (Stones)", "desc": "Pedras caindo / Ataque de planta / Falling rocks"},
-    {"id": 17, "name": "Blue Energy (Lightning)", "desc": "Feixe de eletricidade azul / Energy lightning"},
-    {"id": 18, "name": "Firework (Giant Explosion)", "desc": "Fogos de artifício com estrelas / Fireworks blast"},
-    {"id": 19, "name": "Dice Roll", "desc": "Dado rolando (1 a 6) / Rolling dice"},
-    {"id": 20, "name": "Gift / Present", "desc": "Presente de natal animado / Animated gift box"},
-    {"id": 21, "name": "Critical / Tear", "desc": "Lágrima / Brilho de golpe crítico / Critical hit tears"},
-    {"id": 22, "name": "Stun / Thunder", "desc": "Trovão / Atordoamento / Thunder stun"},
-    {"id": 23, "name": "Assassin Smoke", "desc": "Fumaça preta de assassino / Black assassin smoke"},
-    {"id": 24, "name": "Bubble", "desc": "Bolhas de água mágicas / Water bubbles"},
-    {"id": 25, "name": "Hearts / Love", "desc": "Corações vermelhos apaixonados / Red love hearts"}
+    {"id": 1, "name": "Draw Blood (Red Spark)", "desc": "Red spark from physical impact"},
+    {"id": 2, "name": "Lose Energy (Blue Spark)", "desc": "Blue spark from magical energy impact"},
+    {"id": 3, "name": "Poff / Puff", "desc": "Blue/gray vanishing smoke puff"},
+    {"id": 4, "name": "Block (Yellow Spark)", "desc": "Yellow shield block spark"},
+    {"id": 5, "name": "Magic Blue (Energy)", "desc": "Blue magical rays / Teleport"},
+    {"id": 6, "name": "Magic Red (Fire)", "desc": "Red magic flame / Fire flare"},
+    {"id": 7, "name": "Magic Green (Poison)", "desc": "Green poison spark / Poison flash"},
+    {"id": 8, "name": "Hit Area (Fire Area)", "desc": "Fire area burst / Fiery explosion"},
+    {"id": 9, "name": "Teleport Yellow", "desc": "Yellow teleport flash / Sparkle"},
+    {"id": 10, "name": "Mort Area (Death / SD)", "desc": "Death effect (Sudden Death) / Death burst"},
+    {"id": 11, "name": "Sound Green (Music Notes)", "desc": "Green musical notes"},
+    {"id": 12, "name": "Sound Red (Music Notes)", "desc": "Red musical notes"},
+    {"id": 13, "name": "Poison Area", "desc": "Toxic poison cloud / Poison area"},
+    {"id": 14, "name": "Yellow Energy", "desc": "Yellow shockwave / Energy discharge"},
+    {"id": 15, "name": "Explosion", "desc": "Ground explosion (Explosion rune)"},
+    {"id": 16, "name": "Plant Attack (Stones)", "desc": "Falling stones / Plant attack"},
+    {"id": 17, "name": "Blue Energy (Lightning)", "desc": "Blue lightning beam / Energy strike"},
+    {"id": 18, "name": "Firework (Giant Explosion)", "desc": "Fireworks burst with stars"},
+    {"id": 19, "name": "Dice Roll", "desc": "Rolling dice (1 to 6)"},
+    {"id": 20, "name": "Gift / Present", "desc": "Animated holiday gift box"},
+    {"id": 21, "name": "Critical / Tear", "desc": "Critical strike spark / Glint tears"},
+    {"id": 22, "name": "Stun / Thunder", "desc": "Thunder stun / Daze spark"},
+    {"id": 23, "name": "Assassin Smoke", "desc": "Black assassin smoke"},
+    {"id": 24, "name": "Bubble", "desc": "Magical water bubbles"},
+    {"id": 25, "name": "Hearts / Love", "desc": "Red floating love hearts"}
 ]
 
 @app.route("/api/effects", methods=["GET"])
@@ -338,17 +382,29 @@ def get_objects():
                 continue
 
         if flag_filter:
-            # Aceita várias flags separadas por vírgula (todas devem estar presentes)
-            required_flags = [f.strip() for f in flag_filter.split(",") if f.strip()]
-            if not all(f in obj["flags"] for f in required_flags):
-                continue
+            lower_flags = [f.lower() for f in obj.get("flags", [])]
+            obj_name = obj.get("name", "").lower()
+            if flag_filter.lower() == "corpse":
+                is_corpse = ("corpse" in lower_flags or 
+                             ("container" in lower_flags and any(w in obj_name for w in ["dead", "slain", "remains", "corpse"])) or
+                             any(w in obj_name for w in ["dead ", "slain ", "remains of", "dead_"]))
+                if not is_corpse:
+                    continue
+            else:
+                required_flags = [f.strip().lower() for f in flag_filter.split(",") if f.strip()]
+                if not any(f in lower_flags for f in required_flags):
+                    continue
 
         filtered.append(obj)
 
     total = len(filtered)
-    start_idx = (page - 1) * limit
-    end_idx = start_idx + limit
-    paginated = filtered[start_idx:end_idx]
+    # Se limit <= 0 ou limit >= 1000, retorna tudo
+    if limit <= 0:
+        paginated = filtered
+    else:
+        start_idx = (page - 1) * limit
+        end_idx = start_idx + limit
+        paginated = filtered[start_idx:end_idx]
 
     return jsonify({
         "total": total,
@@ -362,7 +418,7 @@ def get_objects():
 def get_object(type_id: int):
     obj = objects_parser.objects.get(type_id)
     if not obj:
-        return jsonify({"error": "Objeto não encontrado"}), 404
+        return jsonify({"error": "Object not found"}), 404
     return jsonify({
         "type_id": obj.type_id,
         "name": obj.name,
@@ -377,7 +433,7 @@ def save_object():
     data = request.json or {}
     type_id = int(data.get("type_id", -1))
     if type_id < 0:
-        return jsonify({"error": "TypeID inválido"}), 400
+        return jsonify({"error": "Invalid TypeID"}), 400
 
     obj = ServerObject(
         type_id=type_id,
@@ -394,7 +450,7 @@ def save_object():
         backup_mgr.create_backup(objects_parser.file_path)
         objects_parser.save()
 
-    return jsonify({"success": True, "type_id": type_id, "message": f"Item {type_id} salvo com sucesso!"})
+    return jsonify({"success": True, "type_id": type_id, "message": f"Item {type_id} saved successfully!"})
 
 @app.route("/api/objects/delete", methods=["POST"])
 def delete_object():
@@ -405,8 +461,8 @@ def delete_object():
         if objects_parser.file_path:
             backup_mgr.create_backup(objects_parser.file_path)
             objects_parser.save()
-        return jsonify({"success": True, "message": f"Item {type_id} removido."})
-    return jsonify({"error": "Item não encontrado"}), 404
+        return jsonify({"success": True, "message": f"Item {type_id} deleted."})
+    return jsonify({"error": "Item not found"}), 404
 
 # ----------------- MONSTROS (.MON) -----------------
 
@@ -434,7 +490,7 @@ def get_monsters():
 def get_monster(filename: str):
     m = monster_manager.monsters.get(filename)
     if not m:
-        return jsonify({"error": "Monstro não encontrado"}), 404
+        return jsonify({"error": "Monster not found"}), 404
     return jsonify({
         "filename": m.filename,
         "name": m.name,
@@ -475,7 +531,7 @@ def save_monster():
     data = request.json or {}
     filename = data.get("filename", "").strip()
     if not filename:
-        return jsonify({"error": "Nome de arquivo inválido"}), 400
+        return jsonify({"error": "Invalid filename"}), 400
 
     if not filename.endswith(".mon"):
         filename += ".mon"
@@ -520,7 +576,7 @@ def save_monster():
         backup_mgr.create_backup(full_p)
         monster_manager.save_monster(mon)
 
-    return jsonify({"success": True, "filename": filename, "message": f"Monstro {mon.name} salvo com sucesso!"})
+    return jsonify({"success": True, "filename": filename, "message": f"Monster {mon.name} saved successfully!"})
 
 # ----------------- MOVEUSE (MOVEUSE.DAT) -----------------
 
@@ -569,12 +625,11 @@ def save_moveuse():
         backup_mgr.create_backup(moveuse_parser.file_path)
         moveuse_parser.save()
 
-    return jsonify({"success": True, "message": "Arquivo moveuse.dat salvo com sucesso!"})
+    return jsonify({"success": True, "message": "File moveuse.dat saved successfully!"})
 
 @app.route("/api/moveuse/docs", methods=["GET"])
 def get_moveuse_docs():
-    lang = request.args.get("lang", "pt_BR")
-    return jsonify(get_full_catalog(lang))
+    return jsonify(get_full_catalog("en"))
 
 # ----------------- NPCS (.NPC) -----------------
 
@@ -601,7 +656,7 @@ def get_npcs():
 def get_npc(filename: str):
     npc = npc_manager.npcs.get(filename)
     if not npc:
-        return jsonify({"error": "NPC não encontrado"}), 404
+        return jsonify({"error": "NPC not found"}), 404
     return jsonify({
         "filename": npc.filename,
         "name": npc.name,
@@ -620,7 +675,7 @@ def save_npc():
     data = request.json or {}
     filename = data.get("filename", "").strip()
     if not filename:
-        return jsonify({"error": "Nome de arquivo inválido"}), 400
+        return jsonify({"error": "Invalid filename"}), 400
 
     if not filename.endswith(".npc"):
         filename += ".npc"
@@ -643,7 +698,474 @@ def save_npc():
         backup_mgr.create_backup(full_p)
         npc_manager.save_npc(npc)
 
-    return jsonify({"success": True, "filename": filename, "message": f"NPC {npc.name} salvo com sucesso!"})
+    return jsonify({"success": True, "filename": filename, "message": f"NPC {npc.name} saved successfully!"})
+
+# ----------------- INNOVATIVE FEATURES: SIMULATORS & BACKUPS -----------------
+
+@app.route("/api/npcs/simulate_chat", methods=["POST"])
+def simulate_npc_chat():
+    """Simulates real-time dialogue interaction between a player and an NPC"""
+    data = request.json or {}
+    filename = data.get("filename", "")
+    message = data.get("message", "").strip().lower()
+    player_name = data.get("player_name", "Player").strip()
+    topic = int(data.get("topic", 0))
+    player_money = int(data.get("player_money", 1000))
+
+    npc = npc_manager.npcs.get(filename)
+    if not npc:
+        for k, v in npc_manager.npcs.items():
+            if k.lower() == filename.lower():
+                npc = v
+                break
+    if not npc:
+        return jsonify({"error": "NPC not found"}), 404
+
+    response_text = ""
+    new_topic = topic
+    new_money = player_money
+    item_created = None
+    item_amount = 0
+    item_price = 0
+
+    is_greeting = any(g in message for g in ["hi", "hello", "hey", "ola", "oi", "greetings"])
+    is_farewell = any(f in message for f in ["bye", "farewell", "adeus", "tchau"])
+
+    # Scans NPC behaviour lines looking for best match
+    matched = False
+    for line in npc.behaviour_lines:
+        line_clean = line.strip()
+        if not line_clean or line_clean.startswith("#") or "->" not in line_clean:
+            continue
+
+        trigger_part, action_part = line_clean.split("->", 1)
+        trigger_part = trigger_part.strip()
+        action_part = action_part.strip()
+
+        # Checks greeting (ADDRESS)
+        if "address" in trigger_part.lower():
+            if is_greeting and ("hello" in trigger_part.lower() or "hi" in trigger_part.lower() or "! ->" in line_clean):
+                matched = True
+            else:
+                continue
+
+        # Checks condition Topic
+        req_topic = None
+        topic_match = re.search(r"topic\s*=\s*(\d+)", trigger_part, re.IGNORECASE)
+        if topic_match:
+            req_topic = int(topic_match.group(1))
+            if req_topic != topic:
+                continue
+
+        # Verifica palavras-chave entre aspas no trigger
+        keywords = re.findall(r'"([^"]+)"', trigger_part)
+        keyword_matched = False
+        if keywords:
+            for kw in keywords:
+                clean_kw = kw.strip().rstrip("$").lower()
+                if clean_kw in message:
+                    keyword_matched = True
+                    break
+        elif "address" in trigger_part.lower():
+            keyword_matched = is_greeting
+        else:
+            keyword_matched = True
+
+        if not keyword_matched and not (is_greeting and "address" in trigger_part.lower()):
+            continue
+
+        # Checks money condition: CountMoney>=Price
+        if "countmoney" in trigger_part.lower() and "price" in trigger_part.lower():
+            # Needs to know price from previous topic if present
+            cur_price = int(data.get("last_price", 0))
+            if player_money < cur_price:
+                continue
+
+        # Executes actions
+        matched = True
+
+        # Price and item type defined in action
+        price_m = re.search(r"price\s*=\s*([0-9\*\+]+)", action_part, re.IGNORECASE)
+        if price_m:
+            try:
+                item_price = eval(price_m.group(1)) # Ex: 3 ou 3*1
+            except:
+                item_price = 10
+
+        amt_m = re.search(r"amount\s*=\s*(\d+)", action_part, re.IGNORECASE)
+        if amt_m:
+            item_amount = int(amt_m.group(1))
+
+        type_m = re.search(r"type\s*=\s*(\d+)", action_part, re.IGNORECASE)
+        if type_m:
+            item_created = int(type_m.group(1))
+
+        # Topic update in action
+        act_topic = re.search(r"topic\s*=\s*(\d+)", action_part, re.IGNORECASE)
+        if act_topic:
+            new_topic = int(act_topic.group(1))
+        elif "idle" in action_part.lower():
+            new_topic = 0
+
+        # Purchase/money deduction
+        if "deletemoney" in action_part.lower():
+            cur_price = int(data.get("last_price", 0)) or item_price
+            if new_money >= cur_price:
+                new_money -= cur_price
+
+        # Extrai o texto da fala do NPC
+        speech_m = re.findall(r'"([^"]+)"', action_part)
+        if speech_m:
+            raw_speech = speech_m[0]
+            # Substitui tokens do Tibia
+            raw_speech = raw_speech.replace("%N", player_name)
+            raw_speech = raw_speech.replace("%P", str(item_price or data.get("last_price", 0)))
+            raw_speech = raw_speech.replace("%A", str(item_amount or 1))
+            response_text = raw_speech
+            break
+
+    if not matched:
+        if is_farewell:
+            response_text = "Good bye."
+            new_topic = 0
+        else:
+            response_text = "I don't understand what you mean."
+
+    return jsonify({
+        "success": True,
+        "npc_name": npc.name,
+        "message": response_text,
+        "new_topic": new_topic,
+        "new_money": new_money,
+        "item_price": item_price,
+        "item_created": item_created,
+        "item_amount": item_amount
+    })
+
+@app.route("/api/monsters/simulate_loot", methods=["POST"])
+def simulate_monster_loot():
+    """Simula Monte Carlo de drops de loot com base na probabilidade real do monstro"""
+    try:
+        data = request.json or {}
+        filename = data.get("filename", "")
+        kills = int(data.get("kills", 100))
+        kills = max(1, min(100000, kills))
+
+        mon = monster_manager.monsters.get(filename)
+        if not mon:
+            for k, v in monster_manager.monsters.items():
+                if k.lower() == filename.lower():
+                    mon = v
+                    break
+        if not mon:
+            return jsonify({"error": "Monster not found"}), 404
+
+        inventory = mon.inventory
+        results = {}
+        total_gold = 0
+        total_drops = 0
+
+        for item in inventory:
+            type_id = getattr(item, "item_id", getattr(item, "type_id", 0))
+            max_count = max(1, item.count)
+            chance = item.chance # permille: 1 a 1000
+
+            item_drops = 0
+            times_dropped = 0
+
+            for _ in range(kills):
+                if random.randint(1, 1000) <= chance:
+                    times_dropped += 1
+                    qty = random.randint(1, max_count)
+                    item_drops += qty
+
+            if times_dropped > 0:
+                obj_name = f"Item #{type_id}"
+                obj_price = 0
+                if objects_parser.is_loaded and type_id in objects_parser.objects:
+                    obj = objects_parser.objects[type_id]
+                    obj_name = obj.name or obj_name
+                    obj_price = int(obj.attributes.get("Price", 0) or 0)
+
+                # Se for gold coin (2148 / 3031) ou platinum (2152 / 3035) ou crystal (2160 / 3043)
+                val_factor = 1
+                if type_id in (2148, 3031): val_factor = 1
+                elif type_id in (2152, 3035): val_factor = 100
+                elif type_id in (2160, 3043): val_factor = 10000
+                else: val_factor = obj_price or 0
+
+                est_gold = item_drops * val_factor
+                total_gold += est_gold
+                total_drops += item_drops
+
+                if type_id in results:
+                    results[type_id]["total_dropped"] += item_drops
+                    results[type_id]["times_dropped"] += times_dropped
+                    results[type_id]["estimated_gold_value"] += est_gold
+                    results[type_id]["actual_chance_pct"] = round((results[type_id]["times_dropped"] / kills) * 100, 2)
+                else:
+                    results[type_id] = {
+                        "type_id": type_id,
+                        "name": obj_name,
+                        "theory_chance_pct": round((chance / 1000.0) * 100, 2),
+                        "actual_chance_pct": round((times_dropped / kills) * 100, 2),
+                        "total_dropped": item_drops,
+                        "times_dropped": times_dropped,
+                        "estimated_gold_value": est_gold,
+                        "rarity": "common" if chance >= 200 else ("uncommon" if chance >= 50 else ("rare" if chance >= 5 else "very_rare"))
+                    }
+
+        sorted_items = sorted(results.values(), key=lambda x: x["times_dropped"], reverse=True)
+
+        return jsonify({
+            "success": True,
+            "monster_name": mon.name,
+            "kills": kills,
+            "total_items_dropped": total_drops,
+            "total_gold_value": total_gold,
+            "items": sorted_items
+        })
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e), "traceback": traceback.format_exc()}), 500
+
+@app.route("/api/backups", methods=["GET"])
+def get_backups():
+    """Returns history of backups automatically generated by editor"""
+    data_path = current_config.get("data_path", "")
+    backups = backup_mgr.list_backups([data_path])
+    return jsonify({
+        "total": len(backups),
+        "backups": backups
+    })
+
+@app.route("/api/backups/restore", methods=["POST"])
+def restore_backup():
+    """Restores a user-selected backup"""
+    data = request.json or {}
+    backup_path = data.get("backup_path", "")
+    if not backup_path or not os.path.exists(backup_path):
+        return jsonify({"error": "Invalid or missing backup file"}), 400
+
+    ok = backup_mgr.restore_backup(backup_path)
+    if ok:
+        # Reload server data
+        auto_load_data()
+        return jsonify({"success": True, "message": "Backup restored successfully!"})
+    return jsonify({"error": "Failed to restore backup"}), 500
+
+# =============================================================================
+# APIS DE MAPA, TILES, SPAWNS E CASAS
+# =============================================================================
+
+@app.route("/api/map/overview", methods=["GET"])
+def get_map_overview():
+    return jsonify(map_manager.get_overview_info())
+
+@app.route("/api/map/chunk", methods=["GET"])
+def get_map_chunk():
+    cx = int(request.args.get("x", 32360))
+    cy = int(request.args.get("y", 32199))
+    z = int(request.args.get("z", 7))
+    radius = min(32, max(4, int(request.args.get("radius", 16))))
+    chunk = map_manager.get_chunk(cx, cy, z, radius)
+    return jsonify(chunk)
+
+@app.route("/api/map/spawns", methods=["GET"])
+def get_map_spawns():
+    z = int(request.args.get("z", 7))
+    min_x = request.args.get("min_x", type=int)
+    max_x = request.args.get("max_x", type=int)
+    min_y = request.args.get("min_y", type=int)
+    max_y = request.args.get("max_y", type=int)
+    q = request.args.get("q", "")
+    spawns = map_manager.get_spawns_in_area(z=z, min_x=min_x, max_x=max_x, min_y=min_y, max_y=max_y, query=q)
+    return jsonify({"spawns": spawns, "total": len(spawns)})
+
+@app.route("/api/map/npcs", methods=["GET"])
+def get_map_npcs():
+    z = int(request.args.get("z", 7))
+    q = request.args.get("q", "").lower().strip()
+    results = []
+    for n in npc_manager.get_all_list():
+        m = re.match(r"\[\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\]", n.get("home_pos", ""))
+        if m:
+            nx, ny, nz = int(m.group(1)), int(m.group(2)), int(m.group(3))
+            if nz == z:
+                if not q or (q in n["name"].lower() or q in n["filename"].lower()):
+                    results.append({
+                        "name": n["name"],
+                        "filename": n["filename"],
+                        "x": nx,
+                        "y": ny,
+                        "z": nz,
+                        "radius": n.get("radius", 2),
+                        "outfit_type": n.get("outfit_type", 128),
+                        "outfit_colors": n.get("outfit_colors", "0-0-0-0"),
+                        "is_item_outfit": n.get("is_item_outfit", False),
+                        "item_outfit_id": n.get("item_outfit_id", 0)
+                    })
+    return jsonify({"npcs": results, "total": len(results)})
+
+@app.route("/api/map/houses", methods=["GET"])
+def get_map_houses():
+    z = int(request.args.get("z", 7))
+    min_x = request.args.get("min_x", type=int)
+    max_x = request.args.get("max_x", type=int)
+    min_y = request.args.get("min_y", type=int)
+    max_y = request.args.get("max_y", type=int)
+    q = request.args.get("q", "")
+    houses = map_manager.get_houses_in_area(z=z, min_x=min_x, max_x=max_x, min_y=min_y, max_y=max_y, query=q)
+    return jsonify({"houses": houses, "total": len(houses)})
+
+@app.route("/api/map/signs", methods=["GET"])
+def get_map_signs():
+    z = int(request.args.get("z", 7))
+    min_x = request.args.get("min_x", type=int)
+    max_x = request.args.get("max_x", type=int)
+    min_y = request.args.get("min_y", type=int)
+    max_y = request.args.get("max_y", type=int)
+    signs = map_manager.get_signs_in_area(z=z, min_x=min_x, max_x=max_x, min_y=min_y, max_y=max_y)
+    return jsonify({"signs": signs, "total": len(signs)})
+
+@app.route("/api/map/sector_image/<int:sx>/<int:sy>/<int:sz>", methods=["GET"])
+def get_map_sector_image(sx: int, sy: int, sz: int):
+    scale = int(request.args.get("scale", 32))
+    scale = max(8, min(32, scale))
+    cache_dir = os.path.join(BASE_DIR, "cache", "map_sectors")
+    png_bytes = map_manager.render_sector_image(sx, sy, sz, dat_reader, spr_reader, scale=scale, cache_dir=cache_dir, objects_parser=objects_parser)
+    if png_bytes:
+        resp = send_file(BytesIO(png_bytes), mimetype="image/png")
+        resp.headers["Cache-Control"] = "no-cache, must-revalidate"
+        return resp
+    return jsonify({"error": "Sector not found or empty"}), 404
+
+# =============================================================================
+# CHANGES COMPARATOR API (DIFF VIEWER BEFORE SAVE)
+# =============================================================================
+
+@app.route("/api/diff", methods=["POST"])
+def get_file_diff():
+    data = request.json or {}
+    file_type = data.get("file_type", "")
+    filename = data.get("filename", "")
+    modified_text = data.get("modified_text", "")
+
+    # If moveuse and no raw text provided, serialize sections
+    if file_type == "moveuse" and not modified_text and "sections" in data:
+        lines = []
+        if moveuse_parser.header_comments:
+            lines.extend(moveuse_parser.header_comments)
+            lines.append("")
+        else:
+            lines.append("# Tibia - graphical Multi-User-Dungeon")
+            lines.append("# Move/Use Rules File")
+            lines.append("")
+        for s in data["sections"]:
+            sec_name = s.get("name", "Geral")
+            if sec_name == "Global":
+                for r in s.get("rules", []):
+                    raw = r.get("raw") if isinstance(r, dict) else str(r)
+                    lines.append(raw)
+                lines.append("")
+            else:
+                lines.append(f'BEGIN "{sec_name}"')
+                for r in s.get("rules", []):
+                    raw = r.get("raw") if isinstance(r, dict) else str(r)
+                    lines.append(raw)
+                lines.append("END")
+                lines.append("")
+        modified_text = "\n".join(lines)
+
+    # If monster and no raw text provided, serialize monster
+    if file_type == "monster" and not modified_text and "monster" in data:
+        mdata = data["monster"]
+        inv_list = []
+        for item in mdata.get("inventory", []):
+            inv_list.append(LootItem(
+                item_id=int(item.get("item_id", 0)),
+                count=int(item.get("count", 1)),
+                chance=int(item.get("chance", 1000))
+            ))
+        mon = MonsterData(
+            filename=filename or mdata.get("filename", "monster.mon"),
+            race_number=int(mdata.get("race_number", 0)),
+            name=mdata.get("name", ""),
+            article=mdata.get("article", "a"),
+            outfit_type=int(mdata.get("outfit_type", 0)),
+            outfit_colors=mdata.get("outfit_colors", "0-0-0-0"),
+            corpse=int(mdata.get("corpse", 0)),
+            blood=mdata.get("blood", "Blood"),
+            experience=int(mdata.get("experience", 0)),
+            summon_cost=int(mdata.get("summon_cost", 0)),
+            flee_threshold=int(mdata.get("flee_threshold", 0)),
+            attack=int(mdata.get("attack", 0)),
+            defend=int(mdata.get("defend", 0)),
+            armor=int(mdata.get("armor", 0)),
+            poison=int(mdata.get("poison", 0)),
+            lose_target=int(mdata.get("lose_target", 0)),
+            strategy=mdata.get("strategy", "(100, 0, 0, 0)"),
+            hitpoints=int(mdata.get("hitpoints", 100)),
+            speed=int(mdata.get("speed", 100)),
+            flags=mdata.get("flags", []),
+            skills_raw=mdata.get("skills_raw", []),
+            spells_raw=mdata.get("spells_raw", []),
+            inventory=inv_list,
+            talk=mdata.get("talk", [])
+        )
+        modified_text = mon.to_mon_text()
+
+    original_text = ""
+    data_path = current_config.get("data_path", "")
+
+    try:
+        if file_type == "monster" and filename:
+            path = os.path.join(data_path, "mon", filename)
+            if os.path.exists(path):
+                with open(path, "r", encoding="latin-1") as f:
+                    original_text = f.read()
+        elif file_type == "npc" and filename:
+            path = os.path.join(data_path, "npc", filename)
+            if os.path.exists(path):
+                with open(path, "r", encoding="latin-1") as f:
+                    original_text = f.read()
+        elif file_type == "moveuse":
+            path = os.path.join(data_path, "dat", "moveuse.dat")
+            if os.path.exists(path):
+                with open(path, "r", encoding="latin-1") as f:
+                    original_text = f.read()
+        elif file_type == "objects":
+            path = os.path.join(data_path, "dat", "objects.srv")
+            if os.path.exists(path):
+                with open(path, "r", encoding="latin-1") as f:
+                    original_text = f.read()
+
+        orig_lines = original_text.splitlines()
+        mod_lines = modified_text.splitlines()
+
+        diff_gen = difflib.unified_diff(
+            orig_lines, mod_lines,
+            fromfile=f"a/{filename or file_type}",
+            tofile=f"b/{filename or file_type}",
+            lineterm=""
+        )
+        diff_lines = list(diff_gen)
+        
+        added_count = sum(1 for l in diff_lines if l.startswith("+") and not l.startswith("+++"))
+        removed_count = sum(1 for l in diff_lines if l.startswith("-") and not l.startswith("---"))
+
+        return jsonify({
+            "has_diff": len(diff_lines) > 0,
+            "filename": filename or file_type,
+            "added_count": added_count,
+            "removed_count": removed_count,
+            "diff_lines": diff_lines,
+            "original_lines_count": len(orig_lines),
+            "modified_lines_count": len(mod_lines)
+        })
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 if __name__ == "__main__":
     auto_load_data()

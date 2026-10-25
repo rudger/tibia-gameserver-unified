@@ -57,4 +57,9 @@ int DB_DecrementIsOnline(uint32 CharacterID);
 int DB_LoadPlayers(int MinimumCharacterID, int *NumberOfPlayers,
 		char (*PlayerNames)[30], uint32 *CharacterIDs);
 
+// Player Persistence Queries
+struct TPlayerData;
+bool DB_SaveCharacterState(const struct TPlayerData *Slot);
+bool DB_LoadCharacterState(struct TPlayerData *Slot);
+
 #endif // TIBIA_DB_HH_

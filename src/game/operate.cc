@@ -75,6 +75,11 @@ void AnnounceChangedCreature(uint32 CreatureID, int Type){
 		}
 
 		if(KnowingConnection->IsVisible(Creature->posx, Creature->posy, Creature->posz)){
+			TPlayer *Observer = KnowingConnection->GetPlayer();
+			if(!CanPlayerSeeCreature(Observer, Creature)){
+				continue;
+			}
+
 			switch(Type){
 				case CREATURE_HEALTH_CHANGED: SendCreatureHealth(KnowingConnection, CreatureID); break;
 				case CREATURE_LIGHT_CHANGED:  SendCreatureLight(KnowingConnection, CreatureID); break;
@@ -482,6 +487,22 @@ void CheckMapDestination(uint32 CreatureID, Object Obj, Object MapCon){
 	GetObjectCoordinates(Obj, &OrigX, &OrigY, &OrigZ);
 	GetObjectCoordinates(MapCon, &DestX, &DestY, &DestZ);
 	if(!ObjType.isCreatureContainer()){
+		// Bugfix: Prevent "parcel push to different floor" and throwing items across vertical floors
+		if(OrigZ != DestZ){
+			// Items can NEVER be thrown to an upper floor
+			if(DestZ < OrigZ){
+				throw UPSTAIRS;
+			}
+			// Items can only fall to the floor directly below (DestZ == OrigZ + 1)
+			if(DestZ > (OrigZ + 1)){
+				throw DOWNSTAIRS;
+			}
+			// There must be a valid opening / hole (cannot drop onto solid bank floor)
+			if(CoordinateFlag(DestX, DestY, OrigZ, BANK) && !CoordinateFlag(DestX, DestY, OrigZ, UNPASS)){
+				throw NOWAY;
+			}
+		}
+
 		if(IsMapBlocked(DestX, DestY, DestZ, ObjType)){
 			throw NOROOM;
 		}
@@ -512,23 +533,29 @@ void CheckMapDestination(uint32 CreatureID, Object Obj, Object MapCon){
 			throw ERROR;
 		}
 
-		if(OrigZ == DestZ || MovingCreature->Type != MONSTER){
-			if(!MovingCreature->MovePossible(DestX, DestY, DestZ, true, OrigZ != DestZ)){
-				if(CreatureID == MovingCreature->ID){
-					throw MOVENOTPOSSIBLE;
-				}else{
-					throw NOROOM;
-				}
+		if(MovingCreature->Type == MONSTER && OrigZ != DestZ){
+			throw OUTOFRANGE;
+		}
+
+		if(CreatureID != MovingCreature->ID && OrigZ != DestZ){
+			throw MOVENOTPOSSIBLE;
+		}
+
+		if(!MovingCreature->MovePossible(DestX, DestY, DestZ, true, OrigZ != DestZ)){
+			if(CreatureID == MovingCreature->ID){
+				throw MOVENOTPOSSIBLE;
+			}else{
+				throw NOROOM;
+			}
+		}
+
+		if(CreatureID != MovingCreature->ID){
+			if(CoordinateFlag(DestX, DestY, DestZ, AVOID)){
+				throw NOROOM;
 			}
 
-			if(CreatureID != MovingCreature->ID){
-				if(CoordinateFlag(DestX, DestY, DestZ, AVOID)){
-					throw NOROOM;
-				}
-
-				if(IsProtectionZone(OrigX, OrigY, OrigZ) && !IsProtectionZone(DestX, DestY, DestZ)){
-					throw PROTECTIONZONE;
-				}
+			if(IsProtectionZone(OrigX, OrigY, OrigZ) && !IsProtectionZone(DestX, DestY, DestZ)){
+				throw PROTECTIONZONE;
 			}
 		}
 	}
@@ -606,6 +633,17 @@ void CheckMapPlace(uint32 CreatureID, ObjectType Type, Object MapCon){
 void CheckContainerDestination(Object Obj, Object Con){
 	if(IsHeldByContainer(Con, Obj)){
 		throw CROSSREFERENCE;
+	}
+
+	// Security: Prevent deeply nested container recursion DoS (limit max 16 levels)
+	int Depth = 0;
+	Object Parent = Con;
+	while(Parent != NONE && !Parent.getObjectType().isMapContainer() && !Parent.getObjectType().isBodyContainer()){
+		Depth += 1;
+		if(Depth > 16){
+			throw CONTAINERFULL;
+		}
+		Parent = Parent.getContainer();
 	}
 
 	ObjectType ConType = Con.getObjectType();
@@ -1061,27 +1099,18 @@ void CloseContainer(Object Con, bool Force){
 		return;
 	}
 
-	// IMPORTANT(fusion): The original search range was (12, 10), but it caused
-	// containers to remain open when a player moved them beyond it. The new range
-	// is the sum of:
-	//		(7, 7) - max Z offset
-	//		(7, 5) - max terminal distance
-	//		(6, 4) - max walk to object distance
-	//		(2, 2) - max distance to another player close to the container
-	//	Considering that `CMoveObject` does a visibility check to limit the "walk
-	// to object distance", this should be a permanent fix. It may not be the best
-	// solution, but I don't want to diverge too much from the original. See `Move`
-	// for a complementary comment about this.
-	TFindCreatures Search(22, 18, Con, FIND_PLAYERS);
-	while(true){
-		uint32 CharacterID = Search.getNext();
-		if(CharacterID == 0){
-			break;
+	// Permanently fix the container-push bug and optimize performance:
+	// Iterate through all active player connections instead of relying on a spatial map search.
+	// This guarantees that any player who moved or whose open container was pushed
+	// (regardless of distance, screen borders, or floors) will properly have it closed.
+	for(int i = 0; i < MAX_CONNECTIONS; i += 1){
+		TConnection *Connection = GetConnectionByIndex(i);
+		if(Connection == NULL || !Connection->InGame()){
+			continue;
 		}
 
-		TPlayer *Player = GetPlayer(CharacterID);
+		TPlayer *Player = Connection->GetPlayer();
 		if(Player == NULL){
-			error("CloseContainer: Spieler existiert nicht.\n");
 			continue;
 		}
 
@@ -1089,12 +1118,11 @@ void CloseContainer(Object Con, bool Force){
 				ContainerNr < NARRAY(Player->OpenContainer);
 				ContainerNr += 1){
 			Object OpenCon = Player->GetOpenContainer(ContainerNr);
-			if(IsHeldByContainer(OpenCon, Con)){
+			if(OpenCon != NONE && IsHeldByContainer(OpenCon, Con)){
 				if(Force || !ObjectAccessible(Player->ID, Con, 1)){
 					Player->SetOpenContainer(ContainerNr, NONE);
 					SendCloseContainer(Player->Connection, ContainerNr);
 				}else{
-					// TODO(fusion): Why are we doing this? Is the container being refreshed?
 					SendContainer(Player->Connection, ContainerNr);
 				}
 			}
@@ -1358,6 +1386,9 @@ void Move(uint32 CreatureID, Object Obj, Object Con, int Count, bool NoMerge, Ob
 		if(ConType.isBodyContainer()){
 			CheckInventoryDestination(Obj, Con, Split);
 		}else{
+			if(CreatureID != 0 && !ObjectAccessible(CreatureID, Con, 1)){
+				throw NOTACCESSIBLE;
+			}
 			CheckContainerDestination(Obj, Con);
 		}
 
@@ -1987,21 +2018,31 @@ void Look(uint32 CreatureID, Object Obj){
 						RemainingUses, (RemainingUses != 1 ? "s" : ""));
 				strcat(Description, Help);
 			}else if(ObjType.getFlag(EXPIRE) || ObjType.getFlag(EXPIRESTOP)){
-				uint32 SecondsLeft;
-				if(ObjType.getFlag(EXPIRE)){
-					SecondsLeft = CronInfo(Obj, false);
-				}else{
-					SecondsLeft = Obj.getAttribute(SAVEDEXPIRETIME);
-				}
+				int BodyPos = (int)ObjType.getAttribute(BODYPOSITION);
+				int CurPos = GetObjectBodyPosition(Obj);
+				bool IsRingOrAmulet = (BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK
+						|| CurPos == INVENTORY_FINGER || CurPos == INVENTORY_NECK);
 
-				uint32 MinutesLeft = (SecondsLeft + 59) / 60;
-				if(MinutesLeft == 0){
-					snprintf(Help, sizeof(Help), " that is brand-new");
+				if(!RemoveWeaponCharges && IsRingOrAmulet){
+					snprintf(Help, sizeof(Help), " that has unlimited energy");
+					strcat(Description, Help);
 				}else{
-					snprintf(Help, sizeof(Help), " that has energy for %u minute%s left",
-							MinutesLeft, (MinutesLeft != 1 ? "s" : ""));
+					uint32 SecondsLeft;
+					if(ObjType.getFlag(EXPIRE)){
+						SecondsLeft = CronInfo(Obj, false);
+					}else{
+						SecondsLeft = Obj.getAttribute(SAVEDEXPIRETIME);
+					}
+
+					uint32 MinutesLeft = (SecondsLeft + 59) / 60;
+					if(MinutesLeft == 0){
+						snprintf(Help, sizeof(Help), " that is brand-new");
+					}else{
+						snprintf(Help, sizeof(Help), " that has energy for %u minute%s left",
+								MinutesLeft, (MinutesLeft != 1 ? "s" : ""));
+					}
+					strcat(Description, Help);
 				}
-				strcat(Description, Help);
 			}else{
 				error("Look: Objekt %d hat Flag SHOWDETAIL, aber weder WEAROUT noch EXPIRE.\n", ObjType.TypeID);
 			}
@@ -2770,6 +2811,20 @@ void ProcessCronSystem(void){
 
 		try{
 			ObjectType ObjType = Obj.getObjectType();
+			if(!RemoveWeaponCharges){
+				int BodyPos = (int)ObjType.getAttribute(BODYPOSITION);
+				int CurPos = GetObjectBodyPosition(Obj);
+				if(BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK
+						|| CurPos == INVENTORY_FINGER || CurPos == INVENTORY_NECK){
+					uint32 TotalTime = ObjType.getAttribute(TOTALEXPIRETIME);
+					if(TotalTime == 0){
+						TotalTime = 3600;
+					}
+					CronExpire(Obj, TotalTime);
+					continue;
+				}
+			}
+
 			ObjectType ExpireTarget = (int)ObjType.getAttribute(EXPIRETARGET);
 			if(ObjType.getFlag(CONTAINER)){
 				int Remainder = 0;

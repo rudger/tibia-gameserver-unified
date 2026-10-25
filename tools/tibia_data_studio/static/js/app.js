@@ -1,365 +1,15 @@
 /**
- * Tibia Data Studio - Controlador Frontend SPA (Vanilla JavaScript)
- * Gerencia a lógica das abas de Itens, Monstros, NPCs, MoveUse, Sprites, Dicionário e Configurações.
- * Suporte completo a Internacionalização (i18n): Português do Brasil, English e Español.
+ * Tibia Data Studio - Frontend SPA Controller (Vanilla JavaScript)
+ * Manages UI logic for Items, Monsters, NPCs, MoveUse, Sprites, Function Dictionary, Minimap and Configuration.
  */
 
 // =============================================================================
-// DICIONÁRIO DE INTERNACIONALIZAÇÃO (i18n)
+// LOCALIZATION DICTIONARY
+// =============================================================================
+// =============================================================================
+// LOCALIZATION DICTIONARY (ENGLISH)
 // =============================================================================
 const I18N_DICT = {
-  pt_BR: {
-    // Sidebar
-    nav_objects: "Itens (objects.srv)",
-    nav_monsters: "Monstros (.mon)",
-    nav_npcs: "NPCs (.npc)",
-    nav_moveuse: "Ações (moveuse.dat)",
-    nav_sprites: "Sprites (.spr / .dat)",
-    nav_docs: "Dicionário de Funções",
-    nav_settings: "Diretórios & Config",
-    server_active: "Servidor Ativo",
-    backup_active: "🛡️ Backups automáticos ativos",
-
-    // Header
-    search_placeholder: "Pesquisar por ID, Nome...",
-    btn_reload: "🔄 Recarregar",
-    btn_save_current: "💾 Salvar Atual",
-
-    // Titles & Subtitles
-    tab_objects_title: "Editor de Itens (objects.srv)",
-    tab_objects_sub: "Gerenciamento completo de atributos, pesos, flags e sprites",
-    tab_monsters_title: "Editor de Monstros (.mon)",
-    tab_monsters_sub: "Edição de atributos, estatísticas, spells e tabela de loot",
-    tab_npcs_title: "Editor de NPCs (.npc)",
-    tab_npcs_sub: "Edição de aparência, posição home e diálogos",
-    tab_moveuse_title: "Editor de Ações (moveuse.dat)",
-    tab_moveuse_sub: "Regras de uso, portas, camas, transformações e interações",
-    tab_sprites_title: "Navegador de Sprites (.spr / .dat)",
-    tab_sprites_sub: "Inspeção e visualização de todos os gráficos do jogo",
-    tab_docs_title: "Dicionário de Funções CipSoft",
-    tab_docs_sub: "Guia completo de todos os Eventos, Condições e Ações da Move/Use Engine",
-    tab_settings_title: "Diretórios & Configurações",
-    tab_settings_sub: "Caminhos das pastas do servidor e do cliente Tibia",
-
-    // Objects Tab
-    objects_list_title: "Lista de Itens",
-    btn_new_object: "+ Novo Item",
-    all_flags: "Todas as Flags",
-    obj_details_title: "Propriedades do Item",
-    btn_save_object: "Salvar Item",
-    btn_delete_object: "Excluir",
-    btn_select_sprite: "Selecionar Sprite",
-    lbl_obj_typeid: "Type ID (ID do Objeto)*",
-    lbl_obj_name: "Nome do Item*",
-    lbl_obj_desc: "Descrição (Look Description)",
-    lbl_obj_comment: "Comentário Interno",
-    lbl_numeric_attrs: "Atributos Comuns",
-    lbl_weight: "Weight (oz * 100)",
-    lbl_capacity: "Capacity (Slots)",
-    lbl_attack: "Attack",
-    lbl_defend: "Defense",
-    lbl_armor: "Armor Value",
-    lbl_nutrition: "Nutrition (Food)",
-    lbl_waypoints: "Waypoints (Ground)",
-    lbl_totalexpire: "Total Expire Time",
-    lbl_raw_attrs: "Outros Atributos (JSON/Chave=Valor)",
-    lbl_flags: "Flags do Item",
-    btn_prev: "◀ Ant",
-    btn_next: "Próx ▶",
-    obj_title_edit: "Edição:",
-    obj_title_create: "Criar Novo Item",
-    obj_typeid_new: "Novo",
-    obj_unnamed: "(Sem Nome)",
-    lbl_items_count: "itens",
-    lbl_page: "Página",
-
-    // Monsters Tab
-    monsters_list_title: "Monstros do Servidor",
-    btn_new_monster: "+ Novo Monstro",
-    btn_save_monster: "Salvar Monstro",
-    btn_combat_guide: "💡 Guia de Cálculos & Dano",
-    lbl_avg_melee: "⚔️ Melee Médio:",
-    lbl_avg_armor: "🛡️ Absorção Armor:",
-    lbl_flee_point: "🏃 Ponto de Fuga:",
-    lbl_max_combo: "💥 Combo Máx Teórico:",
-    lbl_mon_combat_sec: "⚔️ Combate & Atributos",
-    lbl_mon_immunities_sec: "🛡️ Imunidades & Comportamento",
-    lbl_mon_loot_sec: "💎 Tabela de Drop / Loot (Inventory)",
-    lbl_mon_spells_sec: "✨ Magias e Ataques Mágicos (Spells)",
-    lbl_mon_talk_sec: "💬 Falas e Sons em Combate (Talk)",
-    lbl_mon_name: "Nome do Monstro*",
-    lbl_mon_race: "RaceNumber*",
-    lbl_mon_outfit: "Outfit LookType",
-    lbl_mon_colors: "Cores (Head-Body-Legs-Feet)",
-    lbl_mon_hp: "HitPoints (Vida)*",
-    lbl_mon_exp: "Experience (XP)",
-    lbl_mon_atk: "Attack (Dano Melee Máx)",
-    lbl_mon_def: "Defend (Escudo/Defesa)",
-    lbl_mon_armor: "Armor (Armadura)",
-    lbl_mon_speed: "Speed (Velocidade)",
-    lbl_mon_blood: "Blood (Tipo de Sangue)",
-    lbl_mon_flee: "Flee Threshold (HP Fuga)",
-    lbl_mon_corpse: "Corpse (ID do Corpo)",
-    lbl_mon_poison: "Poison (Veneno Melee)",
-    opt_blood_red: "Blood (Sangue Vermelho)",
-    opt_blood_slime: "Slime (Gosma Verde)",
-    opt_blood_undead: "Undead (Sem Sangue / Fumaça)",
-    opt_blood_fire: "Fire (Fogo / Chamas)",
-    opt_blood_energy: "Energy (Energia Azul)",
-    btn_add_loot_item: "+ Adicionar Item de Loot",
-    btn_add_monster_spell: "+ Nova Magia",
-    btn_add_monster_talk: "+ Nova Fala",
-    th_loot_item: "Item",
-    th_loot_id: "ID",
-    th_loot_count: "Qtd Máx",
-    th_loot_chance: "Chance (Permilagem)",
-    th_loot_percent: "Porcentagem",
-    th_loot_action: "Ações",
-    btn_remove: "Remover",
-    th_spell_effect: "Efeito",
-    th_spell_type: "Tipo / Forma",
-    th_spell_details: "Detalhes",
-    th_talk_mode: "Modo",
-    th_talk_text: "Texto da fala",
-    no_loot_registered: "Nenhum item dropado cadastrado",
-    no_spells_registered: "Nenhuma magia cadastrada. Clique em '+ Nova Magia' para adicionar.",
-    no_talk_registered: "Nenhuma fala cadastrada. Clique em '+ Nova Fala' para adicionar.",
-    badge_yell: "📣 Grito (#Y)",
-    badge_say: "💬 Fala (Say)",
-    placeholder_talk: "Digite a fala do monstro...",
-    mon_title_edit: "Edição:",
-    mon_title_create: "Criar Novo Monstro",
-    mon_race_new: "Novo",
-    modal_pick_corpse: "Escolher Item de Corpo Morto (Corpse)",
-    modal_pick_loot: "Adicionar Item ao Loot do Monstro",
-    summary_combo_melee: "Melee",
-    summary_combo_spells: "Magias",
-
-    // Spell Types & Names
-    dmg_name_physical: "Físico",
-    dmg_name_fire: "Fogo",
-    dmg_name_poison: "Veneno",
-    dmg_name_energy: "Energia",
-    dmg_name_death: "Morte/SD",
-    dmg_name_manadrain: "Mana Drain",
-    dmg_name_holy: "Holy",
-    dmg_name_drown: "Afogamento",
-    spell_lbl_damage: "Dano",
-    spell_lbl_heal: "Auto-Cura",
-    spell_lbl_summon: "Invocação: Raça",
-    spell_lbl_minions: "lacaios",
-    spell_lbl_turns: "Turnos",
-    spell_lbl_to: "a",
-
-    // Monster Spell Builder Modal
-    modal_mon_spell_title: "✨ Criar / Editar Magia de Monstro",
-    lbl_spell_impact: "Efeito da Magia (Impact)*",
-    opt_impact_damage: "Damage (Dano Elementar / Físico / Morte / Mana)",
-    opt_impact_healing: "Healing (Cura de Vida / Auto-Cura)",
-    opt_impact_speed: "Speed (Paralyze / Haste)",
-    opt_impact_summon: "Summon (Invocar Criaturas / Lacaios)",
-    opt_impact_field: "Field (Criar Campo de Fogo/Veneno no Chão)",
-    opt_impact_drunken: "Drunken (Embriaguez)",
-    lbl_spell_shape: "Forma de Disparo / Alvo (Shape)*",
-    opt_shape_origin: "Origin (Projétil em Linha Reta)",
-    opt_shape_victim: "Victim (Alvo Travado na Vítima)",
-    opt_shape_actor: "Actor (Em Si Mesmo / Self Buff)",
-    opt_shape_destination: "Destination (Área no Chão / Bomba)",
-    opt_shape_angle: "Angle (Wave / Cone Frontal)",
-    lbl_spell_params_title: "🎯 Parâmetros de Dano e Efeito",
-    lbl_spell_dmg_type: "Elemento / Tipo de Dano",
-    opt_dmg_fire: "Fire (4 - Fogo / Chamas)",
-    opt_dmg_energy: "Energy (16 - Energia / Raios)",
-    opt_dmg_poison: "Poison (8 - Veneno / Terra)",
-    opt_dmg_death: "Death / LifeDrain (32 - Morte / SD)",
-    opt_dmg_physical: "Physical (1 - Físico / Impacto)",
-    opt_dmg_manadrain: "ManaDrain (64 - Dreno de Mana)",
-    opt_dmg_holy: "Holy (128 - Luz Sagrada)",
-    opt_dmg_drown: "Drown (256 - Afogamento)",
-    lbl_spell_dmg_min: "Dano Mínimo",
-    lbl_spell_dmg_max: "Dano Máximo",
-    lbl_spell_heal_min: "Cura Mínima",
-    lbl_spell_heal_max: "Cura Máxima",
-    lbl_spell_speed_val: "Alteração de Speed (ex: -50 ou +60)",
-    lbl_spell_speed_dur: "Duração (Segundos)",
-    lbl_spell_speed_eff: "Efeito de Speed (ID)",
-    lbl_spell_summon_race: "RaceNumber do Monstro Invocado",
-    lbl_spell_summon_count: "Quantidade Máxima Invocada",
-    lbl_spell_field_item: "Item ID do Campo (ex: 1487 = Fire Field)",
-    lbl_spell_drunk_int: "Intensidade (1 a 100)",
-    lbl_spell_drunk_dur: "Duração (Segundos)",
-    lbl_spell_drunk_eff: "Efeito (ID)",
-    lbl_spell_visual_title: "🔮 Visual do Efeito, Projétil & Frequência",
-    lbl_spell_magic_effect: "Efeito Mágico no Impacto",
-    lbl_pick_spell_effect_btn: "✨ Escolher",
-    lbl_spell_missile_effect: "Projétil / Míssil (Distance)",
-    lbl_spell_delay: "Turnos / Frequência (Delay)*",
-    lbl_mon_spell_code_title: "Linha Formatada do .mon:",
-    btn_cancel_mon_spell: "Cancelar",
-    btn_confirm_mon_spell: "Salvar Magia",
-
-    // Monster Combat Guide & Simulator Modal
-    combat_guide_title: "💡 Guia de Combate, Cálculos de Dano & Fórmulas (CipSoft 7.72)",
-    sim_title_text: "🎯 Simulador Rápido de Dano Melee",
-    sim_badge_text: "Baseado no C++",
-    lbl_sim_mon_atk: "Ataque do Monstro (Attack):",
-    lbl_sim_target_def: "Defesa do Alvo (Defend):",
-    lbl_sim_target_armor: "Armadura do Alvo (Armor):",
-    btn_run_damage_sim: "🎲 Simular 100 Ataques",
-    sim_lbl_avg: "Dano Médio / Turno",
-    sim_lbl_max: "Dano Máximo Causado",
-    sim_lbl_block: "Taxa de Bloqueio (Poff)",
-    sim_lbl_hits: "Golpes com Dano",
-    btn_close_combat_guide_footer: "Fechar Guia",
-
-    // NPCs Tab
-    npcs_list_title: "NPCs do Servidor",
-    btn_new_npc: "+ Novo NPC",
-    btn_save_npc: "Salvar NPC",
-    npc_details_title: "Edição de NPC",
-    lbl_npc_name: "Nome*",
-    lbl_npc_sex: "Sexo",
-    opt_npc_sex_male: "Male (Masculino)",
-    opt_npc_sex_female: "Female (Feminino)",
-    lbl_npc_outfit: "LookType",
-    lbl_npc_home: "Home Position [X, Y, Z]",
-    lbl_npc_radius: "Raio (Radius)",
-    lbl_npc_colors: "Cores (H-B-L-F)",
-    lbl_npc_palette_sec: "🎨 Paleta de Cores do Outfit (Tibia Client)",
-    tab_pal_head: "Head",
-    tab_pal_primary: "Primary",
-    tab_pal_secondary: "Secondary",
-    tab_pal_detail: "Detail",
-    btn_npc_random_colors: "🎲 Cores Aleatórias",
-    btn_npc_reset_colors: "🔄 Reset (0-0-0-0)",
-    btn_tab_npc_dialogues: "💬 Diálogos & Respostas",
-    btn_tab_npc_ndb: "🛒 Comércio & Módulos (NDB)",
-    btn_tab_npc_raw: "📝 Script Completo (.npc)",
-    lbl_npc_greetings_title: "👋 Saudações, Foco & Despedida",
-    lbl_npc_greeting: "Saudação (Player diz 'hi' / 'hello')",
-    lbl_npc_farewell: "Despedida (Player diz 'bye' / 'farewell')",
-    lbl_npc_busy: "Quando Ocupado com outro Jogador (BUSY)",
-    lbl_npc_vanish: "Jogador Anda para Longe (VANISH)",
-    lbl_npc_aggressive: "Fala Espontânea ao Ver Jogador (Sem Trigger / Agressivo)",
-    lbl_npc_keywords_title: "💬 Palavras-Chave & Regras de Conversa",
-    btn_add_npc_keyword: "+ Adicionar Regra",
-    th_npc_keyword: "Palavras-Chave (Keywords)",
-    th_npc_condition: "Condição / Topic",
-    th_npc_response: "Resposta do NPC",
-    th_npc_actions: "Ações / Efeitos",
-    lbl_npc_ndb_modules: "📦 Módulos Oficiais CipSoft (.ndb)",
-    lbl_npc_ndb_desc: "Marque os módulos pré-fabricados de comércio para incluir automaticamente no NPC:",
-    lbl_npc_behaviour: "Código Completo de Behaviour ({ ... })",
-    npc_title_edit: "Edição:",
-    npc_title_create: "Criar Novo NPC",
-    lbl_lines: "falas",
-
-    // MoveUse Tab
-    moveuse_sections_title: "Seções de Regras",
-    moveuse_rules_title: "Regras da Seção",
-    btn_add_rule: "+ Nova Regra",
-    btn_save_moveuse: "Salvar moveuse.dat",
-    moveuse_rules_of_section: "Regras da Seção:",
-    lbl_rules: "regras",
-    no_section_selected: "Nenhuma seção selecionada",
-
-    // Sprites Tab
-    sprites_panel_title: "Navegador de Sprites do Tibia.spr",
-    sprites_search_placeholder: "Ir para Sprite ID...",
-    btn_search: "Buscar",
-    lbl_zoom_text: "Zoom:",
-    btn_first: "Primeira",
-    btn_prev_sprite: "Anterior",
-    btn_next_sprite: "Próxima",
-    btn_last: "Última",
-    btn_go: "Ir",
-    lbl_page_text: "Página",
-    lbl_of: "de",
-    lbl_showing_sprites: "Mostrando sprites",
-
-    // CipSoft Function Dictionary Tab
-    docs_panel_title: "📚 Dicionário & Guia de Funções CipSoft (Move/Use Engine)",
-    docs_panel_subtitle: "Catálogo completo de todos os Eventos, Condições, Ações, Alvos e Parâmetros suportados pelo servidor.",
-    doc_btn_all: "Todos",
-    doc_btn_events: "Eventos (5)",
-    doc_btn_conds: "Condições (19)",
-    doc_btn_acts: "Ações / Efeitos (17)",
-    docs_search_placeholder: "Pesquisar por nome de função, palavra-chave, exemplo (ex: Change, IsType, Level, Effect, Logout)...",
-    badge_event_label: "Evento / Trigger",
-    badge_condition_label: "Condição",
-    badge_action_label: "Ação / Efeito",
-    lbl_parameters: "Parâmetros:",
-    lbl_example: "Exemplo:",
-
-    // Rule Builder
-    builder_modal_title: "⚡ Construtor de Evento & Regra CipSoft",
-    lbl_builder_sec: "Seção no moveuse.dat (ex: Beds, Doors, Keys, Fun)*",
-    lbl_builder_trigger: "Evento Disparador (Trigger)*",
-    opt_trig_use: "Use (Clicar em 'Use' no item - Obj1)",
-    opt_trig_multiuse: "MultiUse ('Use With' - Usar Obj1 em Obj2)",
-    opt_trig_movement: "Movement (Arrastar item ou andar)",
-    opt_trig_collision: "Collision (Pisar em cima de alavanca de piso/tile)",
-    opt_trig_separation: "Separation (Sair de cima do tile)",
-    lbl_builder_conds: "🔎 Condições Obrigatórias (Se acontecer isso...)",
-    add_condition_opt: "+ Adicionar Condição...",
-    lbl_builder_acts: "⚡ Ações e Efeitos Resultantes (Então faça isso...)",
-    add_action_opt: "+ Adicionar Ação...",
-    lbl_builder_raw: "Linha Formatada do moveuse.dat:",
-    btn_cancel: "Cancelar",
-    btn_confirm_rule: "Salvar Regra no moveuse.dat",
-    choose_effect_btn: "✨ Escolher Efeito...",
-    choose_item_btn: "📦 Escolher Item...",
-    custom_chip: "Personalizado",
-    no_cond_added: "Nenhuma condição adicionada (será executada sempre).",
-    no_act_added: "Nenhuma ação adicionada.",
-    modal_pick_cond_item: "Escolher Item para Condição",
-    modal_pick_act_item: "Escolher Item para Ação",
-
-    // Modals
-    modal_picker_title: "Selecionar Item do objects.srv",
-    modal_item_search: "Filtrar por nome ou ID...",
-    modal_effect_picker_title: "✨ Selecionar Efeito Mágico CipSoft",
-    modal_effect_search: "Filtrar por nome ou ID do efeito...",
-
-    // Settings
-    settings_panel_title: "Caminhos de Diretórios & Configuração",
-    lbl_cfg_data_path: "Diretório de Dados do Servidor (tibia-game_data)",
-    sub_cfg_data_path: "Contém as pastas <code>dat/</code>, <code>mon/</code>, <code>npc/</code>.",
-    lbl_cfg_client_path: "Diretório do Cliente Tibia (com Tibia.spr e Tibia.dat)",
-    sub_cfg_client_path: "Usado para extrair e renderizar todos os gráficos e sprites visuais.",
-    lbl_cfg_status: "Status do Carregamento de Arquivos:",
-    btn_save_config: "Salvar e Recarregar Dados",
-    status_loaded: "Carregado",
-    status_not_found: "Não encontrado",
-    status_spr_missing: "Não carregado (Selecione a pasta do cliente)",
-    status_types: "tipos",
-    status_sections: "seções",
-    status_creatures: "criaturas",
-    status_npcs: "NPCs",
-    status_sprites: "sprites",
-    status_items: "itens",
-
-    // Unsaved Changes (Dirty State)
-    lbl_unsaved_text: "Edições pendentes",
-    lbl_modal_unsaved_title: "⚠️ Alterações Não Salvas",
-    lbl_modal_unsaved_msg: "Você possui edições pendentes que ainda não foram salvas. Deseja salvar as alterações agora antes de continuar ou descartá-las?",
-    btn_unsaved_save: "💾 Salvar e Continuar",
-    btn_unsaved_discard: "🗑️ Descartar",
-    btn_unsaved_cancel: "Cancelar",
-
-    // Toasts
-    toast_reloading: "Recarregando dados...",
-    toast_updated: "Dados atualizados com sucesso!",
-    toast_item_saved: "Item salvo com sucesso!",
-    toast_monster_saved: "Monstro salvo com sucesso!",
-    toast_npc_saved: "NPC salvo com sucesso!",
-    toast_moveuse_saved: "moveuse.dat salvo com sucesso!",
-    toast_config_saved: "Configurações salvas e dados recarregados!",
-    toast_sprite_copied: "Sprite ID copiado",
-    toast_invalid_typeid: "Por favor, informe um TypeID válido!",
-    toast_invalid_sprite_id: "Informe um Sprite ID válido!"
-  },
-
   en: {
     // Sidebar
     nav_objects: "Items (objects.srv)",
@@ -368,6 +18,7 @@ const I18N_DICT = {
     nav_moveuse: "Actions (moveuse.dat)",
     nav_sprites: "Sprites (.spr / .dat)",
     nav_docs: "Function Dictionary",
+    nav_map: "Minimap & Spawns",
     nav_settings: "Directories & Config",
     server_active: "Server Active",
     backup_active: "🛡️ Automatic backups active",
@@ -390,6 +41,8 @@ const I18N_DICT = {
     tab_sprites_sub: "Inspection and preview of all game graphics",
     tab_docs_title: "CipSoft Function Dictionary",
     tab_docs_sub: "Complete guide to all Events, Conditions, and Actions of Move/Use Engine",
+    tab_map_title: "Minimap & Spawns Visualizer",
+    tab_map_sub: "Interactive rendering of map sectors (.sec), monsters, npcs and houses",
     tab_settings_title: "Directories & Settings",
     tab_settings_sub: "Paths to server and Tibia client folders",
 
@@ -486,6 +139,14 @@ const I18N_DICT = {
     modal_pick_loot: "Add Item to Monster Loot",
     summary_combo_melee: "Melee",
     summary_combo_spells: "Spells",
+    mon_filter_placeholder: "🔍 Filter name or race...",
+    opt_mon_sort_name: "Name",
+    opt_mon_sort_race: "Race Number",
+    opt_mon_sort_hp: "HitPoints",
+    opt_mon_sort_exp: "Experience",
+    opt_mon_sort_atk: "Attack",
+    btn_sort_asc: "▲ Asc",
+    btn_sort_desc: "▼ Desc",
 
     // Spell Types & Names
     dmg_name_physical: "Physical",
@@ -605,6 +266,13 @@ const I18N_DICT = {
     npc_title_edit: "Edit:",
     npc_title_create: "Create New NPC",
     lbl_lines: "lines",
+    npc_filter_placeholder: "🔍 Filter name or outfit...",
+    opt_npc_filter_all: "All NPCs",
+    opt_npc_filter_creatures: "Standard Outfits",
+    opt_npc_filter_items: "Item Outfits (0)",
+    modal_select_item_outfit: "Select Item for NPC Outfit",
+    btn_pick_npc_item: "📦 Pick Item",
+    badge_item_outfit_label: "Item Outfit",
 
     // MoveUse Tab
     moveuse_sections_title: "Rule Sections",
@@ -709,367 +377,64 @@ const I18N_DICT = {
     toast_config_saved: "Settings saved and data reloaded!",
     toast_sprite_copied: "Sprite ID copied",
     toast_invalid_typeid: "Please provide a valid TypeID!",
-    toast_invalid_sprite_id: "Please provide a valid Sprite ID!"
-  },
+    toast_invalid_sprite_id: "Please provide a valid Sprite ID!",
+    toast_error_save_item: "Error saving item",
+    toast_net_error_save_item: "Network error while saving item",
+    toast_item_deleted: "Item deleted",
+    toast_error_delete_item: "Error deleting item",
+    toast_warn_monster_name: "Please enter a monster name",
+    toast_error_save_monster: "Error saving monster",
+    toast_warn_npc_name: "Please enter an NPC name",
+    toast_error_save_npc: "Error saving NPC",
+    toast_error_save_moveuse: "Error saving moveuse.dat",
+    toast_error_load_config: "Error loading directory settings",
+    npc_no_keywords: "No keywords registered. Click '+ Add Rule' to create dialogue responses to words like 'job', 'name', 'offer', etc.",
 
-  es: {
-    // Sidebar
-    nav_objects: "Objetos (objects.srv)",
-    nav_monsters: "Monstruos (.mon)",
-    nav_npcs: "NPCs (.npc)",
-    nav_moveuse: "Acciones (moveuse.dat)",
-    nav_sprites: "Sprites (.spr / .dat)",
-    nav_docs: "Diccionario de Funciones",
-    nav_settings: "Directorios y Config",
-    server_active: "Servidor Activo",
-    backup_active: "🛡️ Copias de seguridad activas",
-
-    // Header
-    search_placeholder: "Buscar por ID, Nombre...",
-    btn_reload: "🔄 Recargar",
-    btn_save_current: "💾 Guardar Actual",
-
-    // Titles & Subtitles
-    tab_objects_title: "Editor de Objetos (objects.srv)",
-    tab_objects_sub: "Gestión completa de atributos, pesos, flags y sprites",
-    tab_monsters_title: "Editor de Monstruos (.mon)",
-    tab_monsters_sub: "Edición de atributos, estadísticas, hechizos y tabla de botín",
-    tab_npcs_title: "Editor de NPCs (.npc)",
-    tab_npcs_sub: "Edición de apariencia, posición de origen y diálogos",
-    tab_moveuse_title: "Editor de Acciones (moveuse.dat)",
-    tab_moveuse_sub: "Reglas de uso, puertas, camas, transformaciones e interacciones",
-    tab_sprites_title: "Navegador de Sprites (.spr / .dat)",
-    tab_sprites_sub: "Inspección y previsualización de todos los gráficos del juego",
-    tab_docs_title: "Diccionario de Funciones CipSoft",
-    tab_docs_sub: "Guía completa de todos los Eventos, Condiciones y Acciones de Move/Use Engine",
-    tab_settings_title: "Directorios y Configuración",
-    tab_settings_sub: "Rutas de carpetas del servidor y del cliente de Tibia",
-
-    // Objects Tab
-    objects_list_title: "Lista de Objetos",
-    btn_new_object: "+ Nuevo Objeto",
-    all_flags: "Todas las Flags",
-    obj_details_title: "Propiedades del Objeto",
-    btn_save_object: "Guardar Objeto",
-    btn_delete_object: "Eliminar",
-    btn_select_sprite: "Seleccionar Sprite",
-    lbl_obj_typeid: "Type ID (ID del Objeto)*",
-    lbl_obj_name: "Nombre del Objeto*",
-    lbl_obj_desc: "Descripción (Look Description)",
-    lbl_obj_comment: "Comentario Interno / Nota",
-    lbl_numeric_attrs: "Atributos Comunes",
-    lbl_weight: "Peso (100 = 1.00 oz)",
-    lbl_capacity: "Capacidad (Slots)",
-    lbl_attack: "Valor de Ataque",
-    lbl_defend: "Valor de Defensa",
-    lbl_armor: "Valor de Armadura",
-    lbl_nutrition: "Nutrición (Comida)",
-    lbl_waypoints: "Waypoints (Suelo)",
-    lbl_totalexpire: "Tiempo Total de Expiración",
-    lbl_raw_attrs: "Otros Atributos (clave=valor, ...)",
-    lbl_flags: "Flags del Objeto",
-    btn_prev: "◀ Ant",
-    btn_next: "Sig ▶",
-    obj_title_edit: "Edición:",
-    obj_title_create: "Crear Nuevo Objeto",
-    obj_typeid_new: "Nuevo",
-    obj_unnamed: "(Sin Nombre)",
-    lbl_items_count: "objetos",
-    lbl_page: "Página",
-
-    // Monsters Tab
-    monsters_list_title: "Monstruos del Servidor",
-    btn_new_monster: "+ Nuevo Monstruo",
-    btn_save_monster: "Guardar Monstruo",
-    btn_combat_guide: "💡 Guía de Cálculos y Daño",
-    lbl_avg_melee: "⚔️ Melee Medio:",
-    lbl_avg_armor: "🛡️ Absorción Armor:",
-    lbl_flee_point: "🏃 Punto de Huida:",
-    lbl_max_combo: "💥 Combo Máx Teórico:",
-    lbl_mon_combat_sec: "⚔️ Combate y Atributos",
-    lbl_mon_immunities_sec: "🛡️ Inmunidades y Comportamiento",
-    lbl_mon_loot_sec: "💎 Tabla de Drop / Botín (Inventory)",
-    lbl_mon_spells_sec: "✨ Hechizos y Ataques Mágicos (Spells)",
-    lbl_mon_talk_sec: "💬 Frases y Sonidos en Combate (Talk)",
-    lbl_mon_name: "Nombre del Monstruo*",
-    lbl_mon_race: "Número de Raza*",
-    lbl_mon_outfit: "LookType del Outfit",
-    lbl_mon_colors: "Colores (Head-Body-Legs-Feet)",
-    lbl_mon_hp: "HitPoints (Vida)*",
-    lbl_mon_exp: "Experiencia (XP)",
-    lbl_mon_atk: "Ataque (Daño Melee Máx)",
-    lbl_mon_def: "Defensa (Escudo/Defensa)",
-    lbl_mon_armor: "Armadura (Valor de Armadura)",
-    lbl_mon_speed: "Velocidad (Movimiento)",
-    lbl_mon_blood: "Sangre (Tipo de Sangre)",
-    lbl_mon_flee: "Umbral de Huida (HP Huida)",
-    lbl_mon_corpse: "Cadáver (ID del Cuerpo)",
-    lbl_mon_poison: "Veneno (Veneno Melee)",
-    opt_blood_red: "Blood (Sangre Roja)",
-    opt_blood_slime: "Slime (Baba Verde)",
-    opt_blood_undead: "Undead (Sin Sangre / Humo)",
-    opt_blood_fire: "Fire (Fuego / Llamas)",
-    opt_blood_energy: "Energy (Energía Azul)",
-    btn_add_loot_item: "+ Añadir Objeto al Botín",
-    btn_add_monster_spell: "+ Nueva Magia",
-    btn_add_monster_talk: "+ Nueva Frase",
-    th_loot_item: "Objeto",
-    th_loot_id: "ID",
-    th_loot_count: "Cant. Máx",
-    th_loot_chance: "Probabilidad (‰)",
-    th_loot_percent: "Porcentaje",
-    th_loot_action: "Acciones",
-    btn_remove: "Eliminar",
-    th_spell_effect: "Efecto",
-    th_spell_type: "Tipo / Forma",
-    th_spell_details: "Detalles",
-    th_talk_mode: "Modo",
-    th_talk_text: "Texto del habla",
-    no_loot_registered: "Ningún objeto de loot registrado",
-    no_spells_registered: "No hay magias registradas. Haz clic en '+ Nueva Magia' para añadir.",
-    no_talk_registered: "No hay frases registradas. Haz clic en '+ Nueva Frase' para añadir.",
-    badge_yell: "📣 Grito (#Y)",
-    badge_say: "💬 Frase (Say)",
-    placeholder_talk: "Escribe la frase del monstruo...",
-    mon_title_edit: "Edición:",
-    mon_title_create: "Crear Nuevo Monstruo",
-    mon_race_new: "Nuevo",
-    modal_pick_corpse: "Elegir Objeto de Cadáver (Corpse)",
-    modal_pick_loot: "Añadir Objeto al Botín del Monstruo",
-    summary_combo_melee: "Melee",
-    summary_combo_spells: "Magias",
-
-    // Spell Types & Names
-    dmg_name_physical: "Físico",
-    dmg_name_fire: "Fuego",
-    dmg_name_poison: "Veneno",
-    dmg_name_energy: "Energía",
-    dmg_name_death: "Muerte/SD",
-    dmg_name_manadrain: "Drenaje de Maná",
-    dmg_name_holy: "Sagrado",
-    dmg_name_drown: "Ahogamiento",
-    spell_lbl_damage: "Daño",
-    spell_lbl_heal: "Auto-Curación",
-    spell_lbl_summon: "Invocación: Raza",
-    spell_lbl_minions: "esbirros",
-    spell_lbl_turns: "Turnos",
-    spell_lbl_to: "a",
-
-    // Monster Spell Builder Modal
-    modal_mon_spell_title: "✨ Crear / Editar Magia de Monstruo",
-    lbl_spell_impact: "Efecto de la Magia (Impact)*",
-    opt_impact_damage: "Damage (Daño Elemental / Físico / Muerte / Maná)",
-    opt_impact_healing: "Healing (Curación de Vida / Auto-Curación)",
-    opt_impact_speed: "Speed (Parálisis / Celeridad)",
-    opt_impact_summon: "Summon (Invocar Criaturas / Esbirros)",
-    opt_impact_field: "Field (Crear Campo de Fuego/Veneno en el Suelo)",
-    opt_impact_drunken: "Drunken (Embriaguez)",
-    lbl_spell_shape: "Forma de Disparo / Objetivo (Shape)*",
-    opt_shape_origin: "Origin (Proyectil en Línea Recta)",
-    opt_shape_victim: "Victim (Fijado en la Víctima)",
-    opt_shape_actor: "Actor (En Sí Mismo / Auto-Buff)",
-    opt_shape_destination: "Destination (Área en Suelo / Bomba)",
-    opt_shape_angle: "Angle (Wave / Cono Frontal)",
-    lbl_spell_params_title: "🎯 Parâmetros de Daño y Efecto",
-    lbl_spell_dmg_type: "Elemento / Tipo de Daño",
-    opt_dmg_fire: "Fire (4 - Fuego / Llamas)",
-    opt_dmg_energy: "Energy (16 - Energía / Rayos)",
-    opt_dmg_poison: "Poison (8 - Veneno / Tierra)",
-    opt_dmg_death: "Death / LifeDrain (32 - Muerte / SD)",
-    opt_dmg_physical: "Physical (1 - Físico / Impacto)",
-    opt_dmg_manadrain: "ManaDrain (64 - Drenaje de Maná)",
-    opt_dmg_holy: "Holy (128 - Luz Sagrada)",
-    opt_dmg_drown: "Drown (256 - Ahogamiento)",
-    lbl_spell_dmg_min: "Daño Mínimo",
-    lbl_spell_dmg_max: "Daño Máximo",
-    lbl_spell_heal_min: "Curación Mínima",
-    lbl_spell_heal_max: "Curación Máxima",
-    lbl_spell_speed_val: "Cambio de Velocidad (ej: -50 o +60)",
-    lbl_spell_speed_dur: "Duración (Segundos)",
-    lbl_spell_speed_eff: "Efecto de Velocidad (ID)",
-    lbl_spell_summon_race: "RaceNumber del Monstruo Invocado",
-    lbl_spell_summon_count: "Cantidad Máxima Invocada",
-    lbl_spell_field_item: "ID del Objeto de Campo (ej: 1487 = Fire Field)",
-    lbl_spell_drunk_int: "Intensidad (1 a 100)",
-    lbl_spell_drunk_dur: "Duración (Segundos)",
-    lbl_spell_drunk_eff: "Efecto (ID)",
-    lbl_spell_visual_title: "🔮 Efecto Visual, Proyectil y Frecuencia",
-    lbl_spell_magic_effect: "Efecto Mágico en Impacto",
-    lbl_pick_spell_effect_btn: "✨ Elegir",
-    lbl_spell_missile_effect: "Proyectil / Misil (Distancia)",
-    lbl_spell_delay: "Turnos / Frecuencia (Delay)*",
-    lbl_mon_spell_code_title: "Línea formateada del .mon:",
-    btn_cancel_mon_spell: "Cancelar",
-    btn_confirm_mon_spell: "Guardar Magia",
-
-    // Monster Combat Guide & Simulator Modal
-    combat_guide_title: "💡 Guía de Combate, Cálculos de Daño y Fórmulas (CipSoft 7.72)",
-    sim_title_text: "🎯 Simulador Rápido de Daño Melee",
-    sim_badge_text: "Basado en C++",
-    lbl_sim_mon_atk: "Ataque del Monstruo (Attack):",
-    lbl_sim_target_def: "Defensa del Objetivo (Defend):",
-    lbl_sim_target_armor: "Armadura del Objetivo (Armor):",
-    btn_run_damage_sim: "🎲 Simular 100 Ataques",
-    sim_lbl_avg: "Daño Medio / Turno",
-    sim_lbl_max: "Daño Máximo Causado",
-    sim_lbl_block: "Tasa de Bloqueo (Poff)",
-    sim_lbl_hits: "Golpes con Daño",
-    btn_close_combat_guide_footer: "Cerrar Guía",
-
-    // NPCs Tab
-    npcs_list_title: "NPCs del Servidor",
-    btn_new_npc: "+ Nuevo NPC",
-    btn_save_npc: "Guardar NPC",
-    npc_details_title: "Edición de NPC",
-    lbl_npc_name: "Nombre*",
-    lbl_npc_sex: "Sexo",
-    opt_npc_sex_male: "Male (Masculino)",
-    opt_npc_sex_female: "Female (Femenino)",
-    lbl_npc_outfit: "LookType",
-    lbl_npc_home: "Posición Home [X, Y, Z]",
-    lbl_npc_radius: "Radio de Movimiento",
-    lbl_npc_colors: "Colores (H-B-L-F)",
-    lbl_npc_palette_sec: "🎨 Paleta de Colores del Outfit (Tibia Client)",
-    tab_pal_head: "Head",
-    tab_pal_primary: "Primary",
-    tab_pal_secondary: "Secondary",
-    tab_pal_detail: "Detail",
-    btn_npc_random_colors: "🎲 Colores Aleatorios",
-    btn_npc_reset_colors: "🔄 Restablecer (0-0-0-0)",
-    btn_tab_npc_dialogues: "💬 Diálogos y Respuestas",
-    btn_tab_npc_ndb: "🛒 Comercio y Módulos (NDB)",
-    btn_tab_npc_raw: "📝 Script Completo (.npc)",
-    lbl_npc_greetings_title: "👋 Saludos, Enfoque y Despedida",
-    lbl_npc_greeting: "Saludo (Jugador dice 'hi' / 'hello')",
-    lbl_npc_farewell: "Despedida (Jugador dice 'bye' / 'farewell')",
-    lbl_npc_busy: "Cuando Ocupado con otro Jugador (BUSY)",
-    lbl_npc_vanish: "Jugador se Aleja (VANISH)",
-    lbl_npc_aggressive: "Frase Espontánea al Ver Jugador (Sin Trigger / Agresivo)",
-    lbl_npc_keywords_title: "💬 Palabras Clave y Regras de Conversación",
-    btn_add_npc_keyword: "+ Añadir Regla",
-    th_npc_keyword: "Palabras Clave (Keywords)",
-    th_npc_condition: "Condición / Topic",
-    th_npc_response: "Respuesta del NPC",
-    th_npc_actions: "Acciones / Efectos",
-    lbl_npc_ndb_modules: "📦 Módulos Oficiales CipSoft (.ndb)",
-    lbl_npc_ndb_desc: "Marca los módulos prefabricados de comercio para incluir automáticamente en el NPC:",
-    lbl_npc_behaviour: "Código Completo de Behaviour ({ ... })",
-    npc_title_edit: "Edición:",
-    npc_title_create: "Crear Nuevo NPC",
-    lbl_lines: "líneas",
-
-    // MoveUse Tab
-    moveuse_sections_title: "Secciones de Reglas",
-    moveuse_rules_title: "Reglas de la Sección",
-    btn_add_rule: "+ Nueva Regla",
-    btn_save_moveuse: "Guardar moveuse.dat",
-    moveuse_rules_of_section: "Reglas de la Sección:",
-    lbl_rules: "reglas",
-    no_section_selected: "Ninguna sección seleccionada",
-
-    // Sprites Tab
-    sprites_panel_title: "Navegador de Sprites de Tibia.spr",
-    sprites_search_placeholder: "Ir a Sprite ID...",
-    btn_search: "Buscar",
-    lbl_zoom_text: "Zoom:",
-    btn_first: "Primera",
-    btn_prev_sprite: "Anterior",
-    btn_next_sprite: "Siguiente",
-    btn_last: "Última",
-    btn_go: "Ir",
-    lbl_page_text: "Página",
-    lbl_of: "de",
-    lbl_showing_sprites: "Mostrando sprites",
-
-    // CipSoft Function Dictionary Tab
-    docs_panel_title: "📚 Diccionario y Guía de Funciones CipSoft (Move/Use Engine)",
-    docs_panel_subtitle: "Catálogo completo de todos los Eventos, Condiciones, Acciones, Objetivos y Parámetros soportados por el servidor.",
-    doc_btn_all: "Todos",
-    doc_btn_events: "Eventos (5)",
-    doc_btn_conds: "Condiciones (19)",
-    doc_btn_acts: "Acciones / Efectos (17)",
-    docs_search_placeholder: "Buscar por nombre de función, palabra clave, ejemplo (ej: Change, IsType, Level, Effect, Logout)...",
-    badge_event_label: "Evento / Trigger",
-    badge_condition_label: "Condición",
-    badge_action_label: "Acción / Efecto",
-    lbl_parameters: "Parámetros:",
-    lbl_example: "Ejemplo:",
-
-    // Rule Builder
-    builder_modal_title: "⚡ Constructor de Eventos y Reglas CipSoft",
-    lbl_builder_sec: "Sección en moveuse.dat (ej: Beds, Doors, Keys, Fun)*",
-    lbl_builder_trigger: "Evento Disparador (Trigger)*",
-    opt_trig_use: "Use (Clic en 'Use' en el objeto - Obj1)",
-    opt_trig_multiuse: "MultiUse ('Use With' - Usar Obj1 en Obj2)",
-    opt_trig_movement: "Movement (Arrastrar objeto o caminar)",
-    opt_trig_collision: "Collision (Pisar sobre palanca de suelo/casilla)",
-    opt_trig_separation: "Separation (Salir de encima de la casilla)",
-    lbl_builder_conds: "🔎 Condiciones Obligatorias (Si ocurre esto...)",
-    add_condition_opt: "+ Añadir Condición...",
-    lbl_builder_acts: "⚡ Acciones y Efectos Resultantes (Entonces haz esto...)",
-    add_action_opt: "+ Añadir Acción...",
-    lbl_builder_raw: "Línea formateada de moveuse.dat:",
-    btn_cancel: "Cancelar",
-    btn_confirm_rule: "Guardar Regla en moveuse.dat",
-    choose_effect_btn: "✨ Elegir Efecto...",
-    choose_item_btn: "📦 Elegir Objeto...",
-    custom_chip: "Personalizado",
-    no_cond_added: "Ninguna condición añadida (se ejecutará siempre).",
-    no_act_added: "Ninguna acción añadida.",
-    modal_pick_cond_item: "Elegir Objeto para Condición",
-    modal_pick_act_item: "Elegir Objeto para Acción",
-
-    // Modals
-    modal_picker_title: "Seleccionar Objeto de objects.srv",
-    modal_item_search: "Filtrar por nombre o ID...",
-    modal_effect_picker_title: "✨ Seleccionar Efecto Mágico CipSoft",
-    modal_effect_search: "Filtrar por nombre o ID del efecto...",
-
-    // Settings
-    settings_panel_title: "Rutas de Directorios y Configuración",
-    lbl_cfg_data_path: "Directorio de Datos del Servidor (tibia-game_data)",
-    sub_cfg_data_path: "Contiene las carpetas <code>dat/</code>, <code>mon/</code>, <code>npc/</code>.",
-    lbl_cfg_client_path: "Directorio del Cliente Tibia (con Tibia.spr y Tibia.dat)",
-    sub_cfg_client_path: "Utilizado para extraer y renderizar todos los gráficos y sprites visuales.",
-    lbl_cfg_status: "Estado de Carga de Archivos:",
-    btn_save_config: "Guardar y Recargar Datos",
-    status_loaded: "Cargado",
-    status_not_found: "No encontrado",
-    status_spr_missing: "No cargado (Seleccione la carpeta del cliente)",
-    status_types: "tipos",
-    status_sections: "secciones",
-    status_creatures: "criaturas",
-    status_npcs: "NPCs",
-    status_sprites: "sprites",
-    status_items: "objetos",
-
-    // Unsaved Changes (Dirty State)
-    lbl_unsaved_text: "Cambios sin guardar",
-    lbl_modal_unsaved_title: "⚠️ Cambios sin Guardar",
-    lbl_modal_unsaved_msg: "Tienes ediciones pendientes que aún no se han guardado. ¿Deseas guardar los cambios antes de continuar o descartarlos?",
-    btn_unsaved_save: "💾 Guardar y Continuar",
-    btn_unsaved_discard: "🗑️ Descartar",
-    btn_unsaved_cancel: "Cancelar",
-
-    // Toasts
-    toast_reloading: "Recargando datos...",
-    toast_updated: "¡Datos actualizados con éxito!",
-    toast_item_saved: "¡Objeto guardado con éxito!",
-    toast_monster_saved: "¡Monstruo guardado con éxito!",
-    toast_npc_saved: "¡NPC guardado con éxito!",
-    toast_moveuse_saved: "¡moveuse.dat guardado con éxito!",
-    toast_config_saved: "¡Configuraciones guardadas y datos recargados!",
-    toast_sprite_copied: "Sprite ID copiado",
-    toast_invalid_typeid: "¡Por favor ingrese un TypeID válido!",
-    toast_invalid_sprite_id: "¡Ingrese un Sprite ID válido!"
+    // Innovative Features: Directions, NPC Chat Simulator, Monte Carlo Loot & Backups
+    btn_loot_sim: "🎲 Loot Simulator",
+    tab_npc_simulator: "🎮 Live Chat Simulator",
+    chat_sim_welcome: "Type a message to interact with the NPC in real time (e.g. 'hi', 'job', 'offer').",
+    chat_sim_placeholder: "Say something to the NPC (e.g. hi, buy bread, yes)...",
+    chat_sim_send: "Send",
+    chat_sim_reset: "🔄 Reset",
+    lbl_sim_player: "Player:",
+    lbl_sim_gold: "Gold:",
+    loot_sim_title: "🎲 Loot Drop Simulator (Monte Carlo)",
+    lbl_loot_sim_kills: "Kills to simulate:",
+    btn_run_loot_sim: "⚡ Run Simulation",
+    lbl_sim_total_drops: "Total Drops:",
+    lbl_sim_total_gold: "Estimated Gold Value:",
+    lbl_sim_avg_gold: "Avg per Kill:",
+    th_sim_item: "Item",
+    th_sim_theory: "Theory Chance",
+    th_sim_real: "Actual Chance",
+    th_sim_dropped: "Qty Dropped",
+    th_sim_gold: "Total Value",
+    rarity_common: "Common",
+    rarity_uncommon: "Uncommon",
+    rarity_rare: "Rare",
+    rarity_very_rare: "Very Rare",
+    lbl_cfg_backups_title: "🛡️ Automatic Backup History",
+    sub_cfg_backups: "Timestamped backups created before every save for maximum safety and data loss prevention.",
+    btn_refresh_backups: "🔄 Refresh",
+    th_bak_time: "Date & Time",
+    th_bak_file: "Original File",
+    th_bak_cat: "Category",
+    th_bak_size: "Size",
+    th_bak_action: "Action",
+    btn_restore: "Restore",
+    confirm_restore_backup: "Are you sure you want to restore this backup? The active file will be overwritten with this version.",
+    toast_backup_restored: "Backup restored successfully! Server data reloaded.",
+    toast_backup_restore_error: "Failed to restore backup.",
+    no_backups_found: "No backup files found yet."
   }
 };
 
 // =============================================================================
-// ESTADO GLOBAL DA APLICAÇÃO
+// GLOBAL APPLICATION STATE
 // =============================================================================
 const state = {
-  lang: localStorage.getItem("tibia_studio_lang") || "pt_BR",
+  lang: "en",
   currentTab: "tab-objects",
   isDirty: false,
   pendingNavigation: null,
@@ -1084,12 +449,15 @@ const state = {
   monsters: {
     list: [],
     selectedFilename: null,
-    search: ""
+    search: "",
+    sortBy: "name",
+    sortOrder: "asc"
   },
   npcs: {
     list: [],
     selectedFilename: null,
-    search: ""
+    search: "",
+    filterType: "all"
   },
   moveuse: {
     sections: [],
@@ -1115,12 +483,63 @@ const state = {
     actions: []
   },
   effects: [],
-  config: {}
+  config: {},
+  outfits: {
+    mon: { dir: 2, anim: 0, timer: null },
+    npc: { dir: 2, anim: 0, timer: null }
+  },
+  npcChat: {
+    topic: 0,
+    playerMoney: 1000,
+    lastPrice: 0
+  },
+  lootSim: {
+    kills: 100
+  },
+  map: {
+    centerX: 32360,
+    centerY: 32199,
+    z: 7,
+    zoom: 1.0,
+    radius: 16,
+    tiles: {},
+    spawns: [],
+    npcs: [],
+    houses: [],
+    signs: [],
+    cities: [],
+    activeSubtab: "spawns",
+    searchQuery: "",
+    selectedSpawn: null,
+    selectedNpc: null,
+    selectedSign: null,
+    layers: {
+      monsters: true,
+      npcs: true,
+      outfits: true,
+      signs: true,
+      houses: true,
+      lowerFloors: true,
+      grid: false
+    },
+    hoveredCoord: { x: 32360, y: 32199, z: 7 },
+    hoveredEntity: null
+  },
+  questWizard: {
+    chestId: 1746,
+    triggerMode: "actionid",
+    triggerValue: "2000",
+    rewardId: 2493,
+    rewardCount: 1,
+    storageKey: 10001,
+    msgSuccess: "You have found a demon helmet.",
+    msgEmpty: "It is empty."
+  }
 };
 
 function t(key) {
-  const dict = I18N_DICT[state.lang] || I18N_DICT["pt_BR"];
-  return dict[key] || I18N_DICT["pt_BR"][key] || key;
+  const dict = I18N_DICT["en"];
+  return dict[key] || key;
 }
 
 function setDirty(isDirty) {
@@ -1266,16 +685,10 @@ function setupDirtyTracking() {
   });
 }
 
-async function setLanguage(lang) {
-  if (!I18N_DICT[lang]) lang = "pt_BR";
-  state.lang = lang;
-  localStorage.setItem("tibia_studio_lang", lang);
-
-  const langSelect = document.getElementById("app-language-select");
-  if (langSelect) langSelect.value = lang;
-
+async function setLanguage(lang = "en") {
+  state.lang = "en";
   applyTranslationsToDOM();
-  await loadDocs(); // Recarrega dicionário com o idioma selecionado
+  await loadDocs();
   
   if (state.currentTab === "tab-monsters") {
     if (state.monsters.selectedFilename) {
@@ -1349,6 +762,7 @@ function applyTranslationsToDOM() {
     "tab-moveuse": { title: t("tab_moveuse_title"), sub: t("tab_moveuse_sub") },
     "tab-sprites": { title: t("tab_sprites_title"), sub: t("tab_sprites_sub") },
     "tab-docs": { title: t("tab_docs_title"), sub: t("tab_docs_sub") },
+    "tab-map": { title: t("tab_map_title"), sub: t("tab_map_sub") },
     "tab-settings": { title: t("tab_settings_title"), sub: t("tab_settings_sub") }
   };
 
@@ -1369,6 +783,7 @@ function applyTranslationsToDOM() {
     { tab: "tab-moveuse", key: "nav_moveuse" },
     { tab: "tab-sprites", key: "nav_sprites" },
     { tab: "tab-docs", key: "nav_docs" },
+    { tab: "tab-map", key: "nav_map" },
     { tab: "tab-settings", key: "nav_settings" }
   ];
   navMap.forEach(({ tab, key }) => {
@@ -1410,6 +825,16 @@ function applyTranslationsToDOM() {
   // Monsters Tab
   setText("lbl-monsters-list-title", t("monsters_list_title"));
   setText("btn-new-monster", t("btn_new_monster"));
+  setPlaceholder("mon-filter-search", t("mon_filter_placeholder"));
+  setText("opt-mon-sort-name", t("opt_mon_sort_name"));
+  setText("opt-mon-sort-race", t("opt_mon_sort_race"));
+  setText("opt-mon-sort-hp", t("opt_mon_sort_hp"));
+  setText("opt-mon-sort-exp", t("opt_mon_sort_exp"));
+  setText("opt-mon-sort-atk", t("opt_mon_sort_atk"));
+  const monSortIcon = document.getElementById("mon-sort-dir-icon");
+  if (monSortIcon) {
+    monSortIcon.innerText = (state.monsters && state.monsters.sortOrder === "desc") ? t("btn_sort_desc") : t("btn_sort_asc");
+  }
   setText("btn-mon-combat-guide", t("btn_combat_guide"));
   setText("btn-save-monster", t("btn_save_monster"));
   setText("lbl-summary-avg-melee", t("lbl_avg_melee"));
@@ -1524,6 +949,11 @@ function applyTranslationsToDOM() {
   // NPCs Tab
   setText("lbl-npcs-list-title", t("npcs_list_title"));
   setText("btn-new-npc", t("btn_new_npc"));
+  setPlaceholder("npc-filter-search", t("npc_filter_placeholder"));
+  setText("opt-npc-filter-all", t("opt_npc_filter_all"));
+  setText("opt-npc-filter-creatures", t("opt_npc_filter_creatures"));
+  setText("opt-npc-filter-items", t("opt_npc_filter_items"));
+  setText("btn-pick-npc-item", t("btn_pick_npc_item"));
   setText("btn-save-npc", t("btn_save_npc"));
   setText("lbl-npc-name", t("lbl_npc_name"));
   setText("lbl-npc-sex", t("lbl_npc_sex"));
@@ -1616,13 +1046,42 @@ function applyTranslationsToDOM() {
   setText("lbl-cfg-status", t("lbl_cfg_status"));
   setText("btn-save-config", t("btn_save_config"));
 
-  // Dirty State / Modal Alterações Não Salvas
+  // Dirty State / Unsaved Changes Modal
   setText("lbl-unsaved-text", t("lbl_unsaved_text"));
   setText("lbl-modal-unsaved-title", t("lbl_modal_unsaved_title"));
   setText("lbl-modal-unsaved-msg", t("lbl_modal_unsaved_msg"));
   setText("btn-unsaved-save", t("btn_unsaved_save"));
   setText("btn-unsaved-discard", t("btn_unsaved_discard"));
   setText("btn-unsaved-cancel", t("btn_unsaved_cancel"));
+
+  // Recursos Inovadores: Simulador de Loot, Chat NPC e Backups
+  setText("btn-open-loot-sim", t("btn_loot_sim"));
+  setText("btn-tab-npc-simulator", t("tab_npc_simulator"));
+  setText("chat-sim-welcome-msg", t("chat_sim_welcome"));
+  setPlaceholder("chat-sim-input", t("chat_sim_placeholder"));
+  setText("btn-chat-sim-send", t("chat_sim_send"));
+  setText("btn-chat-sim-reset", t("chat_sim_reset"));
+  setText("lbl-sim-player", t("lbl_sim_player"));
+  setText("lbl-sim-gold", t("lbl_sim_gold"));
+  setText("loot-sim-title", t("loot_sim_title"));
+  setText("lbl-loot-sim-kills", t("lbl_loot_sim_kills"));
+  setText("btn-run-loot-sim", t("btn_run_loot_sim"));
+  setText("lbl-sim-total-drops", t("lbl_sim_total_drops"));
+  setText("lbl-sim-total-gold", t("lbl_sim_total_gold"));
+  setText("lbl-sim-avg-gold", t("lbl_sim_avg_gold"));
+  setText("th-sim-item", t("th_sim_item"));
+  setText("th-sim-theory", t("th_sim_theory"));
+  setText("th-sim-real", t("th_sim_real"));
+  setText("th-sim-dropped", t("th_sim_dropped"));
+  setText("th-sim-gold", t("th_sim_gold"));
+  setText("lbl-cfg-backups-title", t("lbl_cfg_backups_title"));
+  setText("sub-cfg-backups", t("sub_cfg_backups"));
+  setText("btn-refresh-backups", t("btn_refresh_backups"));
+  setText("th-bak-time", t("th_bak_time"));
+  setText("th-bak-file", t("th_bak_file"));
+  setText("th-bak-cat", t("th_bak_cat"));
+  setText("th-bak-size", t("th_bak_size"));
+  setText("th-bak-action", t("th_bak_action"));
 
   // Re-render components with translated texts
   if (state.currentTab === "tab-sprites") renderSpritesGrid();
@@ -1633,168 +1092,58 @@ function renderCombatGuideCards() {
   const container = document.getElementById("combat-guide-grid");
   if (!container) return;
 
-  const lang = state.lang || "pt_BR";
+  container.innerHTML = `
+    <div class="guide-topic-card">
+      <h4>⚔️ 1. Melee Attack & Physical Damage</h4>
+      <p>Every combat round (<strong>~2 seconds</strong>), the monster performs a physical attack against its target:</p>
+      <div class="formula-box">
+        <code>Raw_Damage = random(0, Attack)</code>
+      </div>
+      <p>Next, the target's <strong>Defense (Defend)</strong> value tries to block the blow:</p>
+      <div class="formula-box">
+        <code>Damage_After_Shield = max(0, Raw_Damage - Target_Defense)</code>
+      </div>
+      <p>If <code>Damage_After_Shield > 0</code>, the target's <strong>Armor</strong> absorbs part of the impact:</p>
+      <div class="formula-box">
+        <code>Armor_Absorption = (Armor / 2) + random(0, Armor / 2)</code><br>
+        <code>Final_Damage = max(0, Damage_After_Shield - Armor_Absorption)</code>
+      </div>
+    </div>
 
-  if (lang === "en") {
-    container.innerHTML = `
-      <div class="guide-topic-card">
-        <h4>⚔️ 1. Melee Attack & Physical Damage</h4>
-        <p>Every combat round (<strong>~2 seconds</strong>), the monster performs a physical attack against its target:</p>
-        <div class="formula-box">
-          <code>Raw_Damage = random(0, Attack)</code>
-        </div>
-        <p>Next, the target's <strong>Defense (Defend)</strong> value tries to block the blow:</p>
-        <div class="formula-box">
-          <code>Damage_After_Shield = max(0, Raw_Damage - Target_Defense)</code>
-        </div>
-        <p>If <code>Damage_After_Shield > 0</code>, the target's <strong>Armor</strong> absorbs part of the impact:</p>
-        <div class="formula-box">
-          <code>Armor_Absorption = (Armor / 2) + random(0, Armor / 2)</code><br>
-          <code>Final_Damage = max(0, Damage_After_Shield - Armor_Absorption)</code>
-        </div>
-      </div>
+    <div class="guide-topic-card">
+      <h4>🛡️ 2. Defense & Resistances</h4>
+      <ul>
+        <li><strong>Defend:</strong> Acts as shield defense. Blocks physical damage from up to 2 attackers per round.</li>
+        <li><strong>Armor:</strong> Absorbs residual damage. On average absorbs <strong>75%</strong> of Armor value on each physical hit.</li>
+        <li><strong>Poison:</strong> If <code>Poison > 0</code>, when landing a physical hit the monster inflicts poison damage from <code>Poison/2</code> to <code>Poison</code> per second.</li>
+        <li><strong>Blood:</strong> Type of blood emitted (Blood = Red, Slime = Green, Undead = Smoke, Fire = Flames, Energy = Blue).</li>
+      </ul>
+    </div>
 
-      <div class="guide-topic-card">
-        <h4>🛡️ 2. Defense & Resistances</h4>
-        <ul>
-          <li><strong>Defend:</strong> Acts as shield defense. Blocks physical damage from up to 2 attackers per round.</li>
-          <li><strong>Armor:</strong> Absorbs residual damage. On average absorbs <strong>75%</strong> of Armor value on each physical hit.</li>
-          <li><strong>Poison:</strong> If <code>Poison > 0</code>, when landing a physical hit the monster inflicts poison damage from <code>Poison/2</code> to <code>Poison</code> per second.</li>
-          <li><strong>Blood:</strong> Type of blood emitted (Blood = Red, Slime = Green, Undead = Smoke, Fire = Flames, Energy = Blue).</li>
-        </ul>
-      </div>
+    <div class="guide-topic-card">
+      <h4>✨ 3. Spells & Ranged Magic Attacks</h4>
+      <p>Spells formatted as <code>Shape -> Impact : Delay</code> are evaluated each turn:</p>
+      <ul>
+        <li><strong>Shape:</strong> How the spell is cast:
+          <br>• <code>Origin(Missile, Effect)</code>: Straight line projectile.
+          <br>• <code>Victim(Missile, Range, Effect)</code>: Locked-on target projectile.
+          <br>• <code>Actor(Effect)</code>: Centered on monster (Self Buff / Heal).
+          <br>• <code>Destination(...)</code>: Ground area / Bomb.
+          <br>• <code>Angle(...)</code>: Frontal cone / wave (e.g. Dragon Wave).
+        </li>
+        <li><strong>Impact:</strong> The resulting effect (<code>Damage(Type, Max, Min)</code>, <code>Healing</code>, <code>Speed/Paralyze</code>, <code>Summon</code>, <code>Field</code>).</li>
+        <li><strong>Delay (Turns):</strong> Spell frequency. <code>: 2</code> = 50% chance/turn (~every 4s), <code>: 6</code> = ~16% chance/turn (~every 12s).</li>
+      </ul>
+    </div>
 
-      <div class="guide-topic-card">
-        <h4>✨ 3. Spells & Ranged Magic Attacks</h4>
-        <p>Spells formatted as <code>Shape -> Impact : Delay</code> are evaluated each turn:</p>
-        <ul>
-          <li><strong>Shape:</strong> How the spell is cast:
-            <br>• <code>Origin(Missile, Effect)</code>: Straight line projectile.
-            <br>• <code>Victim(Missile, Range, Effect)</code>: Locked-on target projectile.
-            <br>• <code>Actor(Effect)</code>: Centered on monster (Self Buff / Heal).
-            <br>• <code>Destination(...)</code>: Ground area / Bomb.
-            <br>• <code>Angle(...)</code>: Frontal cone / wave (e.g. Dragon Wave).
-          </li>
-          <li><strong>Impact:</strong> The resulting effect (<code>Damage(Type, Max, Min)</code>, <code>Healing</code>, <code>Speed/Paralyze</code>, <code>Summon</code>, <code>Field</code>).</li>
-          <li><strong>Delay (Turns):</strong> Spell frequency. <code>: 2</code> = 50% chance/turn (~every 4s), <code>: 6</code> = ~16% chance/turn (~every 12s).</li>
-        </ul>
-      </div>
-
-      <div class="guide-topic-card">
-        <h4>💬 4. Monster Talk Lines & Yells</h4>
-        <ul>
-          <li><strong>Regular Talk (Say):</strong> Appears in yellow over the creature within normal screen vision.</li>
-          <li><strong>Yell (#Y):</strong> Starts with <code>#Y </code>. Appears in <strong>red</strong> to all players across the full game screen (e.g. <code>#Y GROOAAARRR!</code>).</li>
-        </ul>
-      </div>
-    `;
-  } else if (lang === "es") {
-    container.innerHTML = `
-      <div class="guide-topic-card">
-        <h4>⚔️ 1. Ataque Melee y Daño Físico</h4>
-        <p>En cada ronda de combate (<strong>~2 segundos</strong>), el monstruo realiza un ataque físico contra su objetivo:</p>
-        <div class="formula-box">
-          <code>Daño_Bruto = random(0, Attack)</code>
-        </div>
-        <p>A continuación, el valor de <strong>Defensa (Defend)</strong> del objetivo intenta bloquear el golpe:</p>
-        <div class="formula-box">
-          <code>Daño_Tras_Escudo = max(0, Daño_Bruto - Defensa_Objetivo)</code>
-        </div>
-        <p>Si <code>Daño_Tras_Escudo > 0</code>, la <strong>Armadura (Armor)</strong> del objetivo absorbe parte del impacto:</p>
-        <div class="formula-box">
-          <code>Absorcion_Armor = (Armor / 2) + random(0, Armor / 2)</code><br>
-          <code>Daño_Final = max(0, Daño_Tras_Escudo - Absorcion_Armor)</code>
-        </div>
-      </div>
-
-      <div class="guide-topic-card">
-        <h4>🛡️ 2. Defensa y Resistencias</h4>
-        <ul>
-          <li><strong>Defend:</strong> Actúa como escudo. Bloquea el daño físico de hasta 2 atacantes por turno.</li>
-          <li><strong>Armor:</strong> Absorbe daño residual. En promedio absorbe el <strong>75%</strong> del valor de Armor en cada golpe físico.</li>
-          <li><strong>Poison:</strong> Si <code>Poison > 0</code>, al acertar un golpe físico el monstruo aplica veneno de <code>Poison/2</code> a <code>Poison</code> por segundo.</li>
-          <li><strong>Blood:</strong> Tipo de sangre emitida (Blood = Roja, Slime = Verde, Undead = Humo, Fire = Fuego, Energy = Azul).</li>
-        </ul>
-      </div>
-
-      <div class="guide-topic-card">
-        <h4>✨ 3. Hechizos y Ataques a Distancia (Spells)</h4>
-        <p>Los hechizos en formato <code>Shape -> Impact : Delay</code> se evalúan en cada turno:</p>
-        <ul>
-          <li><strong>Shape:</strong> Cómo se dispara el hechizo:
-            <br>• <code>Origin(Missile, Effect)</code>: Proyectil en línea recta.
-            <br>• <code>Victim(Missile, Range, Effect)</code>: Guiado hacia la víctima.
-            <br>• <code>Actor(Effect)</code>: Centrado en el monstruo (Auto-Buff / Curación).
-            <br>• <code>Destination(...)</code>: Área / Bomba en el suelo.
-            <br>• <code>Angle(...)</code>: Cono / Wave frontal (ej: Dragon Wave).
-          </li>
-          <li><strong>Impact:</strong> Efecto causado (<code>Damage(Tipo, Max, Min)</code>, <code>Healing</code>, <code>Speed/Parálisis</code>, <code>Summon</code>, <code>Field</code>).</li>
-          <li><strong>Delay (Turnos):</strong> Frecuencia del hechizo. <code>: 2</code> = 50% probabilidad/turno (~cada 4s), <code>: 6</code> = ~16% probabilidad/turno (~cada 12s).</li>
-        </ul>
-      </div>
-
-      <div class="guide-topic-card">
-        <h4>💬 4. Frases del Monstruo (Talk) y Gritos</h4>
-        <ul>
-          <li><strong>Frase Común (Say):</strong> Aparece en amarillo sobre la criatura en rango normal de visión.</li>
-          <li><strong>Grito (#Y):</strong> Comienza con <code>#Y </code>. Aparece en <strong>rojo</strong> para todos los jugadores en toda la pantalla (ej: <code>#Y GROOAAARRR!</code>).</li>
-        </ul>
-      </div>
-    `;
-  } else {
-    container.innerHTML = `
-      <div class="guide-topic-card">
-        <h4>⚔️ 1. Ataque Melee & Dano Físico</h4>
-        <p>A cada rodada de combate (<strong>~2 segundos</strong>), o monstro executa um ataque físico contra seu alvo:</p>
-        <div class="formula-box">
-          <code>Dano_Bruto = random(0, Attack)</code>
-        </div>
-        <p>Em seguida, o valor de <strong>Defesa (Defend)</strong> do alvo tenta bloquear o golpe:</p>
-        <div class="formula-box">
-          <code>Dano_Apos_Escudo = max(0, Dano_Bruto - Defesa_Alvo)</code>
-        </div>
-        <p>Se <code>Dano_Apos_Escudo > 0</code>, a <strong>Armadura (Armor)</strong> do alvo absorve parte do impacto:</p>
-        <div class="formula-box">
-          <code>Absorcao_Armor = (Armor / 2) + random(0, Armor / 2)</code><br>
-          <code>Dano_Final = max(0, Dano_Apos_Escudo - Absorcao_Armor)</code>
-        </div>
-      </div>
-
-      <div class="guide-topic-card">
-        <h4>🛡️ 2. Defesa & Resistência do Monstro</h4>
-        <ul>
-          <li><strong>Defend:</strong> Age como escudo. Bloqueia o dano físico de até 2 atacantes por rodada.</li>
-          <li><strong>Armor:</strong> Absorve dano residual. Em média absorve <strong>75%</strong> do valor de Armor em cada golpe físico recebido.</li>
-          <li><strong>Poison:</strong> Se <code>Poison > 0</code>, ao acertar um ataque físico o monstro aplica veneno periódico de <code>Poison/2</code> a <code>Poison</code> por segundo.</li>
-          <li><strong>Blood:</strong> Tipo de sangue emitido (Blood = Vermelho, Slime = Verde, Undead = Fumaça, Fire = Fogo, Energy = Azul).</li>
-        </ul>
-      </div>
-
-      <div class="guide-topic-card">
-        <h4>✨ 3. Magias e Ataques à Distância (Spells)</h4>
-        <p>As magias no formato <code>Shape -> Impact : Delay</code> são processadas a cada turno:</p>
-        <ul>
-          <li><strong>Shape:</strong> Como a magia é disparada:
-            <br>• <code>Origin(Missile, Effect)</code>: Projétil em linha reta.
-            <br>• <code>Victim(Missile, Range, Effect)</code>: Teleguiado até o alvo.
-            <br>• <code>Actor(Effect)</code>: Centrado no monstro (Self Buff / Cura).
-            <br>• <code>Destination(...)</code>: Área / Bomba no chão.
-            <br>• <code>Angle(...)</code>: Cone / Wave frontal (ex: Dragon Wave).
-          </li>
-          <li><strong>Impact:</strong> O efeito causado (<code>Damage(Tipo, Max, Min)</code>, <code>Healing</code>, <code>Speed/Paralyze</code>, <code>Summon</code>, <code>Field</code>).</li>
-          <li><strong>Delay (Turnos):</strong> Frequência da magia. <code>: 2</code> = 50% de chance/turno (~1 a cada 4s), <code>: 6</code> = ~16% de chance/turno (~1 a cada 12s).</li>
-        </ul>
-      </div>
-
-      <div class="guide-topic-card">
-        <h4>💬 4. Falas do Monstro (Talk) & Gritos</h4>
-        <ul>
-          <li><strong>Fala Comum (Say):</strong> Aparece em amarelo sobre a criatura no alcance normal de visão.</li>
-          <li><strong>Grito (#Y):</strong> Começa com <code>#Y </code>. Aparece em <strong>vermelho</strong> para todos os jogadores na tela inteira (ex: <code>#Y GROOAAARRR!</code>).</li>
-        </ul>
-      </div>
-    `;
-  }
+    <div class="guide-topic-card">
+      <h4>💬 4. Monster Talk Lines & Yells</h4>
+      <ul>
+        <li><strong>Regular Talk (Say):</strong> Appears in yellow over the creature within normal screen vision.</li>
+        <li><strong>Yell (#Y):</strong> Starts with <code>#Y </code>. Appears in <strong>red</strong> to all players across the full game screen (e.g. <code>#Y GROOAAARRR!</code>).</li>
+      </ul>
+    </div>
+  `;
 }
 
 // Flags conhecidas do objects.srv
@@ -1814,7 +1163,7 @@ const MONSTER_FLAGS = [
   "NoParalyze"
 ];
 
-// Inicialização ao carregar a página
+// Page Initialization on DOMContentLoaded
 document.addEventListener("DOMContentLoaded", async () => {
   setupLanguageSelector();
   setupNavigation();
@@ -1830,6 +1179,26 @@ document.addEventListener("DOMContentLoaded", async () => {
   setupRuleBuilder();
   setupSettingsTab();
   setupModals();
+  setupOutfitControls();
+  setupNpcChatSimulator();
+  setupLootSimulator();
+  setupBackupManager();
+  setupMapTab();
+  setupQuestWizard();
+  setupDiffViewer();
+  setupMobileMenu();
+
+  // Atalhos Globais: Ctrl+S (Salvar Atual) e Ctrl+K (Focar Busca Global)
+  window.addEventListener("keydown", (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      document.getElementById("btn-global-save")?.click();
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+      e.preventDefault();
+      document.getElementById("global-search")?.focus();
+    }
+  });
 
   setLanguage(state.lang);
 
@@ -1843,17 +1212,11 @@ document.addEventListener("DOMContentLoaded", async () => {
 });
 
 function setupLanguageSelector() {
-  const select = document.getElementById("app-language-select");
-  if (select) {
-    select.value = state.lang;
-    select.addEventListener("change", (e) => {
-      setLanguage(e.target.value);
-    });
-  }
+  // English-only application
 }
 
 // =============================================================================
-// NAVEGAÇÃO & ABAS
+// NAVIGATION & TABS
 // =============================================================================
 function setupNavigation() {
   const navButtons = document.querySelectorAll(".nav-item");
@@ -1881,6 +1244,12 @@ function setupNavigation() {
         }
         if (targetTab === "tab-docs") {
           renderDocsGrid();
+        }
+        if (targetTab === "tab-map") {
+          initMapModule();
+        }
+        if (targetTab === "tab-settings") {
+          loadBackupsList();
         }
       });
     });
@@ -1943,7 +1312,7 @@ function setupGlobalSearch() {
 }
 
 // =============================================================================
-// CONFIGURAÇÃO & STATUS INICIAL
+// CONFIGURATION & INITIAL STATUS
 // =============================================================================
 function renderConfigStatus() {
   const data = state.config || {};
@@ -1980,7 +1349,7 @@ async function loadInitialConfig() {
 
     renderConfigStatus();
   } catch (err) {
-    console.error("Erro ao carregar configurações:", err);
+    console.error("Error loading configuration:", err);
   }
 }
 
@@ -2078,7 +1447,7 @@ async function loadObjects() {
       selectObject(data.items[0].type_id);
     }
   } catch (err) {
-    console.error("Erro ao carregar lista de itens:", err);
+    console.error("Error loading items list:", err);
   }
 }
 
@@ -2101,7 +1470,7 @@ async function selectObject(typeId) {
 
     document.getElementById("obj-sprite-img").src = `/api/item_sprite/${item.type_id}?zoom=3&t=${Date.now()}`;
 
-    // Atributos numéricos
+    // Numeric attributes
     const attrs = item.attributes || {};
     document.getElementById("attr-weight").value = attrs.Weight !== undefined ? attrs.Weight : "";
     document.getElementById("attr-capacity").value = attrs.Capacity !== undefined ? attrs.Capacity : "";
@@ -2128,7 +1497,7 @@ async function selectObject(typeId) {
 
     setDirty(false);
   } catch (err) {
-    console.error("Erro ao selecionar objeto:", err);
+    console.error("Error selecting object:", err);
   }
 }
 
@@ -2226,11 +1595,11 @@ async function saveCurrentObject() {
       selectObject(typeId);
       return true;
     } else {
-      showToast(result.error || "Erro ao salvar item", "error");
+      showToast(result.error || t("toast_error_save_item"), "error");
       return false;
     }
   } catch (err) {
-    showToast("Erro de rede ao salvar item", "error");
+    showToast(t("toast_net_error_save_item"), "error");
     return false;
   }
 }
@@ -2249,12 +1618,12 @@ async function deleteCurrentObject() {
     });
     const result = await res.json();
     if (result.success) {
-      showToast(`Item ${typeId} excluído`, "success");
+      showToast(`${t("toast_item_deleted")} (ID: ${typeId})`, "success");
       clearObjectForm();
       loadObjects();
     }
   } catch (err) {
-    showToast("Erro ao excluir item", "error");
+    showToast(t("toast_error_delete_item"), "error");
   }
 }
 
@@ -2296,16 +1665,55 @@ function setupMonstersTab() {
     });
   });
 
-  const updateMonsterPreview = () => {
+  // Monster Filters and Sorting
+  const monSearchInput = document.getElementById("mon-filter-search");
+  if (monSearchInput) {
+    monSearchInput.addEventListener("input", (e) => {
+      state.monsters.search = e.target.value.trim().toLowerCase();
+      renderMonstersList();
+    });
+  }
+
+  const monSortSelect = document.getElementById("mon-sort-by");
+  if (monSortSelect) {
+    monSortSelect.addEventListener("change", (e) => {
+      state.monsters.sortBy = e.target.value;
+      renderMonstersList();
+    });
+  }
+
+  const monSortDirBtn = document.getElementById("btn-mon-sort-dir");
+  if (monSortDirBtn) {
+    monSortDirBtn.addEventListener("click", () => {
+      state.monsters.sortOrder = (state.monsters.sortOrder === "asc") ? "desc" : "asc";
+      const icon = document.getElementById("mon-sort-dir-icon");
+      if (icon) {
+        icon.innerText = state.monsters.sortOrder === "asc" ? t("btn_sort_asc") : t("btn_sort_desc");
+      }
+      renderMonstersList();
+    });
+  }
+
+  window.updateMonsterPreview = function() {
     const outfit = parseInt(document.getElementById("mon-outfit").value) || 0;
+    const corpse = parseInt(document.getElementById("mon-corpse")?.value) || 0;
     const colors = document.getElementById("mon-colors").value.trim() || "0-0-0-0";
-    document.getElementById("mon-sprite-img").src = `/api/outfit_sprite/${outfit}?zoom=3&colors=${encodeURIComponent(colors)}&t=${Date.now()}`;
+    const dir = (state.outfits && state.outfits.mon) ? state.outfits.mon.dir : 2;
+    const anim = (state.outfits && state.outfits.mon) ? state.outfits.mon.anim : 0;
+    const img = document.getElementById("mon-sprite-img");
+    if (img) {
+      if (outfit === 0 && corpse > 0) {
+        img.src = `/api/item_sprite/${corpse}?zoom=3&t=${Date.now()}`;
+      } else {
+        img.src = `/api/outfit_sprite/${outfit}?dir=${dir}&anim=${anim}&zoom=3&colors=${encodeURIComponent(colors)}&t=${Date.now()}`;
+      }
+    }
   };
 
   document.getElementById("mon-outfit").addEventListener("input", updateMonsterPreview);
   document.getElementById("mon-colors").addEventListener("input", updateMonsterPreview);
 
-  // Listeners para Métricas de Combate em Tempo Real
+  // Real-Time Combat Metrics Listeners
   ["mon-hp", "mon-atk", "mon-armor", "mon-flee"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener("input", updateMonsterCombatSummary);
@@ -2320,7 +1728,10 @@ function setupMonstersTab() {
       corpseImg.src = `/api/item_sprite/${cId}?zoom=1&t=${Date.now()}`;
     }
   };
-  corpseInput.addEventListener("input", updateCorpseImg);
+  corpseInput.addEventListener("input", () => {
+    updateCorpseImg();
+    if (typeof window.updateMonsterPreview === "function") window.updateMonsterPreview();
+  });
 
   const btnPickCorpse = document.getElementById("btn-pick-corpse");
   if (btnPickCorpse) {
@@ -2329,7 +1740,7 @@ function setupMonstersTab() {
         corpseInput.value = item.type_id;
         updateCorpseImg();
         setDirty(true);
-      }, "Corpse,Container");
+      }, "corpse");
     });
   }
 
@@ -2457,27 +1868,51 @@ async function loadMonsters() {
     state.monsters.list = data.monsters;
     renderMonstersList();
   } catch (err) {
-    console.error("Erro ao carregar monstros:", err);
+    console.error("Error loading monsters:", err);
   }
 }
 
 function renderMonstersList() {
   const listContainer = document.getElementById("monsters-list");
-  const q = state.monsters.search.toLowerCase();
+  if (!listContainer) return;
+  const q = (state.monsters.search || "").toLowerCase();
 
-  const filtered = state.monsters.list.filter(m => {
+  let filtered = state.monsters.list.filter(m => {
     if (!q) return true;
-    return m.name.toLowerCase().includes(q) || m.filename.toLowerCase().includes(q) || String(m.race_number).startsWith(q);
+    const nameMatch = (m.name || "").toLowerCase().includes(q);
+    const fileMatch = (m.filename || "").toLowerCase().includes(q);
+    const raceMatch = String(m.race_number || "").includes(q);
+    return nameMatch || fileMatch || raceMatch;
+  });
+
+  const sortBy = state.monsters.sortBy || "name";
+  const sortOrder = state.monsters.sortOrder || "asc";
+
+  filtered.sort((a, b) => {
+    let cmp = 0;
+    if (sortBy === "name") {
+      cmp = (a.name || "").localeCompare(b.name || "");
+    } else if (sortBy === "race") {
+      cmp = (a.race_number || 0) - (b.race_number || 0);
+    } else if (sortBy === "hp") {
+      cmp = (a.hitpoints || 0) - (b.hitpoints || 0);
+    } else if (sortBy === "exp") {
+      cmp = (a.experience || 0) - (b.experience || 0);
+    } else if (sortBy === "atk") {
+      cmp = (a.attack || 0) - (b.attack || 0);
+    }
+    return sortOrder === "desc" ? -cmp : cmp;
   });
 
   listContainer.innerHTML = filtered.map(m => `
     <div class="list-item-card ${state.monsters.selectedFilename === m.filename ? 'selected' : ''}" data-file="${m.filename}">
       <div class="item-thumb">
-        <img src="/api/outfit_sprite/${m.outfit_type}?zoom=1&colors=${encodeURIComponent(m.outfit_colors || '0-0-0-0')}" alt="${m.name}" loading="lazy">
+        <img src="${(m.outfit_type === 0 && (m.corpse || 0) > 0) ? `/api/item_sprite/${m.corpse}?zoom=1` : `/api/outfit_sprite/${m.outfit_type}?zoom=1&colors=${encodeURIComponent(m.outfit_colors || '0-0-0-0')}`}" alt="${m.name}" loading="lazy">
       </div>
       <div class="item-info">
         <div class="item-name">${m.name}</div>
         <div class="item-meta">
+          <span class="badge-race">Race: #${m.race_number}</span>
           <span>HP: ${m.hitpoints}</span>
           <span>XP: ${m.experience}</span>
         </div>
@@ -2534,7 +1969,7 @@ async function selectMonster(filename) {
       corpseImg.src = `/api/item_sprite/${corpseId || 4025}?zoom=1&t=${Date.now()}`;
     }
 
-    document.getElementById("mon-sprite-img").src = `/api/outfit_sprite/${m.outfit_type}?zoom=3&colors=${encodeURIComponent(colors)}&t=${Date.now()}`;
+    updateMonsterPreview();
 
     const flagsSet = new Set(m.flags || []);
     document.querySelectorAll("input[name='mon-flag']").forEach(chk => {
@@ -2551,7 +1986,7 @@ async function selectMonster(filename) {
     updateMonsterCombatSummary();
     setDirty(false);
   } catch (err) {
-    console.error("Erro ao carregar detalhes do monstro:", err);
+    console.error("Error loading monster details:", err);
   }
 }
 
@@ -2979,7 +2414,7 @@ function clearMonsterForm() {
 async function saveCurrentMonster() {
   const name = document.getElementById("mon-name").value.trim();
   if (!name) {
-    showToast("Informe o nome do monstro", "error");
+    showToast(t("toast_warn_monster_name"), "error");
     return false;
   }
 
@@ -3024,17 +2459,17 @@ async function saveCurrentMonster() {
       selectMonster(filename);
       return true;
     } else {
-      showToast(result.error || "Erro ao salvar monstro", "error");
+      showToast(result.error || t("toast_error_save_monster"), "error");
       return false;
     }
   } catch (err) {
-    showToast("Erro ao salvar monstro", "error");
+    showToast(t("toast_error_save_monster"), "error");
     return false;
   }
 }
 
 // =============================================================================
-// ABA 3: NPCS (.NPC) - PALETA DE CORES TIBIA E CONSTRUTOR DE DIÁLOGOS
+// TAB 3: NPCS (.NPC) - TIBIA PALETTE & DIALOGUE BUILDER
 // =============================================================================
 const TIBIA_PALETTE_HEX = [
   "FFFFFF", "FFD4BF", "FFE9BF", "FFFFBF", "E9FFBF", "D4FFBF",
@@ -3063,7 +2498,7 @@ const TIBIA_PALETTE_HEX = [
 ];
 
 const KNOWN_NDBS = [
-  { file: "gen-bank.ndb", name: "🏦 Banco & Depósitos (gen-bank.ndb)" },
+  { file: "gen-bank.ndb", name: "🏦 Bank & Deposits (gen-bank.ndb)" },
   { file: "gen-post.ndb", name: "📫 Correio & Parcels (gen-post.ndb)" },
   { file: "gen-t-runes-free-s.ndb", name: "📜 Runas Free (gen-t-runes-free-s.ndb)" },
   { file: "gen-t-runes-prem-s.ndb", name: "✨ Runas Premmy (gen-t-runes-prem-s.ndb)" },
@@ -3073,9 +2508,9 @@ const KNOWN_NDBS = [
   { file: "gen-t-armor-s.ndb", name: "🛡️ Armaduras (gen-t-armor-s.ndb)" },
   { file: "gen-t-helm-s.ndb", name: "🪖 Capacetes (gen-t-helm-s.ndb)" },
   { file: "gen-t-shield-s.ndb", name: "🛡️ Escudos (gen-t-shield-s.ndb)" },
-  { file: "gen-t-legs-s.ndb", name: "👖 Calças / Legs (gen-t-legs-s.ndb)" },
+  { file: "gen-t-legs-s.ndb", name: "👖 Legs / Trousers (gen-t-legs-s.ndb)" },
   { file: "gen-t-fruit-s.ndb", name: "🍎 Frutas & Comida (gen-t-fruit-s.ndb)" },
-  { file: "gen-t-furniture-chairs-s.ndb", name: "🪑 Móveis & Cadeiras (gen-t-furniture-chairs-s.ndb)" },
+  { file: "gen-t-furniture-chairs-s.ndb", name: "🪑 Furniture & Chairs (gen-t-furniture-chairs-s.ndb)" },
   { file: "gen-t-distance-s.ndb", name: "🏹 Arcos & Flechas (gen-t-distance-s.ndb)" },
   { file: "gen-t-gems-s.ndb", name: "💎 Gemas & Joias (gen-t-gems-s.ndb)" }
 ];
@@ -3185,20 +2620,46 @@ function syncNpcPaletteSelection() {
 }
 
 function updateNpcSpritePreview() {
-  const outfit = parseInt(document.getElementById("npc-outfit").value) || 128;
-  const colors = document.getElementById("npc-colors").value.trim() || "0-0-0-0";
+  const outfitInput = document.getElementById("npc-outfit");
+  const outfitRaw = outfitInput ? outfitInput.value.trim() : "128";
+  const outfit = (outfitRaw !== "" && !isNaN(outfitRaw)) ? parseInt(outfitRaw) : 128;
+  const colors = (document.getElementById("npc-colors")?.value || "").trim();
+  const dir = (state.outfits && state.outfits.npc) ? state.outfits.npc.dir : 2;
+  const anim = (state.outfits && state.outfits.npc) ? state.outfits.npc.anim : 0;
   const img = document.getElementById("npc-sprite-img");
-  if (img) {
-    img.src = `/api/outfit_sprite/${outfit}?zoom=3&colors=${encodeURIComponent(colors)}&t=${Date.now()}`;
+  const badge = document.getElementById("npc-outfit-badge");
+  const pickBtn = document.getElementById("btn-pick-npc-item");
+  const dirToolbar = document.getElementById("npc-dir-toolbar");
+  const paletteSec = document.getElementById("npc-tibia-palette");
+
+  const isItemOutfit = (outfit === 0);
+  if (isItemOutfit) {
+    const itemId = parseInt(colors) || 0;
+    if (badge) badge.innerText = itemId > 0 ? `${t("badge_item_outfit_label")}: #${itemId}` : `${t("badge_item_outfit_label")}: (0)`;
+    if (pickBtn) pickBtn.style.display = "inline-block";
+    if (dirToolbar) dirToolbar.style.opacity = "0.35";
+    if (paletteSec) paletteSec.style.opacity = "0.45";
+    if (img) {
+      img.src = `/api/outfit_sprite/0?zoom=3&colors=${encodeURIComponent(colors)}&t=${Date.now()}`;
+    }
+  } else {
+    if (badge) badge.innerText = `LookType: ${outfit}`;
+    if (pickBtn) pickBtn.style.display = "none";
+    if (dirToolbar) dirToolbar.style.opacity = "1";
+    if (paletteSec) paletteSec.style.opacity = "1";
+    if (img) {
+      img.src = `/api/outfit_sprite/${outfit}?dir=${dir}&anim=${anim}&zoom=3&colors=${encodeURIComponent(colors || "0-0-0-0")}&t=${Date.now()}`;
+    }
   }
 }
 
-// ---- Diálogos & Comportamento de NPCs ----
+// ---- NPC Dialogues & Behaviour ----
 function initNpcBehaviourTabs() {
   const secTabs = [
     { btnId: "btn-tab-npc-dialogues", paneId: "npc-pane-dialogues", key: "dialogues" },
     { btnId: "btn-tab-npc-ndb", paneId: "npc-pane-ndb", key: "ndb" },
-    { btnId: "btn-tab-npc-raw", paneId: "npc-pane-raw", key: "raw" }
+    { btnId: "btn-tab-npc-raw", paneId: "npc-pane-raw", key: "raw" },
+    { btnId: "btn-tab-npc-simulator", paneId: "npc-pane-simulator", key: "simulator" }
   ];
 
   secTabs.forEach(({ btnId, paneId, key }) => {
@@ -3211,6 +2672,12 @@ function initNpcBehaviourTabs() {
         } else if (currentNpcActiveSecTab === "raw" && key !== "raw") {
           const rawLines = document.getElementById("npc-behaviour").value.split("\n").map(s => s.trim()).filter(Boolean);
           parseNpcBehaviourToUI(rawLines);
+        }
+
+        if (key === "simulator") {
+          const curName = document.getElementById("npc-name")?.value || "NPC";
+          const simNameEl = document.getElementById("chat-sim-npc-name");
+          if (simNameEl) simNameEl.innerText = curName;
         }
 
         currentNpcActiveSecTab = key;
@@ -3235,7 +2702,7 @@ function initNpcBehaviourTabs() {
     `).join("");
   }
 
-  // Botão Adicionar Regra
+  // Add Rule Button
   const btnAddKw = document.getElementById("btn-add-npc-keyword");
   if (btnAddKw) {
     btnAddKw.addEventListener("click", () => {
@@ -3264,7 +2731,7 @@ function renderNpcKeywordRulesTable() {
   if (!tbody) return;
 
   if (currentNpcKeywords.length === 0) {
-    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1rem;">Nenhuma palavra-chave cadastrada. Clique em '+ Adicionar Regra' para criar respostas a palavras como 'job', 'name', 'offer', etc.</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1rem;">${t("npc_no_keywords")}</td></tr>`;
     return;
   }
 
@@ -3363,14 +2830,14 @@ function parseNpcBehaviourToUI(lines) {
       return;
     }
 
-    // Regra de diálogo geral: Trigger -> Resposta / Ações
+    // General dialogue rule: Trigger -> Response / Actions
     if (s.includes("->")) {
       const [left, right] = s.split("->").map(p => p.trim());
       
       let condition = "";
       let keywords = left;
       
-      // Se tiver Topic ou Condição no lado esquerdo
+      // If left side has Topic or Condition
       if (left.includes("Topic=") || left.includes("Count") || left.includes("Price") || left.includes("Quest")) {
         const parts = left.split(",");
         const kwParts = [];
@@ -3387,7 +2854,7 @@ function parseNpcBehaviourToUI(lines) {
         condition = condParts.join(", ");
       }
 
-      // Extrai resposta entre aspas e ações no lado direito
+      // Extract quoted response and actions on right side
       let responseText = "";
       let actionsText = "";
       
@@ -3408,7 +2875,7 @@ function parseNpcBehaviourToUI(lines) {
     }
   });
 
-  // Atualiza campos do formulário
+  // Update form fields
   const elGreet = document.getElementById("npc-greet-input");
   if (elGreet) elGreet.value = greeting;
 
@@ -3447,7 +2914,7 @@ function generateNpcBehaviourFromUI() {
     lines.push(`-> ${aggressive}`);
   }
 
-  // Saudações padrão GIMUD
+  // Standard GIMUD greetings
   if (greeting) {
     lines.push(`ADDRESS,"hello$",! -> "${greeting}"`);
     lines.push(`ADDRESS,"hi$",!    -> *`);
@@ -3489,7 +2956,7 @@ function generateNpcBehaviourFromUI() {
     }
   });
 
-  // Módulos NDB incluídos
+  // Included NDB modules
   currentNpcNdbs.forEach(ndb => {
     lines.push(`@"${ndb}"`);
   });
@@ -3511,13 +2978,41 @@ function setupNpcsTab() {
     });
   });
 
+  const npcSearchInput = document.getElementById("npc-filter-search");
+  if (npcSearchInput) {
+    npcSearchInput.addEventListener("input", (e) => {
+      state.npcs.search = e.target.value.trim().toLowerCase();
+      renderNpcsList();
+    });
+  }
+
+  const npcFilterType = document.getElementById("npc-filter-type");
+  if (npcFilterType) {
+    npcFilterType.addEventListener("change", (e) => {
+      state.npcs.filterType = e.target.value;
+      renderNpcsList();
+    });
+  }
+
+  const btnPickNpcItem = document.getElementById("btn-pick-npc-item");
+  if (btnPickNpcItem) {
+    btnPickNpcItem.addEventListener("click", () => {
+      openItemPickerModal(t("modal_select_item_outfit"), (item) => {
+        document.getElementById("npc-outfit").value = 0;
+        document.getElementById("npc-colors").value = String(item.type_id);
+        updateNpcSpritePreview();
+        setDirty(true);
+      });
+    });
+  }
+
   document.getElementById("npc-outfit").addEventListener("input", updateNpcSpritePreview);
   document.getElementById("npc-colors").addEventListener("input", () => {
     updateNpcSpritePreview();
     syncNpcPaletteSelection();
   });
 
-  // Inputs de diálogos disparam sincronização
+  // Dialogue inputs trigger synchronization
   ["npc-greet-input", "npc-farewell-input", "npc-busy-input", "npc-vanish-input", "npc-aggressive-input"].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.addEventListener("input", generateNpcBehaviourFromUI);
@@ -3534,33 +3029,50 @@ async function loadNpcs() {
     state.npcs.list = data.npcs;
     renderNpcsList();
   } catch (err) {
-    console.error("Erro ao carregar NPCs:", err);
+    console.error("Error loading NPCs:", err);
   }
 }
 
 function renderNpcsList() {
   const listContainer = document.getElementById("npcs-list");
-  const q = state.npcs.search.toLowerCase();
+  if (!listContainer) return;
+  const q = (state.npcs.search || "").toLowerCase();
+  const filterType = state.npcs.filterType || "all";
 
   const filtered = state.npcs.list.filter(n => {
+    const isItem = (n.outfit_type === 0);
+    if (filterType === "creatures" && isItem) return false;
+    if (filterType === "items" && !isItem) return false;
+
     if (!q) return true;
-    return n.name.toLowerCase().includes(q) || n.filename.toLowerCase().includes(q);
+    const nameMatch = (n.name || "").toLowerCase().includes(q);
+    const fileMatch = (n.filename || "").toLowerCase().includes(q);
+    const outfitMatch = String(n.outfit_type || "").includes(q);
+    const colorsMatch = String(n.outfit_colors || "").includes(q);
+    return nameMatch || fileMatch || outfitMatch || colorsMatch;
   });
 
-  listContainer.innerHTML = filtered.map(n => `
-    <div class="list-item-card ${state.npcs.selectedFilename === n.filename ? 'selected' : ''}" data-file="${n.filename}">
-      <div class="item-thumb">
-        <img src="/api/outfit_sprite/${n.outfit_type}?zoom=1&colors=${encodeURIComponent(n.outfit_colors || '0-0-0-0')}" alt="${n.name}" loading="lazy">
-      </div>
-      <div class="item-info">
-        <div class="item-name">${n.name}</div>
-        <div class="item-meta">
-          <span>${n.home_pos}</span>
-          <span>${n.behaviour_count} ${t("lbl_lines")}</span>
+  listContainer.innerHTML = filtered.map(n => {
+    const isItem = (n.outfit_type === 0);
+    const badgeHtml = isItem
+      ? `<span class="badge-item-outfit">📦 Item #${n.outfit_colors}</span>`
+      : `<span>Look: #${n.outfit_type}</span>`;
+
+    return `
+      <div class="list-item-card ${state.npcs.selectedFilename === n.filename ? 'selected' : ''}" data-file="${n.filename}">
+        <div class="item-thumb">
+          <img src="/api/outfit_sprite/${n.outfit_type}?zoom=1&colors=${encodeURIComponent(n.outfit_colors || '0-0-0-0')}" alt="${n.name}" loading="lazy">
+        </div>
+        <div class="item-info">
+          <div class="item-name">${n.name}</div>
+          <div class="item-meta">
+            ${badgeHtml}
+            <span>${n.behaviour_count} ${t("lbl_lines")}</span>
+          </div>
         </div>
       </div>
-    </div>
-  `).join("");
+    `;
+  }).join("");
 
   listContainer.querySelectorAll(".list-item-card").forEach(el => {
     el.addEventListener("click", () => {
@@ -3595,14 +3107,16 @@ async function selectNpc(filename) {
     const colors = n.outfit_colors || "0-0-0-0";
     document.getElementById("npc-colors").value = colors;
 
-    document.getElementById("npc-sprite-img").src = `/api/outfit_sprite/${n.outfit_type}?zoom=3&colors=${encodeURIComponent(colors)}&t=${Date.now()}`;
+    updateNpcSpritePreview();
+    const chatSimNpcName = document.getElementById("chat-sim-npc-name");
+    if (chatSimNpcName) chatSimNpcName.innerText = n.name || "NPC";
     document.getElementById("npc-behaviour").value = (n.behaviour_lines || []).join("\n");
 
     syncNpcPaletteSelection();
     parseNpcBehaviourToUI(n.behaviour_lines || []);
     setDirty(false);
   } catch (err) {
-    console.error("Erro ao carregar detalhes do NPC:", err);
+    console.error("Error loading NPC details:", err);
   }
 }
 
@@ -3632,7 +3146,7 @@ function clearNpcForm() {
 async function saveCurrentNpc() {
   const name = document.getElementById("npc-name").value.trim();
   if (!name) {
-    showToast("Informe o nome do NPC", "error");
+    showToast(t("toast_warn_npc_name"), "error");
     return false;
   }
 
@@ -3669,11 +3183,11 @@ async function saveCurrentNpc() {
       selectNpc(filename);
       return true;
     } else {
-      showToast(result.error || "Erro ao salvar NPC", "error");
+      showToast(result.error || t("toast_error_save_npc"), "error");
       return false;
     }
   } catch (err) {
-    showToast("Erro ao salvar NPC", "error");
+    showToast(t("toast_error_save_npc"), "error");
     return false;
   }
 }
@@ -3699,7 +3213,7 @@ async function loadMoveUse() {
     state.moveuse.sections = data.sections;
     renderMoveUseSections();
   } catch (err) {
-    console.error("Erro ao carregar moveuse:", err);
+    console.error("Error loading moveuse:", err);
   }
 }
 
@@ -3782,11 +3296,11 @@ async function saveMoveUse() {
       setDirty(false);
       return true;
     } else {
-      showToast("Erro ao salvar moveuse.dat", "error");
+      showToast(result.error || t("toast_error_save_moveuse"), "error");
       return false;
     }
   } catch (err) {
-    showToast("Erro ao salvar moveuse.dat", "error");
+    showToast(t("toast_error_save_moveuse"), "error");
     return false;
   }
 }
@@ -3804,7 +3318,7 @@ function setupRuleBuilder() {
     updateBuilderPreview();
   });
 
-  // Dropdown de Condições
+  // Conditions Dropdown
   const condSelect = document.getElementById("select-add-condition");
   condSelect.addEventListener("change", (e) => {
     const condId = e.target.value;
@@ -3826,7 +3340,7 @@ function setupRuleBuilder() {
     condSelect.value = "";
   });
 
-  // Dropdown de Ações
+  // Actions Dropdown
   const actSelect = document.getElementById("select-add-action");
   actSelect.addEventListener("change", (e) => {
     const actId = e.target.value;
@@ -3914,7 +3428,7 @@ function openRuleBuilderForEdit(rIdx) {
     rawConds.forEach(cStr => {
       state.builder.conditions.push({
         id: "Custom",
-        name: "Condição",
+        name: "Condition",
         raw: cStr.trim(),
         template: cStr.trim()
       });
@@ -3928,7 +3442,7 @@ function openRuleBuilderForEdit(rIdx) {
     rawActs.forEach(aStr => {
       state.builder.actions.push({
         id: "Custom",
-        name: "Ação",
+        name: "Action",
         raw: aStr.trim(),
         template: aStr.trim()
       });
@@ -4032,7 +3546,7 @@ function renderBuilderActions() {
     const inputsHtml = (def ? def.params : []).map(p => {
       const val = a.params[p.name] !== undefined ? a.params[p.name] : p.default;
 
-      // Seletor de Efeitos Mágicos
+      // Magic Effects Selector
       if (p.name === "EffectID" || p.name === "Effect" || a.id === "Effect") {
         return `
           <div style="display:flex;align-items:center;gap:4px;">
@@ -4138,14 +3652,14 @@ async function saveBuilderRule() {
   const secName = document.getElementById("builder-section-name").value.trim() || "Geral";
   const rawCode = generateRuleCode();
 
-  // Encontra ou cria a seção
+  // Find or create section
   let targetSec = state.moveuse.sections.find(s => s.name.toLowerCase() === secName.toLowerCase());
   if (!targetSec) {
     targetSec = { name: secName, count: 0, rules: [] };
     state.moveuse.sections.push(targetSec);
   }
 
-  // Extrai IDs de itens da linha para visualização
+  // Extract item IDs from line for preview
   const foundIds = (rawCode.match(/\b\d{3,5}\b/g) || []).map(Number);
   const uniqueIds = [...new Set(foundIds)];
 
@@ -4174,7 +3688,7 @@ async function saveBuilderRule() {
 }
 
 // =============================================================================
-// ABA 6: DICIONÁRIO DE FUNÇÕES CIPSOFT (DOCUMENTATION)
+// TAB 6: CIPSOFT FUNCTION DICTIONARY (DOCUMENTATION)
 // =============================================================================
 function setupDocsTab() {
   const filterBtns = document.querySelectorAll("[data-doc-filter]");
@@ -4196,8 +3710,8 @@ function setupDocsTab() {
 
 async function loadDocs() {
   try {
-    const lang = state.lang || "pt_BR";
-    const res = await fetch(`/api/moveuse/docs?lang=${lang}`);
+    const lang = "en";
+    const res = await fetch(`/api/moveuse/docs?lang=en`);
     const data = await res.json();
     state.docs.catalog = data;
 
@@ -4216,7 +3730,7 @@ async function loadDocs() {
 
     renderDocsGrid();
   } catch (err) {
-    console.error("Erro ao carregar dicionário de funções:", err);
+    console.error("Error loading function dictionary:", err);
   }
 }
 
@@ -4276,7 +3790,7 @@ function renderDocsGrid() {
 }
 
 // =============================================================================
-// ABA 5: SPRITES BROWSER (PAGINADO COM 250 POR PÁGINA)
+// TAB 5: SPRITES BROWSER (PAGINATED 250 PER PAGE)
 // =============================================================================
 function setupSpritesTab() {
   document.querySelectorAll(".btn-zoom").forEach(btn => {
@@ -4306,7 +3820,7 @@ function setupSpritesTab() {
     }
   });
 
-  // Botões de Paginação
+  // Pagination Buttons
   document.getElementById("btn-sprites-first").addEventListener("click", () => {
     if (state.sprites.page > 1) {
       state.sprites.page = 1;
@@ -4400,7 +3914,7 @@ window.copySpriteId = function(id) {
 };
 
 // =============================================================================
-// ABA 7: CONFIGURAÇÕES
+// TAB 7: SETTINGS
 // =============================================================================
 async function saveConfig() {
   const dataPath = document.getElementById("cfg-data-path").value.trim();
@@ -4423,7 +3937,7 @@ async function saveConfig() {
     await loadEffects();
     return true;
   } catch (err) {
-    showToast("Erro ao carregar diretórios", "error");
+    showToast(t("toast_error_load_config"), "error");
     return false;
   }
 }
@@ -4433,7 +3947,7 @@ function setupSettingsTab() {
 }
 
 // =============================================================================
-// MODAIS: SELETOR DE ITENS E SELETOR DE EFEITOS MÁGICOS
+// MODALS: ITEM PICKER AND EFFECT PICKER
 // =============================================================================
 let activePickerCallback = null;
 let activeEffectCallback = null;
@@ -4451,7 +3965,7 @@ function setupModals() {
     loadModalItems(e.target.value.trim());
   });
 
-  // Modal de Efeitos Mágicos
+  // Magic Effects Modal
   const effectModal = document.getElementById("effect-picker-modal");
   document.getElementById("btn-close-effect-picker").addEventListener("click", () => {
     effectModal.classList.remove("active");
@@ -4477,13 +3991,24 @@ function openItemPickerModal(title, callback, flags) {
 
 async function loadModalItems(query) {
   try {
-    const res = await fetch(`/api/objects?limit=60&q=${encodeURIComponent(query)}&flag=${encodeURIComponent(activePickerFlags)}`);
+    const res = await fetch(`/api/objects?limit=1000&q=${encodeURIComponent(query)}&flag=${encodeURIComponent(activePickerFlags)}`);
     const data = await res.json();
     const container = document.getElementById("modal-items-container");
+    const countBadge = document.getElementById("modal-picker-count");
+
+    const totalCount = data.total || (data.items ? data.items.length : 0);
+    if (countBadge) {
+      countBadge.textContent = `${totalCount} itens encontrados`;
+    }
+
+    if (!data.items || data.items.length === 0) {
+      container.innerHTML = `<div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--text-muted);">Nenhum item encontrado.</div>`;
+      return;
+    }
 
     container.innerHTML = data.items.map(item => `
-      <button class="modal-item-btn" onclick="selectModalItem(${item.type_id}, '${(item.name || '').replace(/'/g, "\\'")}')">
-        <img src="/api/item_sprite/${item.type_id}?zoom=1" style="width:28px;height:28px;image-rendering:pixelated;">
+      <button class="modal-item-btn" onclick="selectModalItem(${item.type_id}, '${(item.name || '').replace(/'/g, "\\'")}')" title="${item.name || ''} (#${item.type_id})">
+        <img src="/api/item_sprite/${item.type_id}?zoom=1" style="width:36px;height:36px;image-rendering:pixelated;" loading="lazy">
         <div>
           <div style="font-weight:600;font-size:0.8rem;">${item.name || t("obj_unnamed")}</div>
           <div style="font-size:0.7rem;color:var(--text-muted);">#${item.type_id}</div>
@@ -4491,7 +4016,7 @@ async function loadModalItems(query) {
       </button>
     `).join("");
   } catch (err) {
-    console.error("Erro ao carregar itens no modal:", err);
+    console.error("Error loading items in modal:", err);
   }
 }
 
@@ -4502,14 +4027,14 @@ window.selectModalItem = function(typeId, name) {
   document.getElementById("item-picker-modal").classList.remove("active");
 };
 
-// ---- Seletor de Efeitos Mágicos ----
+// ---- Magic Effects Selector ----
 async function loadEffects() {
   try {
     const res = await fetch("/api/effects");
     const data = await res.json();
     cachedEffectsList = data.effects || [];
   } catch (err) {
-    console.error("Erro ao carregar efeitos mágicos:", err);
+    console.error("Error loading magic effects:", err);
   }
 }
 
@@ -4565,4 +4090,2096 @@ function showToast(message, type = "info") {
     setTimeout(() => toast.remove(), 200);
   }, 3000);
 }
+
+// =============================================================================
+// RECURSOS INOVADORES
+// =============================================================================
+
+// ---- 1. 360° Rotation and Step Cycle (Walk Animation) ----
+function setupOutfitControls() {
+  document.querySelectorAll(".btn-dir-ctrl").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const target = btn.getAttribute("data-target"); // "mon" | "npc"
+      const dir = parseInt(btn.getAttribute("data-dir"));
+      if (!target || isNaN(dir) || !state.outfits[target]) return;
+
+      state.outfits[target].dir = dir;
+      const toolbar = btn.closest(".outfit-dir-toolbar");
+      if (toolbar) {
+        toolbar.querySelectorAll(".btn-dir-ctrl").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+      }
+      if (target === "mon") {
+        if (typeof window.updateMonsterPreview === "function") window.updateMonsterPreview();
+      } else {
+        updateNpcSpritePreview();
+      }
+    });
+  });
+
+  const setupAnimBtn = (btnId, target) => {
+    const btn = document.getElementById(btnId);
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+      const cfg = state.outfits[target];
+      if (!cfg) return;
+      if (cfg.timer) {
+        clearInterval(cfg.timer);
+        cfg.timer = null;
+        cfg.anim = 0;
+        btn.classList.remove("playing");
+      } else {
+        btn.classList.add("playing");
+        cfg.timer = setInterval(() => {
+          cfg.anim = (cfg.anim + 1) % 3;
+          if (target === "mon") {
+            if (typeof window.updateMonsterPreview === "function") window.updateMonsterPreview();
+          } else {
+            updateNpcSpritePreview();
+          }
+        }, 220);
+      }
+      if (target === "mon") {
+        if (typeof window.updateMonsterPreview === "function") window.updateMonsterPreview();
+      } else {
+        updateNpcSpritePreview();
+      }
+    });
+  };
+
+  setupAnimBtn("btn-mon-anim", "mon");
+  setupAnimBtn("btn-npc-anim", "npc");
+}
+
+// ---- 2. Interactive NPC Dialogue Simulator ----
+function setupNpcChatSimulator() {
+  const form = document.getElementById("chat-sim-form");
+  const input = document.getElementById("chat-sim-input");
+  const messagesContainer = document.getElementById("chat-sim-messages");
+  const topicBadge = document.getElementById("chat-sim-topic-badge");
+  const moneyInput = document.getElementById("chat-sim-player-money");
+  const playerInput = document.getElementById("chat-sim-player-name");
+  const btnReset = document.getElementById("btn-chat-sim-reset");
+
+  const appendMsg = (sender, text, isAction = false) => {
+    const msgDiv = document.createElement("div");
+    msgDiv.className = `chat-msg ${sender}`;
+    if (isAction) msgDiv.style.fontStyle = "italic";
+    msgDiv.innerText = text;
+    messagesContainer.appendChild(msgDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+  };
+
+  const resetChat = () => {
+    state.npcChat.topic = 0;
+    state.npcChat.lastPrice = 0;
+    if (topicBadge) topicBadge.innerText = "Topic: 0";
+    if (messagesContainer) {
+      messagesContainer.innerHTML = `<div class="chat-msg system" id="chat-sim-welcome-msg">${t("chat_sim_welcome")}</div>`;
+    }
+  };
+
+  if (btnReset) {
+    btnReset.addEventListener("click", resetChat);
+  }
+
+  // Quick shortcut chips
+  document.querySelectorAll(".chip-prompt").forEach(chip => {
+    chip.addEventListener("click", () => {
+      const msg = chip.getAttribute("data-msg");
+      if (msg && input && form) {
+        input.value = msg;
+        form.dispatchEvent(new Event("submit"));
+      }
+    });
+  });
+
+  if (form) {
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text) return;
+      input.value = "";
+
+      const playerName = playerInput ? playerInput.value.trim() || "Player" : "Player";
+      const money = moneyInput ? parseInt(moneyInput.value) || 1000 : 1000;
+      appendMsg("player", `${playerName}: ${text}`);
+
+      try {
+        const payload = {
+          filename: state.npcs.selectedFilename || "",
+          message: text,
+          player_name: playerName,
+          topic: state.npcChat.topic,
+          player_money: money,
+          last_price: state.npcChat.lastPrice
+        };
+
+        const res = await fetch("/api/npcs/simulate_chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          state.npcChat.topic = data.new_topic;
+          state.npcChat.lastPrice = data.item_price || state.npcChat.lastPrice;
+          if (topicBadge) topicBadge.innerText = `Topic: ${data.new_topic}`;
+          if (moneyInput && data.new_money !== undefined) {
+            moneyInput.value = data.new_money;
+          }
+
+          appendMsg("npc", `${data.npc_name}: ${data.message}`);
+
+          if (data.item_created) {
+            appendMsg("system", `🎁 [Item received: #${data.item_created} x${data.item_amount}]`, true);
+          }
+        } else {
+          appendMsg("system", `Error: ${data.error || "NPC did not respond."}`);
+        }
+      } catch (err) {
+        appendMsg("system", `Communication error with simulator.`);
+      }
+    });
+  }
+}
+
+// ---- 3. Simulador Monte Carlo de Drops de Monster Loot ----
+function setupLootSimulator() {
+  const modal = document.getElementById("loot-sim-modal");
+  const btnOpen = document.getElementById("btn-open-loot-sim");
+  const btnClose = document.getElementById("btn-close-loot-sim");
+  const btnCloseFooter = document.getElementById("btn-close-loot-sim-footer");
+  const btnRun = document.getElementById("btn-run-loot-sim");
+  const killBtns = document.querySelectorAll(".loot-kills-btn");
+
+  if (btnOpen) {
+    btnOpen.addEventListener("click", () => {
+      const monName = document.getElementById("mon-name")?.value || "Monstro";
+      const title = document.getElementById("loot-sim-title");
+      if (title) title.innerText = `🎲 ${t("loot_sim_title")} - ${monName}`;
+      modal.style.display = "flex";
+      modal.classList.add("active");
+    });
+  }
+
+  const closeModal = () => {
+    if (modal) {
+      modal.style.display = "none";
+      modal.classList.remove("active");
+    }
+  };
+
+  if (btnClose) btnClose.addEventListener("click", closeModal);
+  if (btnCloseFooter) btnCloseFooter.addEventListener("click", closeModal);
+
+  killBtns.forEach(b => {
+    b.addEventListener("click", () => {
+      killBtns.forEach(btn => btn.classList.remove("active"));
+      b.classList.add("active");
+      state.lootSim.kills = parseInt(b.getAttribute("data-kills")) || 100;
+    });
+  });
+
+  if (btnRun) {
+    btnRun.addEventListener("click", async () => {
+      btnRun.disabled = true;
+      btnRun.innerText = "⏳ Simulando...";
+
+      try {
+        const payload = {
+          filename: state.monsters.selectedFilename || "",
+          kills: state.lootSim.kills
+        };
+
+        const res = await fetch("/api/monsters/simulate_loot", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+        const data = await res.json();
+
+        if (data.success) {
+          document.getElementById("loot-sim-summary").style.display = "grid";
+          document.getElementById("loot-sim-results").style.display = "block";
+
+          document.getElementById("sim-stat-total-drops").innerText = data.total_items_dropped.toLocaleString();
+          document.getElementById("sim-stat-total-gold").innerText = `${data.total_gold_value.toLocaleString()} gp`;
+          const avgGold = (data.total_gold_value / (data.kills || 1)).toFixed(1);
+          document.getElementById("sim-stat-avg-gold").innerText = `${avgGold} gp`;
+
+          const tbody = document.getElementById("loot-sim-tbody");
+          const rarityLabels = {
+            common: t("rarity_common"),
+            uncommon: t("rarity_uncommon"),
+            rare: t("rarity_rare"),
+            very_rare: t("rarity_very_rare")
+          };
+
+          tbody.innerHTML = data.items.map(item => `
+            <tr>
+              <td>
+                <img src="/api/item_sprite/${item.type_id}?zoom=1" style="width:28px;height:28px;image-rendering:pixelated;" alt="${item.name}">
+              </td>
+              <td>
+                <strong>${item.name}</strong> <span style="font-size:0.75rem;color:var(--text-muted);">(#${item.type_id})</span>
+                <div><span class="badge-rarity ${item.rarity}">${rarityLabels[item.rarity] || item.rarity}</span></div>
+              </td>
+              <td style="text-align:right;">${item.theory_chance_pct}%</td>
+              <td style="text-align:right;font-weight:700;color:var(--accent-color);">${item.actual_chance_pct}%</td>
+              <td style="text-align:right;"><strong>${item.total_dropped.toLocaleString()}x</strong> <span style="font-size:0.75rem;color:var(--text-muted);">(${item.times_dropped} kills)</span></td>
+              <td style="text-align:right;font-weight:600;color:#fbbf24;">${item.estimated_gold_value.toLocaleString()} gp</td>
+            </tr>
+          `).join("");
+        } else {
+          showToast(data.error || "Error in loot simulation", "error");
+        }
+      } catch (err) {
+        showToast("Network error during loot simulation", "error");
+      } finally {
+        btnRun.disabled = false;
+        btnRun.innerText = `⚡ ${t("btn_run_loot_sim")}`;
+      }
+    });
+  }
+}
+
+// ---- 4. Automated Backup History & Management ----
+async function loadBackupsList() {
+  const tbody = document.getElementById("backups-list-tbody");
+  if (!tbody) return;
+
+  try {
+    const res = await fetch("/api/backups");
+    const data = await res.json();
+    const backups = data.backups || [];
+
+    if (backups.length === 0) {
+      tbody.innerHTML = `<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:1.5rem;">${t("no_backups_found")}</td></tr>`;
+      return;
+    }
+
+    const catBadges = {
+      objects: '<span class="badge" style="background:rgba(59,130,246,0.15);color:#60a5fa;">objects.srv</span>',
+      monsters: '<span class="badge" style="background:rgba(239,68,68,0.15);color:#f87171;">Monster .mon</span>',
+      npcs: '<span class="badge" style="background:rgba(34,197,94,0.15);color:#4ade80;">NPC .npc</span>',
+      moveuse: '<span class="badge" style="background:rgba(245,158,11,0.15);color:#fbbf24;">moveuse.dat</span>',
+      data: '<span class="badge" style="background:rgba(168,85,247,0.15);color:#c084fc;">Config</span>'
+    };
+
+    tbody.innerHTML = backups.map(b => `
+      <tr>
+        <td style="font-size:0.85rem;font-weight:500;">${b.iso_time || b.timestamp}</td>
+        <td><code>${b.original_name}</code></td>
+        <td>${catBadges[b.category] || b.category}</td>
+        <td style="font-size:0.85rem;color:var(--text-muted);">${b.size_formatted}</td>
+        <td style="text-align:center;">
+          <button type="button" class="btn btn-xs btn-outline" onclick="restoreBackupFile('${b.full_path.replace(/\\/g, '\\\\')}')">↺ ${t("btn_restore")}</button>
+        </td>
+      </tr>
+    `).join("");
+  } catch (err) {
+    console.error("Error loading backup history:", err);
+  }
+}
+
+window.restoreBackupFile = async function(backupPath) {
+  if (!confirm(t("confirm_restore_backup"))) return;
+
+  try {
+    const res = await fetch("/api/backups/restore", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ backup_path: backupPath })
+    });
+    const data = await res.json();
+    if (data.success) {
+      showToast(t("toast_backup_restored"), "success");
+      await loadInitialConfig();
+      await loadObjects();
+      await loadMonsters();
+      await loadNpcs();
+      await loadMoveUse();
+      await loadBackupsList();
+    } else {
+      showToast(data.error || t("toast_backup_restore_error"), "error");
+    }
+  } catch (err) {
+    showToast(t("toast_backup_restore_error"), "error");
+  }
+};
+
+function setupBackupManager() {
+  const btnRefresh = document.getElementById("btn-refresh-backups");
+  if (btnRefresh) {
+    btnRefresh.addEventListener("click", () => {
+      loadBackupsList();
+      showToast("Backups list refreshed", "info");
+    });
+  }
+}
+
+// ---- 5. Menu Responsivo Mobile ----
+function setupMobileMenu() {
+  const btnMobile = document.getElementById("btn-mobile-menu");
+  const sidebar = document.querySelector(".sidebar");
+  const overlay = document.querySelector(".sidebar-overlay");
+
+  if (btnMobile && sidebar && overlay) {
+    btnMobile.addEventListener("click", () => {
+      sidebar.classList.toggle("open");
+      overlay.classList.toggle("active");
+    });
+
+    overlay.addEventListener("click", () => {
+      sidebar.classList.remove("open");
+      overlay.classList.remove("active");
+    });
+
+    document.querySelectorAll(".nav-item").forEach(item => {
+      item.addEventListener("click", () => {
+        sidebar.classList.remove("open");
+        overlay.classList.remove("active");
+      });
+    });
+  }
+}
+
+// =============================================================================
+// RECURSO 1: MINIMAPA & VISUALIZADOR DE SPAWNS (HTML5 CANVAS)
+// =============================================================================
+let mapCanvasInitialized = false;
+let mapLastLoadedCenterX = 0;
+let mapLastLoadedCenterY = 0;
+let mapLastLoadedZ = 7;
+let mapDragActive = false;
+let mapDragMouseX = 0;
+let mapDragMouseY = 0;
+let mapDragOrigCenterX = 0;
+let mapDragOrigCenterY = 0;
+
+function setupMapTab() {
+  const btnGo = document.getElementById("btn-map-go-coord");
+  const inputX = document.getElementById("map-input-x");
+  const inputY = document.getElementById("map-input-y");
+  const selectZ = document.getElementById("map-input-z");
+
+  if (btnGo) {
+    btnGo.addEventListener("click", () => {
+      const x = parseInt(inputX.value) || 32360;
+      const y = parseInt(inputY.value) || 32199;
+      const z = parseInt(selectZ.value) || 7;
+      setMapPosition(x, y, z);
+    });
+  }
+
+  if (selectZ) {
+    selectZ.addEventListener("change", (e) => {
+      const z = parseInt(e.target.value) || 7;
+      state.map.z = z;
+      state.map.tiles = {};
+      loadMapEntities(z);
+      loadMapChunk(state.map.centerX, state.map.centerY, z);
+    });
+  }
+
+  const btnFloorUp = document.getElementById("btn-map-floor-up");
+  const btnFloorDown = document.getElementById("btn-map-floor-down");
+  if (btnFloorUp) {
+    btnFloorUp.addEventListener("click", () => {
+      if (state.map.z > 0) {
+        setMapPosition(state.map.centerX, state.map.centerY, state.map.z - 1);
+      }
+    });
+  }
+  if (btnFloorDown) {
+    btnFloorDown.addEventListener("click", () => {
+      if (state.map.z < 15) {
+        setMapPosition(state.map.centerX, state.map.centerY, state.map.z + 1);
+      }
+    });
+  }
+
+  // Layer toggles
+  const chkMonsters = document.getElementById("chk-layer-monsters");
+  const chkNpcs = document.getElementById("chk-layer-npcs");
+  const chkOutfits = document.getElementById("chk-layer-outfits");
+  const chkSigns = document.getElementById("chk-layer-signs");
+  const chkHouses = document.getElementById("chk-layer-houses");
+  const chkLowerFloors = document.getElementById("chk-layer-lower-floors");
+
+  setupSignModal();
+  const chkGrid = document.getElementById("chk-layer-grid");
+
+  if (chkMonsters) chkMonsters.addEventListener("change", (e) => { state.map.layers.monsters = e.target.checked; renderMapCanvas(); });
+  if (chkNpcs) chkNpcs.addEventListener("change", (e) => { state.map.layers.npcs = e.target.checked; renderMapCanvas(); });
+  if (chkOutfits) chkOutfits.addEventListener("change", (e) => { state.map.layers.outfits = e.target.checked; renderMapCanvas(); });
+  if (chkSigns) chkSigns.addEventListener("change", (e) => { state.map.layers.signs = e.target.checked; renderMapCanvas(); });
+  if (chkHouses) chkHouses.addEventListener("change", (e) => { state.map.layers.houses = e.target.checked; renderMapCanvas(); });
+  if (chkLowerFloors) chkLowerFloors.addEventListener("change", (e) => { state.map.layers.lowerFloors = e.target.checked; renderMapCanvas(); });
+  if (chkGrid) chkGrid.addEventListener("change", (e) => { state.map.layers.grid = e.target.checked; renderMapCanvas(); });
+
+  // Subtabs de entidades (Monstros, NPCs, Placas, Casas)
+  const subtabs = [
+    { btn: "btn-subtab-spawns", pane: "map-pane-spawns", type: "spawns" },
+    { btn: "btn-subtab-npcs", pane: "map-pane-npcs", type: "npcs" },
+    { btn: "btn-subtab-signs", pane: "map-pane-signs", type: "signs" },
+    { btn: "btn-subtab-houses", pane: "map-pane-houses", type: "houses" }
+  ];
+
+  subtabs.forEach(tab => {
+    const elBtn = document.getElementById(tab.btn);
+    if (elBtn) {
+      elBtn.addEventListener("click", () => {
+        subtabs.forEach(t => {
+          document.getElementById(t.btn)?.classList.remove("active");
+          const p = document.getElementById(t.pane);
+          if (p) p.style.display = "none";
+        });
+        elBtn.classList.add("active");
+        const activePane = document.getElementById(tab.pane);
+        if (activePane) activePane.style.display = "block";
+        state.map.activeSubtab = tab.type;
+        renderMapEntitiesList();
+      });
+    }
+  });
+
+  // Campo de filtro de entidades
+  const searchInput = document.getElementById("map-entities-search");
+  if (searchInput) {
+    searchInput.addEventListener("input", (e) => {
+      state.map.searchQuery = e.target.value.toLowerCase().trim();
+      renderMapEntitiesList();
+    });
+  }
+
+  // Floating zoom buttons
+  document.getElementById("btn-map-zoom-in")?.addEventListener("click", () => changeMapZoom(0.25));
+  document.getElementById("btn-map-zoom-out")?.addEventListener("click", () => changeMapZoom(-0.25));
+  document.getElementById("btn-map-zoom-reset")?.addEventListener("click", () => {
+    state.map.zoom = 1.0;
+    updateMapZoomIndicator();
+    renderMapCanvas();
+  });
+
+  document.getElementById("btn-map-fullscreen")?.addEventListener("click", () => {
+    const vp = document.getElementById("map-viewport");
+    if (!document.fullscreenElement) {
+      vp?.requestFullscreen?.();
+    } else {
+      document.exitFullscreen?.();
+    }
+  });
+
+  // Canvas event setup
+  setupCanvasEvents();
+}
+
+function initMapModule() {
+  const canvas = document.getElementById("map-canvas");
+  const viewport = document.getElementById("map-viewport");
+  if (!canvas || !viewport) return;
+
+  // Adjust canvas resolution
+  canvas.width = viewport.clientWidth || 800;
+  canvas.height = viewport.clientHeight || 600;
+
+  if (!mapCanvasInitialized) {
+    mapCanvasInitialized = true;
+    loadMapOverview();
+    loadMapEntities(state.map.z);
+    loadMapChunk(state.map.centerX, state.map.centerY, state.map.z);
+  } else {
+    renderMapCanvas();
+  }
+}
+
+async function loadMapOverview() {
+  try {
+    const res = await fetch("/api/map/overview");
+    const data = await res.json();
+
+    const badge = document.getElementById("map-total-sectors-badge");
+    if (badge) {
+      badge.textContent = `${data.total_sectors || 0} Setores (${data.total_spawns || 0} Spawns)`;
+    }
+
+    // Renderizar chips das cidades
+    const citiesContainer = document.getElementById("map-cities-container");
+    if (citiesContainer && data.cities) {
+      citiesContainer.innerHTML = data.cities.map(c => `
+        <button type="button" class="chip-city" data-x="${c.x}" data-y="${c.y}" data-z="${c.z}" title="${c.desc || ''}">
+          🏛️ ${c.name}
+        </button>
+      `).join("");
+
+      citiesContainer.querySelectorAll(".chip-city").forEach(btn => {
+        btn.addEventListener("click", () => {
+          const x = parseInt(btn.getAttribute("data-x"));
+          const y = parseInt(btn.getAttribute("data-y"));
+          const z = parseInt(btn.getAttribute("data-z"));
+          setMapPosition(x, y, z);
+        });
+      });
+    }
+  } catch (err) {
+    console.warn("Error loading map overview:", err);
+  }
+}
+
+async function loadMapEntities(z) {
+  try {
+    const [spawnsRes, npcsRes, signsRes, housesRes] = await Promise.all([
+      fetch(`/api/map/spawns?z=${z}`).then(r => r.json()),
+      fetch(`/api/map/npcs?z=${z}`).then(r => r.json()),
+      fetch(`/api/map/signs?z=${z}`).then(r => r.json()),
+      fetch(`/api/map/houses?z=${z}`).then(r => r.json())
+    ]);
+
+    state.map.spawns = spawnsRes.spawns || [];
+    state.map.npcs = npcsRes.npcs || [];
+    state.map.signs = signsRes.signs || [];
+    state.map.houses = housesRes.houses || [];
+
+    // Atualiza contadores
+    const countSpawns = document.getElementById("count-map-spawns");
+    const countNpcs = document.getElementById("count-map-npcs");
+    const countSigns = document.getElementById("count-map-signs");
+    const countHouses = document.getElementById("count-map-houses");
+
+    if (countSpawns) countSpawns.textContent = state.map.spawns.length;
+    if (countNpcs) countNpcs.textContent = state.map.npcs.length;
+    if (countSigns) countSigns.textContent = state.map.signs.length;
+    if (countHouses) countHouses.textContent = state.map.houses.length;
+
+    renderMapEntitiesList();
+    renderMapCanvas();
+  } catch (err) {
+    console.warn("Error loading map entities:", err);
+  }
+}
+
+function renderMapEntitiesList() {
+  const q = state.map.searchQuery;
+  const listSpawns = document.getElementById("map-list-spawns");
+  const listNpcs = document.getElementById("map-list-npcs");
+  const listSigns = document.getElementById("map-list-signs");
+  const listHouses = document.getElementById("map-list-houses");
+
+  if (state.map.activeSubtab === "spawns" && listSpawns) {
+    const filtered = state.map.spawns.filter(s => !q || s.name.toLowerCase().includes(q) || String(s.race).includes(q));
+    if (filtered.length === 0) {
+      listSpawns.innerHTML = `<div class="empty-state" style="padding:1rem;">No monsters on this floor/filter.</div>`;
+    } else {
+      listSpawns.innerHTML = filtered.slice(0, 100).map(s => `
+        <div class="map-entity-item" data-x="${s.x}" data-y="${s.y}" data-z="${s.z}">
+          <div class="entity-item-header">
+            <strong>🦁 ${escapeHtmlText(s.name)}</strong>
+            <span class="badge">x${s.amount}</span>
+          </div>
+          <div class="entity-item-coords">
+            Coords: [${s.x}, ${s.y}, ${s.z}] • Radius: ${s.radius} • Regen: ${s.regen}s
+          </div>
+        </div>
+      `).join("");
+    }
+  }
+
+  if (state.map.activeSubtab === "npcs" && listNpcs) {
+    const filtered = state.map.npcs.filter(n => !q || n.name.toLowerCase().includes(q) || n.filename.toLowerCase().includes(q));
+    if (filtered.length === 0) {
+      listNpcs.innerHTML = `<div class="empty-state" style="padding:1rem;">No NPCs on this floor/filter.</div>`;
+    } else {
+      listNpcs.innerHTML = filtered.map(n => `
+        <div class="map-entity-item" data-x="${n.x}" data-y="${n.y}" data-z="${n.z}">
+          <div class="entity-item-header">
+            <strong>🧙 ${escapeHtmlText(n.name)}</strong>
+            <span class="badge">${escapeHtmlText(n.filename)}</span>
+          </div>
+          <div class="entity-item-coords">
+            Coords: [${n.x}, ${n.y}, ${n.z}] • Radius: ${n.radius}
+          </div>
+        </div>
+      `).join("");
+    }
+  }
+
+  if (state.map.activeSubtab === "signs" && listSigns) {
+    const filtered = state.map.signs.filter(s => !q || s.text.toLowerCase().includes(q) || (s.editor && s.editor.toLowerCase().includes(q)));
+    if (filtered.length === 0) {
+      listSigns.innerHTML = `<div class="empty-state" style="padding:1rem;">No signs or plaques with text on this floor/filter.</div>`;
+    } else {
+      listSigns.innerHTML = filtered.map((s, idx) => {
+        const firstLine = s.text.split("\n")[0].trim();
+        return `
+          <div class="map-entity-item map-sign-list-item" data-sign-idx="${idx}" data-x="${s.x}" data-y="${s.y}" data-z="${s.z}" style="cursor:pointer;">
+            <div class="entity-item-header">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <img src="/api/item_sprite/${s.item_id || 2012}?zoom=1" style="width:18px;height:18px;image-rendering:pixelated;" loading="lazy">
+                <strong>📜 ${escapeHtmlText(firstLine.slice(0, 26))}${firstLine.length > 26 ? "..." : ""}</strong>
+              </div>
+              <div style="display:flex;align-items:center;gap:4px;">
+                ${s.editor ? `<span class="badge" title="Editor">${escapeHtmlText(s.editor)}</span>` : ""}
+                <button type="button" class="btn btn-xs btn-outline btn-open-sign-card" data-sign-idx="${idx}" data-x="${s.x}" data-y="${s.y}" data-z="${s.z}" title="Open full text modal" style="padding:1px 6px;font-size:0.72rem;">📖 Read</button>
+              </div>
+            </div>
+            <div class="entity-item-coords">
+              Coords: [${s.x}, ${s.y}, ${s.z}] • "${escapeHtmlText(s.text.replace(/\n/g, " ").slice(0, 48))}"
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+  }
+
+  if (state.map.activeSubtab === "houses" && listHouses) {
+    const filtered = state.map.houses.filter(h => !q || h.name.toLowerCase().includes(q) || String(h.id).includes(q));
+    if (filtered.length === 0) {
+      listHouses.innerHTML = `<div class="empty-state" style="padding:1rem;">No houses on this floor/filter.</div>`;
+    } else {
+      listHouses.innerHTML = filtered.map(h => `
+        <div class="map-entity-item" data-x="${h.center[0]}" data-y="${h.center[1]}" data-z="${h.center[2]}">
+          <div class="entity-item-header">
+            <strong>🏰 ${escapeHtmlText(h.name)}</strong>
+            <span class="badge">#${h.id}</span>
+          </div>
+          <div class="entity-item-coords">
+            Center: [${h.center.join(", ")}] ${h.rent ? `• Rent: ${h.rent} gp` : ""}
+          </div>
+        </div>
+      `).join("");
+    }
+  }
+
+  // Clique em qualquer item de entidade centraliza no mapa e destaca!
+  document.querySelectorAll(".map-entity-item").forEach(item => {
+    item.addEventListener("click", (e) => {
+      // Se clicou no botão "Ler", o botão já tratou o evento
+      if (e.target.closest(".btn-open-sign-card")) return;
+
+      document.querySelectorAll(".map-entity-item").forEach(el => el.classList.remove("active"));
+      item.classList.add("active");
+      const x = parseInt(item.getAttribute("data-x"));
+      const y = parseInt(item.getAttribute("data-y"));
+      const z = parseInt(item.getAttribute("data-z"));
+      if (state.map.activeSubtab === "spawns") {
+        state.map.selectedSpawn = { x, y, z };
+        state.map.selectedNpc = null;
+        state.map.selectedSign = null;
+      } else if (state.map.activeSubtab === "npcs") {
+        state.map.selectedNpc = { x, y, z };
+        state.map.selectedSpawn = null;
+        state.map.selectedSign = null;
+      } else if (state.map.activeSubtab === "signs") {
+        const foundSign = state.map.signs.find(s => s.x === x && s.y === y && s.z === z);
+        state.map.selectedSign = foundSign || { x, y, z };
+        state.map.selectedSpawn = null;
+        state.map.selectedNpc = null;
+        if (foundSign) {
+          openSignModal(foundSign);
+        }
+      } else {
+        state.map.selectedSpawn = null;
+        state.map.selectedNpc = null;
+        state.map.selectedSign = null;
+      }
+      setMapPosition(x, y, z);
+    });
+
+    item.querySelectorAll(".btn-open-sign-card").forEach(btn => {
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        e.preventDefault();
+        const bx = parseInt(btn.getAttribute("data-x") || item.getAttribute("data-x"));
+        const by = parseInt(btn.getAttribute("data-y") || item.getAttribute("data-y"));
+        const bz = parseInt(btn.getAttribute("data-z") || item.getAttribute("data-z"));
+        const signIdx = parseInt(btn.getAttribute("data-sign-idx"));
+
+        let foundSign = state.map.signs.find(s => s.x === bx && s.y === by && s.z === bz);
+        if (!foundSign && !isNaN(signIdx)) {
+          const filteredSigns = state.map.signs.filter(s => {
+            if (!q) return true;
+            return s.text.toLowerCase().includes(q) || (s.editor && s.editor.toLowerCase().includes(q));
+          });
+          foundSign = filteredSigns[signIdx] || state.map.signs[signIdx];
+        }
+
+        if (foundSign) {
+          state.map.selectedSign = foundSign;
+          state.map.selectedSpawn = null;
+          state.map.selectedNpc = null;
+          renderMapCanvas();
+          openSignModal(foundSign);
+        }
+      });
+    });
+  });
+}
+
+async function loadMapChunk(cx, cy, cz, radius = 24) {
+  try {
+    mapLastLoadedCenterX = cx;
+    mapLastLoadedCenterY = cy;
+    mapLastLoadedZ = cz;
+
+    const res = await fetch(`/api/map/chunk?x=${cx}&y=${cy}&z=${cz}&radius=${radius}`);
+    const data = await res.json();
+
+    if (data.tiles) {
+      const tileList = Array.isArray(data.tiles) ? data.tiles : Object.values(data.tiles);
+      tileList.forEach(t => {
+        const key = `${t.x},${t.y}`;
+        state.map.tiles[key] = t;
+      });
+    }
+
+    renderMapCanvas();
+  } catch (err) {
+    console.warn("Error loading map chunk:", err);
+  }
+}
+
+function setMapPosition(x, y, z) {
+  state.map.centerX = x;
+  state.map.centerY = y;
+  const zChanged = (state.map.z !== z);
+  state.map.z = z;
+
+  // Atualiza inputs
+  const inputX = document.getElementById("map-input-x");
+  const inputY = document.getElementById("map-input-y");
+  const selectZ = document.getElementById("map-input-z");
+  if (inputX) inputX.value = x;
+  if (inputY) inputY.value = y;
+  if (selectZ) selectZ.value = z;
+
+  if (zChanged) {
+    state.map.tiles = {};
+    loadMapEntities(z);
+  }
+
+  loadMapChunk(x, y, z);
+  updateHUD(x, y, z);
+}
+
+function changeMapZoom(delta) {
+  state.map.zoom = Math.min(3.0, Math.max(0.25, state.map.zoom + delta));
+  updateMapZoomIndicator();
+  renderMapCanvas();
+}
+
+function updateMapZoomIndicator() {
+  const zoomText = document.getElementById("map-zoom-text");
+  if (zoomText) {
+    zoomText.textContent = `${Math.round(state.map.zoom * 100)}%`;
+  }
+}
+
+function updateHUD(x, y, z, entityName = null) {
+  const hudCoord = document.getElementById("hud-coord");
+  const hudSector = document.getElementById("hud-sector");
+  const hudHovered = document.getElementById("hud-hovered");
+
+  if (hudCoord) hudCoord.textContent = `X: ${x}, Y: ${y}, Z: ${z}`;
+
+  if (hudSector) {
+    const secX = Math.floor(x / 32);
+    const secY = Math.floor(y / 32);
+    const secZ = String(z).padStart(2, '0');
+    hudSector.textContent = `${secX}-${secY}-${secZ}.sec`;
+  }
+
+  if (hudHovered) {
+    if (entityName) {
+      hudHovered.textContent = entityName;
+      hudHovered.style.color = "#38bdf8";
+    } else {
+      hudHovered.textContent = "None";
+      hudHovered.style.color = "var(--text-muted)";
+    }
+  }
+}
+
+function setupCanvasEvents() {
+  const canvas = document.getElementById("map-canvas");
+  const viewport = document.getElementById("map-viewport");
+  if (!canvas || !viewport) return;
+
+  window.addEventListener("resize", () => {
+    if (state.currentTab === "tab-map") {
+      canvas.width = viewport.clientWidth || 800;
+      canvas.height = viewport.clientHeight || 600;
+      renderMapCanvas();
+    }
+  });
+
+  let mapDragMoved = false;
+
+  canvas.addEventListener("mousedown", (e) => {
+    mapDragActive = true;
+    mapDragMoved = false;
+    mapDragMouseX = e.clientX;
+    mapDragMouseY = e.clientY;
+    mapDragOrigCenterX = state.map.centerX;
+    mapDragOrigCenterY = state.map.centerY;
+    canvas.style.cursor = "grabbing";
+  });
+
+  window.addEventListener("mouseup", () => {
+    if (mapDragActive) {
+      mapDragActive = false;
+      canvas.style.cursor = "crosshair";
+
+      // If moved > 8 tiles since last chunk load, reload new chunk
+      const dist = Math.hypot(state.map.centerX - mapLastLoadedCenterX, state.map.centerY - mapLastLoadedCenterY);
+      if (dist >= 8) {
+        loadMapChunk(state.map.centerX, state.map.centerY, state.map.z);
+      }
+    }
+  });
+
+  canvas.addEventListener("mousemove", (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+
+    const tileSize = 20 * state.map.zoom;
+    const halfW = canvas.width / 2;
+    const halfH = canvas.height / 2;
+
+    if (mapDragActive) {
+      const dxPx = e.clientX - mapDragMouseX;
+      const dyPx = e.clientY - mapDragMouseY;
+      if (Math.hypot(dxPx, dyPx) > 6) {
+        mapDragMoved = true;
+      }
+      state.map.centerX = Math.round(mapDragOrigCenterX - (dxPx / tileSize));
+      state.map.centerY = Math.round(mapDragOrigCenterY - (dyPx / tileSize));
+
+      const inputX = document.getElementById("map-input-x");
+      const inputY = document.getElementById("map-input-y");
+      if (inputX) inputX.value = state.map.centerX;
+      if (inputY) inputY.value = state.map.centerY;
+
+      renderMapCanvas();
+    }
+
+    // Calcula coordenadas no mundo do Tibia
+    const worldX = Math.floor(state.map.centerX + (mouseX - halfW) / tileSize);
+    const worldY = Math.floor(state.map.centerY + (mouseY - halfH) / tileSize);
+    state.map.hoveredCoord = { x: worldX, y: worldY, z: state.map.z };
+
+    // Busca entidade sob o mouse
+    let foundEntity = null;
+    state.map.hoveredSpawn = null;
+    let isHoveringSign = false;
+
+    // 1. Check if mouse is directly over any tooltip or sign icon on screen
+    if (state.map.layers.signs && state.map.visibleSignsOnScreen && state.map.visibleSignsOnScreen.length > 0) {
+      const hitSign = state.map.visibleSignsOnScreen.find(s => {
+        if (s.bubble && mouseX >= s.bubble.x && mouseX <= s.bubble.x + s.bubble.w &&
+            mouseY >= s.bubble.y && mouseY <= s.bubble.y + s.bubble.h) {
+          return true;
+        }
+        if (Math.hypot(mouseX - s.anchor.cx, mouseY - s.anchor.cy) <= s.anchor.r) {
+          return true;
+        }
+        return false;
+      });
+      if (hitSign) {
+        isHoveringSign = true;
+        state.map.hoveredCoord = { x: hitSign.sign.x, y: hitSign.sign.y, z: hitSign.sign.z };
+        const preview = hitSign.sign.text.replace(/\n/g, " ").slice(0, 45);
+        foundEntity = `📜 Placa: "${preview}${hitSign.sign.text.length > 45 ? "..." : ""}" (Clique para ler)`;
+      }
+    }
+
+    if (!isHoveringSign && state.map.layers.monsters) {
+      const spawn = state.map.spawns.find(s => s.z === state.map.z && Math.hypot(s.x - worldX, s.y - worldY) <= Math.max(1.5, (s.radius || 1)));
+      if (spawn) {
+        foundEntity = `🦁 Monstro: ${spawn.name} (x${spawn.amount})`;
+        state.map.hoveredSpawn = spawn;
+      }
+    }
+    if (!isHoveringSign && !foundEntity && state.map.layers.npcs) {
+      const npc = state.map.npcs.find(n => n.z === state.map.z && n.x === worldX && n.y === worldY);
+      if (npc) foundEntity = `🧙 NPC: ${npc.name}`;
+    }
+    if (!isHoveringSign && !foundEntity && state.map.layers.signs) {
+      const sign = state.map.signs.find(s => s.z === state.map.z && Math.hypot(s.x - worldX, s.y - worldY) <= 1.2);
+      if (sign) {
+        isHoveringSign = true;
+        const preview = sign.text.replace(/\n/g, " ").slice(0, 45);
+        foundEntity = `📜 Placa: "${preview}${sign.text.length > 45 ? "..." : ""}" (Clique para ler)`;
+      }
+    }
+    if (!isHoveringSign && !foundEntity && state.map.layers.houses) {
+      const house = state.map.houses.find(h => h.center[2] === state.map.z && Math.hypot(h.center[0] - worldX, h.center[1] - worldY) <= 2);
+      if (house) foundEntity = `🏰 Casa: ${house.name}`;
+    }
+
+    if (!mapDragActive) {
+      canvas.style.cursor = isHoveringSign ? "pointer" : "crosshair";
+    }
+
+    updateHUD(worldX, worldY, state.map.z, foundEntity);
+    if (!mapDragActive) {
+      renderMapCanvas();
+    }
+  });
+
+  canvas.addEventListener("click", (e) => {
+    if (mapDragMoved) return;
+    const rect = canvas.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    const tileSize = 20 * state.map.zoom;
+    const halfW = canvas.width / 2;
+    const halfH = canvas.height / 2;
+    const worldX = Math.floor(state.map.centerX + (mouseX - halfW) / tileSize);
+    const worldY = Math.floor(state.map.centerY + (mouseY - halfH) / tileSize);
+
+    // 1. Precise click detection on text balloon or sign icon visible on screen
+    if (state.map.layers.signs && state.map.visibleSignsOnScreen && state.map.visibleSignsOnScreen.length > 0) {
+      const hit = state.map.visibleSignsOnScreen.find(s => {
+        if (s.bubble && mouseX >= s.bubble.x && mouseX <= s.bubble.x + s.bubble.w &&
+            mouseY >= s.bubble.y && mouseY <= s.bubble.y + s.bubble.h) {
+          return true;
+        }
+        if (Math.hypot(mouseX - s.anchor.cx, mouseY - s.anchor.cy) <= s.anchor.r) {
+          return true;
+        }
+        return false;
+      });
+      if (hit) {
+        state.map.selectedSign = hit.sign;
+        state.map.selectedSpawn = null;
+        state.map.selectedNpc = null;
+        renderMapCanvas();
+        openSignModal(hit.sign);
+        return;
+      }
+    }
+
+    // 2. Detection with world coordinate tolerance (1.2 tiles radius)
+    if (state.map.layers.signs && state.map.signs) {
+      const sign = state.map.signs.find(s => s.z === state.map.z && Math.hypot(s.x - worldX, s.y - worldY) <= 1.2);
+      if (sign) {
+        state.map.selectedSign = sign;
+        state.map.selectedSpawn = null;
+        state.map.selectedNpc = null;
+        renderMapCanvas();
+        openSignModal(sign);
+        return;
+      }
+    }
+
+    if (state.map.layers.monsters) {
+      const spawn = state.map.spawns.find(s => s.z === state.map.z && Math.hypot(s.x - worldX, s.y - worldY) <= Math.max(1.5, (s.radius || 1)));
+      if (spawn) {
+        state.map.selectedSpawn = spawn;
+        state.map.selectedSign = null;
+        state.map.selectedNpc = null;
+        renderMapCanvas();
+        return;
+      }
+    }
+
+    if (state.map.layers.npcs) {
+      const npc = state.map.npcs.find(n => n.z === state.map.z && n.x === worldX && n.y === worldY);
+      if (npc) {
+        state.map.selectedNpc = npc;
+        state.map.selectedSpawn = null;
+        state.map.selectedSign = null;
+        renderMapCanvas();
+        return;
+      }
+    }
+
+    state.map.selectedSign = null;
+    state.map.selectedSpawn = null;
+    state.map.selectedNpc = null;
+    renderMapCanvas();
+  });
+
+  canvas.addEventListener("wheel", (e) => {
+    e.preventDefault();
+    const delta = e.deltaY < 0 ? 0.15 : -0.15;
+    changeMapZoom(delta);
+  }, { passive: false });
+
+  // Keyboard navigation for map: Arrow keys to move, + to go up a floor, - to go down a floor
+  canvas.setAttribute("tabindex", "0");
+  canvas.style.outline = "none";
+
+  let mapChunkDebounceTimer = null;
+  function requestMapChunkDebounced(x, y, z) {
+    if (mapChunkDebounceTimer) clearTimeout(mapChunkDebounceTimer);
+    mapChunkDebounceTimer = setTimeout(() => {
+      const dist = Math.hypot(x - mapLastLoadedCenterX, y - mapLastLoadedCenterY);
+      if (dist >= 6 || z !== mapLastLoadedZ) {
+        loadMapChunk(x, y, z);
+      }
+    }, 180);
+  }
+
+  function handleMapKeyDown(e) {
+    // Ignore keydown if user is currently typing in an input, textarea or select
+    const targetTag = e.target?.tagName?.toLowerCase();
+    if (e.target?.isContentEditable || targetTag === "input" || targetTag === "textarea" || targetTag === "select") {
+      return;
+    }
+
+    // Only process map keyboard shortcuts when on the Minimap tab
+    if (state.currentTab !== "tab-map") return;
+
+    let step = e.shiftKey ? 8 : (e.ctrlKey ? 16 : 2);
+    let handled = false;
+
+    if (e.key === "ArrowUp") {
+      state.map.centerY -= step;
+      handled = true;
+    } else if (e.key === "ArrowDown") {
+      state.map.centerY += step;
+      handled = true;
+    } else if (e.key === "ArrowLeft") {
+      state.map.centerX -= step;
+      handled = true;
+    } else if (e.key === "ArrowRight") {
+      state.map.centerX += step;
+      handled = true;
+    } else if (e.key === "+" || e.code === "NumpadAdd" || (e.shiftKey && (e.key === "=" || e.code === "Equal"))) {
+      if (e.shiftKey) {
+        // Shift + "+": Zoom In
+        changeMapZoom(0.25);
+        handled = true;
+      } else {
+        // "+": Subir um andar: Z diminui (ex: 7 -> 6)
+        if (state.map.z > 0) {
+          setMapPosition(state.map.centerX, state.map.centerY, state.map.z - 1);
+          handled = true;
+        }
+      }
+    } else if (e.key === "-" || e.code === "NumpadSubtract" || (e.shiftKey && (e.key === "_" || e.code === "Minus"))) {
+      if (e.shiftKey) {
+        // Shift + "-": Zoom Out
+        changeMapZoom(-0.25);
+        handled = true;
+      } else {
+        // "-": Descer um andar: Z aumenta (ex: 7 -> 8)
+        if (state.map.z < 15) {
+          setMapPosition(state.map.centerX, state.map.centerY, state.map.z + 1);
+          handled = true;
+        }
+      }
+    } else if (e.key === "=") {
+      // Subir andar com tecla '=' sem Shift (se o teclado tiver '+' como Shift + '=')
+      if (state.map.z > 0) {
+        setMapPosition(state.map.centerX, state.map.centerY, state.map.z - 1);
+        handled = true;
+      }
+    }
+
+    if (handled) {
+      e.preventDefault();
+      const inputX = document.getElementById("map-input-x");
+      const inputY = document.getElementById("map-input-y");
+      if (inputX) inputX.value = state.map.centerX;
+      if (inputY) inputY.value = state.map.centerY;
+      updateHUD(state.map.centerX, state.map.centerY, state.map.z);
+      renderMapCanvas();
+      requestMapChunkDebounced(state.map.centerX, state.map.centerY, state.map.z);
+    }
+  }
+
+  window.addEventListener("keydown", handleMapKeyDown);
+}
+
+const sectorImagesCache = {};
+const mapOutfitCache = {};
+
+function getMapOutfitImage(lookType, colors = "0-0-0-0", isItemOutfit = false, itemOutfitId = 0) {
+  if (isItemOutfit && itemOutfitId > 0) {
+    const key = `item_${itemOutfitId}`;
+    if (!mapOutfitCache[key]) {
+      const obj = { img: new Image(), loaded: false, failed: false };
+      obj.img.src = `/api/item_sprite/${itemOutfitId}?zoom=1`;
+      obj.img.onload = () => { obj.loaded = true; renderMapCanvas(); };
+      obj.img.onerror = () => { obj.failed = true; };
+      mapOutfitCache[key] = obj;
+    }
+    return mapOutfitCache[key];
+  }
+
+  if (!lookType || lookType <= 0) return null;
+  const cleanColors = colors || "0-0-0-0";
+  const key = `outfit_${lookType}_${cleanColors}`;
+  if (!mapOutfitCache[key]) {
+    const obj = { img: new Image(), loaded: false, failed: false };
+    obj.img.src = `/api/outfit_sprite/${lookType}?dir=2&colors=${encodeURIComponent(cleanColors)}&zoom=1`;
+    obj.img.onload = () => { obj.loaded = true; renderMapCanvas(); };
+    obj.img.onerror = () => { obj.failed = true; };
+    mapOutfitCache[key] = obj;
+  }
+  return mapOutfitCache[key];
+}
+
+function renderMapCanvas() {
+  const canvas = document.getElementById("map-canvas");
+  if (!canvas) return;
+  const viewport = document.getElementById("map-viewport");
+  if (viewport && viewport.clientWidth > 0 && (canvas.width !== viewport.clientWidth || canvas.height !== viewport.clientHeight)) {
+    canvas.width = viewport.clientWidth;
+    canvas.height = viewport.clientHeight;
+  }
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  const w = canvas.width;
+  const h = canvas.height;
+  const tileSize = 20 * state.map.zoom;
+  const halfW = w / 2;
+  const halfH = h / 2;
+
+  // Map background color (classic Tibia style)
+  if (state.map.z <= 7) {
+    ctx.fillStyle = "#092f54"; // Deep surface ocean
+  } else {
+    ctx.fillStyle = "#0c0f17"; // Subsolo / Cavernas
+  }
+  ctx.fillRect(0, 0, w, h);
+
+  // Calculate visible world coordinate bounds
+  const minWorldX = Math.floor(state.map.centerX - halfW / tileSize);
+  const maxWorldX = Math.ceil(state.map.centerX + halfW / tileSize);
+  const minWorldY = Math.floor(state.map.centerY - halfH / tileSize);
+  const maxWorldY = Math.ceil(state.map.centerY + halfH / tileSize);
+
+  const minSecX = Math.floor(minWorldX / 32);
+  const maxSecX = Math.floor(maxWorldX / 32);
+  const minSecY = Math.floor(minWorldY / 32);
+  const maxSecY = Math.floor(maxWorldY / 32);
+
+  // Tibia Isometric 2.5D Elevation Offset:
+  // In classic Tibia perspective, each floor above ground (Z < 7) is shifted 1 SQM to North-West (-1 X, -1 Y)
+  // relative to the floor below it.
+  const getFloorElevationOffset = (floorZ) => {
+    if (floorZ < 7) {
+      const elevation = 7 - floorZ;
+      return {
+        sqmX: -elevation,
+        sqmY: -elevation,
+        pxX: -elevation * tileSize,
+        pxY: -elevation * tileSize
+      };
+    }
+    return { sqmX: 0, sqmY: 0, pxX: 0, pxY: 0 };
+  };
+
+  const currentFloorOffset = getFloorElevationOffset(state.map.z);
+
+  // Helper to render sectors of a specific floor with perspective elevation
+  const drawFloorSectors = (targetZ) => {
+    const floorOffset = getFloorElevationOffset(targetZ);
+    // Relative shift between target floor and current camera view
+    const shiftPxX = floorOffset.pxX - currentFloorOffset.pxX;
+    const shiftPxY = floorOffset.pxY - currentFloorOffset.pxY;
+
+    for (let sx = minSecX; sx <= maxSecX; sx++) {
+      for (let sy = minSecY; sy <= maxSecY; sy++) {
+        const secScreenX = Math.floor(halfW + (sx * 32 - state.map.centerX) * tileSize + shiftPxX);
+        const secScreenY = Math.floor(halfH + (sy * 32 - state.map.centerY) * tileSize + shiftPxY);
+        const secPixelSize = Math.ceil(32 * tileSize);
+
+        if (secScreenX + secPixelSize < 0 || secScreenX > w || secScreenY + secPixelSize < 0 || secScreenY > h) {
+          continue;
+        }
+
+        const cacheKey = `${sx}_${sy}_${targetZ}`;
+        let cached = sectorImagesCache[cacheKey];
+
+        if (!cached) {
+          cached = { img: new Image(), loaded: false, failed: false };
+          // Native 32x32 scale for sharp rendering
+          cached.img.src = `/api/map/sector_image/${sx}/${sy}/${targetZ}?scale=32`;
+          cached.img.onload = () => {
+            cached.loaded = true;
+            renderMapCanvas();
+          };
+          cached.img.onerror = () => {
+            cached.failed = true;
+          };
+          sectorImagesCache[cacheKey] = cached;
+        }
+
+        if (cached.loaded && cached.img.naturalWidth > 0) {
+          ctx.imageSmoothingEnabled = false; // Preserve crisp pixel-art without blur
+          ctx.drawImage(cached.img, secScreenX, secScreenY, secPixelSize, secPixelSize);
+        }
+      }
+    }
+  };
+
+  // 1. Shading style:
+  // If on upper floor (Z < 7) and option active, render ground (Z=7) up to Z+1 with dark veil
+  if (state.map.layers.lowerFloors && state.map.z < 7) {
+    for (let fz = 7; fz > state.map.z; fz--) {
+      drawFloorSectors(fz);
+      // Sombra gradual do RME sobre o andar inferior
+      ctx.fillStyle = "rgba(0, 0, 0, 0.44)";
+      ctx.fillRect(0, 0, w, h);
+    }
+  }
+
+  // 2. Renderiza o andar atual (em 100% de nitidez e brilho nativo, sem sombra)
+  drawFloorSectors(state.map.z);
+
+  // Grid opcional
+  if (state.map.layers.grid && tileSize >= 8) {
+    ctx.strokeStyle = "rgba(255, 255, 255, 0.08)";
+    ctx.lineWidth = 1;
+    for (let gx = minWorldX; gx <= maxWorldX; gx++) {
+      const px = Math.floor(halfW + (gx - state.map.centerX) * tileSize);
+      ctx.beginPath();
+      ctx.moveTo(px, 0);
+      ctx.lineTo(px, h);
+      ctx.stroke();
+    }
+    for (let gy = minWorldY; gy <= maxWorldY; gy++) {
+      const py = Math.floor(halfH + (gy - state.map.centerY) * tileSize);
+      ctx.beginPath();
+      ctx.moveTo(0, py);
+      ctx.lineTo(w, py);
+      ctx.stroke();
+    }
+  }
+
+  // Renderiza Casas (Discreto e Limpo)
+  if (state.map.layers.houses && state.map.houses.length > 0) {
+    state.map.houses.forEach(house => {
+      const [hx, hy, hz] = house.center;
+      if (hz !== state.map.z) return;
+
+      const sx = halfW + (hx - state.map.centerX) * tileSize + tileSize / 2;
+      const sy = halfH + (hy - state.map.centerY) * tileSize + tileSize / 2;
+
+      if (sx < -60 || sx > w + 60 || sy < -60 || sy > h + 60) return;
+
+      const dotRadius = Math.min(3.5, Math.max(2, tileSize * 0.16));
+      ctx.fillStyle = "#fbbf24";
+      ctx.beginPath();
+      ctx.arc(sx, sy, dotRadius, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#78350f";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      if (state.map.zoom >= 0.85) {
+        ctx.font = "bold 10px Tahoma, Verdana, Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2.5;
+        ctx.strokeText(house.name, sx, sy + tileSize * 0.5 + 8);
+        ctx.fillStyle = "#fef08a";
+        ctx.fillText(house.name, sx, sy + tileSize * 0.5 + 8);
+      }
+    });
+  }
+
+  // Renderiza Spawns de Monstros (Com Outfits Reais e Design Limpo)
+  if (state.map.layers.monsters && state.map.spawns.length > 0) {
+    state.map.spawns.forEach(s => {
+      if (s.z !== state.map.z) return;
+
+      const sx = halfW + (s.x - state.map.centerX) * tileSize + tileSize / 2;
+      const sy = halfH + (s.y - state.map.centerY) * tileSize + tileSize / 2;
+
+      if (sx < -80 || sx > w + 80 || sy < -80 || sy > h + 80) return;
+
+      const isHovered = state.map.hoveredSpawn && (state.map.hoveredSpawn.x === s.x && state.map.hoveredSpawn.y === s.y);
+      const isSelected = state.map.selectedSpawn && (state.map.selectedSpawn.x === s.x && state.map.selectedSpawn.y === s.y);
+
+      // Radius circle: ONLY if selected or hovered
+      if (isSelected || isHovered) {
+        const radiusPx = (s.radius || 1) * tileSize;
+        ctx.strokeStyle = "rgba(239, 68, 68, 0.85)";
+        ctx.fillStyle = "rgba(239, 68, 68, 0.10)";
+        ctx.lineWidth = 1.5;
+        ctx.setLineDash([4, 4]);
+        ctx.beginPath();
+        ctx.arc(sx, sy, radiusPx, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+        ctx.setLineDash([]);
+      }
+
+      let drewOutfit = false;
+      let outfitH = tileSize;
+      const isItemOutfit = (s.is_item_outfit || (s.look_type === 0 && (s.corpse || 0) > 0));
+      const itemOutfitId = s.corpse || 0;
+      if (state.map.layers.outfits && ((s.look_type && s.look_type > 0) || (isItemOutfit && itemOutfitId > 0)) && state.map.zoom >= 0.45) {
+        const outfitData = getMapOutfitImage(s.look_type, s.look_colors, isItemOutfit, itemOutfitId);
+        if (outfitData && outfitData.loaded && outfitData.img.naturalWidth > 0) {
+          const nw = outfitData.img.naturalWidth;
+          const nh = outfitData.img.naturalHeight;
+          const drawW = (nw / 32) * tileSize;
+          const drawH = (nh / 32) * tileSize;
+          outfitH = drawH;
+          const drawX = sx - drawW / 2;
+          const drawY = sy + (tileSize / 2) - drawH;
+
+          // Soft shadow under feet
+          ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+          ctx.beginPath();
+          ctx.ellipse(sx, sy + tileSize * 0.32, Math.max(3, tileSize * 0.36), Math.max(2, tileSize * 0.16), 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(outfitData.img, drawX, drawY, drawW, drawH);
+          drewOutfit = true;
+
+          // Selection outline
+          if (isSelected || isHovered) {
+            ctx.strokeStyle = "#ef4444";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(drawX - 2, drawY - 2, drawW + 4, drawH + 4);
+          }
+        }
+      }
+
+      // Marcador Pontual alternativo (se outfits desligados ou imagem carregando)
+      if (!drewOutfit) {
+        const dotRadius = Math.min(3.5, Math.max(2.2, tileSize * 0.16));
+        ctx.fillStyle = (isSelected || isHovered) ? "#ff3333" : "#ef4444";
+        ctx.beginPath();
+        ctx.arc(sx, sy, (isSelected || isHovered) ? dotRadius + 1.2 : dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 1;
+        ctx.stroke();
+      }
+
+      // Monster Name in Green with Black Outline (Displayed at zoom >= 0.75 or selected/hovered)
+      if (state.map.zoom >= 0.75 || isSelected || isHovered) {
+        ctx.font = "bold 10px Tahoma, Verdana, Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2.5;
+        const label = (s.amount > 1) ? `${s.name} (${s.amount})` : s.name;
+        const textY = drewOutfit ? (sy + (tileSize / 2) - outfitH - 3) : (sy - 5);
+        ctx.strokeText(label, sx, textY);
+        ctx.fillStyle = "#4ade80"; // Verde vibrante
+        ctx.fillText(label, sx, textY);
+      }
+    });
+  }
+
+  // Renderiza NPCs (Com Outfits Reais e Nome em Verde Vivo)
+  if (state.map.layers.npcs && state.map.npcs.length > 0) {
+    state.map.npcs.forEach(n => {
+      if (n.z !== state.map.z) return;
+
+      const sx = halfW + (n.x - state.map.centerX) * tileSize + tileSize / 2;
+      const sy = halfH + (n.y - state.map.centerY) * tileSize + tileSize / 2;
+
+      if (sx < -60 || sx > w + 60 || sy < -60 || sy > h + 60) return;
+
+      const isHovered = state.map.hoveredCoord && (state.map.hoveredCoord.x === n.x && state.map.hoveredCoord.y === n.y);
+      const isSelected = state.map.selectedNpc && (state.map.selectedNpc.x === n.x && state.map.selectedNpc.y === n.y);
+
+      let drewOutfit = false;
+      let outfitH = tileSize;
+      if (state.map.layers.outfits && state.map.zoom >= 0.45) {
+        const outfitData = getMapOutfitImage(n.outfit_type, n.outfit_colors, n.is_item_outfit, n.item_outfit_id);
+        if (outfitData && outfitData.loaded && outfitData.img.naturalWidth > 0) {
+          const nw = outfitData.img.naturalWidth;
+          const nh = outfitData.img.naturalHeight;
+          const drawW = (nw / 32) * tileSize;
+          const drawH = (nh / 32) * tileSize;
+          outfitH = drawH;
+          const drawX = sx - drawW / 2;
+          const drawY = sy + (tileSize / 2) - drawH;
+
+          // Shadow under feet
+          ctx.fillStyle = "rgba(0, 0, 0, 0.35)";
+          ctx.beginPath();
+          ctx.ellipse(sx, sy + tileSize * 0.32, Math.max(3, tileSize * 0.36), Math.max(2, tileSize * 0.16), 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.imageSmoothingEnabled = false;
+          ctx.drawImage(outfitData.img, drawX, drawY, drawW, drawH);
+          drewOutfit = true;
+
+          if (isSelected || isHovered) {
+            ctx.strokeStyle = "#38bdf8";
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(drawX - 2, drawY - 2, drawW + 4, drawH + 4);
+          }
+        }
+      }
+
+      // Marcador pontual alternativo (se outfits desligados ou imagem carregando)
+      if (!drewOutfit) {
+        const dotRadius = Math.min(4, Math.max(2.5, tileSize * 0.18));
+        ctx.fillStyle = "#0284c7";
+        ctx.beginPath();
+        ctx.arc(sx, sy, (isHovered || isSelected) ? dotRadius + 1.5 : dotRadius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = "#ffffff";
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      }
+
+      // Nome do NPC em Verde Vivo com Contorno Preto (Em zoom >= 0.75 ou hover/selecionado)
+      if (state.map.zoom >= 0.75 || isHovered || isSelected) {
+        ctx.font = "bold 10px Tahoma, Verdana, Inter, sans-serif";
+        ctx.textAlign = "center";
+        ctx.lineJoin = "round";
+        ctx.strokeStyle = "#000000";
+        ctx.lineWidth = 2.5;
+        const textY = drewOutfit ? (sy + (tileSize / 2) - outfitH - 3) : (sy - 6);
+        ctx.strokeText(n.name, sx, textY);
+        ctx.fillStyle = "#22c55e"; // Classic Tibia green
+        ctx.fillText(n.name, sx, textY);
+      }
+    });
+  }
+
+  // Renderiza Placas e Murais com Texto (.sec)
+  state.map.visibleSignsOnScreen = [];
+  if (state.map.layers.signs && state.map.signs && state.map.signs.length > 0) {
+    state.map.signs.forEach(sign => {
+      if (sign.z !== state.map.z) return;
+
+      const sx = halfW + (sign.x - state.map.centerX) * tileSize + tileSize / 2;
+      const sy = halfH + (sign.y - state.map.centerY) * tileSize + tileSize / 2;
+
+      if (sx < -120 || sx > w + 120 || sy < -120 || sy > h + 120) return;
+
+      const isHovered = state.map.hoveredCoord && (state.map.hoveredCoord.x === sign.x && state.map.hoveredCoord.y === sign.y);
+      const isSelected = state.map.selectedSign && (state.map.selectedSign.x === sign.x && state.map.selectedSign.y === sign.y);
+
+      // Discreet sign dot/icon
+      const badgeR = Math.min(4.5, Math.max(2.5, tileSize * 0.18));
+      ctx.fillStyle = (isSelected || isHovered) ? "#f59e0b" : "#d97706";
+      ctx.beginPath();
+      ctx.arc(sx, sy, (isSelected || isHovered) ? badgeR + 1.5 : badgeR, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = "#ffffff";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      let balloonRect = null;
+
+      // Styled parchment floating balloon
+      // Displayed if zoom >= 0.95 or on selection/hover
+      if (state.map.zoom >= 0.95 || isSelected || isHovered) {
+        const displayLines = formatSignBalloonLines(sign.text, 22, 3);
+        if (displayLines.length > 0) {
+          ctx.font = "bold 9px Tahoma, Verdana, Inter, sans-serif";
+          ctx.textAlign = "center";
+
+          let maxLineW = 0;
+          displayLines.forEach(l => {
+            const lw = ctx.measureText(l).width;
+            if (lw > maxLineW) maxLineW = lw;
+          });
+
+          const padX = 8;
+          const padY = 5;
+          const lineH = 13;
+          const bubbleW = Math.min(170, Math.max(54, maxLineW + padX * 2));
+          const bubbleH = displayLines.length * lineH + padY * 2;
+          const bubbleX = sx - bubbleW / 2;
+          const bubbleY = sy - tileSize * 0.5 - bubbleH - 4;
+
+          balloonRect = { x: bubbleX, y: bubbleY, w: bubbleW, h: bubbleH };
+
+          // Medieval parchment background
+          ctx.fillStyle = (isSelected || isHovered) ? "rgba(24, 18, 10, 0.96)" : "rgba(30, 24, 16, 0.90)";
+          ctx.strokeStyle = (isSelected || isHovered) ? "#f59e0b" : "rgba(217, 119, 6, 0.8)";
+          ctx.lineWidth = (isSelected || isHovered) ? 1.5 : 1;
+
+          const r = 4;
+          ctx.beginPath();
+          ctx.moveTo(bubbleX + r, bubbleY);
+          ctx.lineTo(bubbleX + bubbleW - r, bubbleY);
+          ctx.quadraticCurveTo(bubbleX + bubbleW, bubbleY, bubbleX + bubbleW, bubbleY + r);
+          ctx.lineTo(bubbleX + bubbleW, bubbleY + bubbleH - r);
+          ctx.quadraticCurveTo(bubbleX + bubbleW, bubbleY + bubbleH, bubbleX + bubbleW - r, bubbleY + bubbleH);
+          ctx.lineTo(bubbleX + bubbleW / 2 + 4, bubbleY + bubbleH);
+          ctx.lineTo(bubbleX + bubbleW / 2, bubbleY + bubbleH + 4);
+          ctx.lineTo(bubbleX + bubbleW / 2 - 4, bubbleY + bubbleH);
+          ctx.lineTo(bubbleX + r, bubbleY + bubbleH);
+          ctx.quadraticCurveTo(bubbleX, bubbleY + bubbleH, bubbleX, bubbleY + bubbleH - r);
+          ctx.lineTo(bubbleX, bubbleY + r);
+          ctx.quadraticCurveTo(bubbleX, bubbleY, bubbleX + r, bubbleY);
+          ctx.closePath();
+          ctx.fill();
+          ctx.stroke();
+
+          displayLines.forEach((line, idx) => {
+            const ly = bubbleY + padY + (idx + 1) * lineH - 2;
+            ctx.fillStyle = (idx === 0) ? "#fef08a" : "#fef9c3";
+            ctx.fillText(line, sx, ly);
+          });
+        }
+      }
+
+      state.map.visibleSignsOnScreen.push({
+        sign: sign,
+        anchor: { cx: sx, cy: sy, r: Math.max(tileSize * 0.7, 14) },
+        bubble: balloonRect
+      });
+    });
+  }
+
+  // Indicador de Cursor Selecionado / Hover
+  if (state.map.hoveredCoord) {
+    const hx = Math.floor(halfW + (state.map.hoveredCoord.x - state.map.centerX) * tileSize);
+    const hy = Math.floor(halfH + (state.map.hoveredCoord.y - state.map.centerY) * tileSize);
+    ctx.strokeStyle = "#38bdf8";
+    ctx.lineWidth = 2;
+    ctx.strokeRect(hx, hy, tileSize, tileSize);
+  }
+
+  // Ponto Central do Viewport (Mira suave)
+  ctx.strokeStyle = "rgba(255, 255, 255, 0.25)";
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(halfW - 10, halfH);
+  ctx.lineTo(halfW + 10, halfH);
+  ctx.moveTo(halfW, halfH - 10);
+  ctx.lineTo(halfW, halfH + 10);
+  ctx.stroke();
+}
+
+function formatSignBalloonLines(text, maxChars = 22, maxLines = 3) {
+  if (!text) return [];
+  const words = text.replace(/\\n|\n/g, " ").split(/\s+/).filter(w => w.length > 0);
+  const lines = [];
+  let currentLine = "";
+
+  for (const word of words) {
+    if ((currentLine + " " + word).trim().length <= maxChars) {
+      currentLine = (currentLine ? currentLine + " " + word : word);
+    } else {
+      if (currentLine) lines.push(currentLine);
+      currentLine = word;
+      if (lines.length === maxLines - 1) {
+        break;
+      }
+    }
+  }
+  if (currentLine && lines.length < maxLines) {
+    lines.push(currentLine);
+  }
+
+  if (words.length > 0) {
+    const renderedWords = lines.join(" ").split(/\s+/).length;
+    if (renderedWords < words.length && lines.length > 0) {
+      const last = lines[lines.length - 1];
+      lines[lines.length - 1] = (last.length > maxChars - 3 ? last.slice(0, maxChars - 3) : last) + "...";
+    }
+  }
+  return lines;
+}
+
+function openSignModal(sign) {
+  if (!sign) return;
+  const modal = document.getElementById("map-sign-modal");
+  if (!modal) return;
+
+  const titleEl = document.getElementById("map-sign-modal-title");
+  const imgEl = document.getElementById("map-sign-modal-img");
+  const coordsEl = document.getElementById("map-sign-modal-coords");
+  const itemIdEl = document.getElementById("map-sign-modal-itemid");
+  const editorRow = document.getElementById("map-sign-modal-editor-row");
+  const editorEl = document.getElementById("map-sign-modal-editor");
+  const textEl = document.getElementById("map-sign-modal-text");
+
+  const itemId = sign.item_id || 2012;
+  if (imgEl) imgEl.src = `/api/item_sprite/${itemId}?zoom=2`;
+  if (coordsEl) coordsEl.textContent = `Coords: [${sign.x}, ${sign.y}, ${sign.z}]`;
+  if (itemIdEl) itemIdEl.textContent = `Item #${itemId}`;
+
+  // Smart title based on item type
+  if (titleEl) {
+    if (itemId >= 2814 && itemId <= 2840) {
+      titleEl.innerHTML = "📖 Book / Document";
+    } else if (itemId >= 2841 && itemId <= 2855) {
+      titleEl.innerHTML = "📜 Scroll / Parchment";
+    } else if (itemId >= 2435 && itemId <= 2440) {
+      titleEl.innerHTML = "📚 Bookshelf Book";
+    } else if (itemId === 2597 || itemId === 2598) {
+      titleEl.innerHTML = "📋 Blackboard";
+    } else if (itemId === 2602 || itemId === 2603) {
+      titleEl.innerHTML = "📜 Wall Plaque";
+    } else {
+      titleEl.innerHTML = "📜 Sign / Inscription";
+    }
+  }
+
+  if (editorRow && editorEl) {
+    if (sign.editor) {
+      editorEl.textContent = sign.editor;
+      editorRow.style.display = "block";
+    } else {
+      editorRow.style.display = "none";
+    }
+  }
+
+  if (textEl) {
+    textEl.textContent = sign.text || "(Empty text)";
+    textEl.scrollTop = 0;
+  }
+
+  // Garantir que o modal esteja anexado diretamente ao body para evitar problemas de stacking context
+  if (modal.parentElement !== document.body) {
+    document.body.appendChild(modal);
+  }
+
+  modal.classList.add("active");
+  modal.style.setProperty("display", "flex", "important");
+  modal.style.setProperty("visibility", "visible", "important");
+  modal.style.setProperty("opacity", "1", "important");
+}
+
+let signModalSetupDone = false;
+function setupSignModal() {
+  if (signModalSetupDone) return;
+  signModalSetupDone = true;
+
+  const modal = document.getElementById("map-sign-modal");
+  const btnClose = document.getElementById("btn-close-map-sign");
+  const btnCloseFooter = document.getElementById("btn-close-map-sign-footer");
+  const btnCopy = document.getElementById("btn-copy-sign-text");
+
+  const closeFn = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    if (modal) {
+      modal.classList.remove("active");
+      modal.style.setProperty("display", "none", "important");
+      modal.style.removeProperty("visibility");
+      modal.style.removeProperty("opacity");
+    }
+  };
+
+  if (btnClose) btnClose.addEventListener("click", closeFn);
+  if (btnCloseFooter) btnCloseFooter.addEventListener("click", closeFn);
+  if (modal) {
+    modal.addEventListener("click", (e) => {
+      if (e.target === modal) closeFn(e);
+    });
+  }
+
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" && modal && modal.classList.contains("active")) {
+      closeFn(e);
+    }
+  });
+
+  if (btnCopy) {
+    btnCopy.addEventListener("click", (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      const text = document.getElementById("map-sign-modal-text")?.textContent || "";
+      if (navigator.clipboard) {
+        navigator.clipboard.writeText(text);
+        showToast("Text copied to clipboard!", "success");
+      }
+    });
+  }
+}
+
+// =============================================================================
+// FEATURE 2: MOVEUSE QUEST CHEST & DOOR WIZARD
+// =============================================================================
+function setupQuestWizard() {
+  const btnOpen = document.getElementById("btn-open-quest-wizard");
+  const modal = document.getElementById("quest-wizard-modal");
+  const btnClose = document.getElementById("btn-close-quest-wizard");
+  const btnCloseFooter = document.getElementById("btn-close-qw-footer");
+  const btnInsert = document.getElementById("btn-qw-insert");
+
+  if (btnOpen && modal) {
+    btnOpen.addEventListener("click", () => {
+      openQuestWizardModal();
+    });
+  }
+
+  const closeModal = () => {
+    if (modal) modal.style.display = "none";
+  };
+
+  if (btnClose) btnClose.addEventListener("click", closeModal);
+  if (btnCloseFooter) btnCloseFooter.addEventListener("click", closeModal);
+
+  // Seletores e Inputs reativos
+  const chestType = document.getElementById("qw-chest-type");
+  const chestCustom = document.getElementById("qw-chest-custom-id");
+  const btnPickChest = document.getElementById("btn-qw-pick-chest");
+
+  if (chestType) {
+    chestType.addEventListener("change", (e) => {
+      if (e.target.value === "custom") {
+        if (chestCustom) chestCustom.style.display = "inline-block";
+      } else {
+        if (chestCustom) chestCustom.style.display = "none";
+        state.questWizard.chestId = parseInt(e.target.value) || 1746;
+      }
+      updateQuestWizardPreview();
+    });
+  }
+
+  if (chestCustom) {
+    chestCustom.addEventListener("input", (e) => {
+      state.questWizard.chestId = parseInt(e.target.value) || 1746;
+      updateQuestWizardPreview();
+    });
+  }
+
+  if (btnPickChest) {
+    btnPickChest.addEventListener("click", () => {
+      openItemPickerModal("Select Quest Chest", (item) => {
+        state.questWizard.chestId = item.type_id;
+        if (chestType) chestType.value = "custom";
+        if (chestCustom) {
+          chestCustom.style.display = "inline-block";
+          chestCustom.value = item.type_id;
+        }
+        updateQuestWizardPreview();
+      });
+    });
+  }
+
+  // Trigger Mode & Value
+  const triggerMode = document.getElementById("qw-trigger-mode");
+  const triggerVal = document.getElementById("qw-trigger-value");
+  if (triggerMode) {
+    triggerMode.addEventListener("change", (e) => {
+      state.questWizard.triggerMode = e.target.value;
+      updateQuestWizardPreview();
+    });
+  }
+  if (triggerVal) {
+    triggerVal.addEventListener("input", (e) => {
+      state.questWizard.triggerValue = e.target.value.trim();
+      updateQuestWizardPreview();
+    });
+  }
+
+  // Reward Item & Count
+  const rewardIdInput = document.getElementById("qw-reward-id");
+  const rewardCountInput = document.getElementById("qw-reward-count");
+  const btnPickReward = document.getElementById("btn-qw-pick-reward");
+  const rewardImg = document.getElementById("qw-reward-img");
+
+  const updateRewardThumb = (id) => {
+    if (rewardImg) {
+      rewardImg.src = `/api/item_sprite/${id}?zoom=1`;
+    }
+  };
+
+  if (rewardIdInput) {
+    rewardIdInput.addEventListener("input", (e) => {
+      const id = parseInt(e.target.value) || 0;
+      state.questWizard.rewardId = id;
+      updateRewardThumb(id);
+      updateQuestWizardPreview();
+    });
+  }
+
+  if (rewardCountInput) {
+    rewardCountInput.addEventListener("input", (e) => {
+      state.questWizard.rewardCount = parseInt(e.target.value) || 1;
+      updateQuestWizardPreview();
+    });
+  }
+
+  if (btnPickReward) {
+    btnPickReward.addEventListener("click", () => {
+      openItemPickerModal("Selecionar Item de Recompensa", (item) => {
+        state.questWizard.rewardId = item.type_id;
+        if (rewardIdInput) rewardIdInput.value = item.type_id;
+        updateRewardThumb(item.type_id);
+        updateQuestWizardPreview();
+      });
+    });
+  }
+
+  // Storage Key e Mensagens
+  const storageKey = document.getElementById("qw-storage-key");
+  const msgSuccess = document.getElementById("qw-msg-success");
+  const msgEmpty = document.getElementById("qw-msg-empty");
+
+  if (storageKey) {
+    storageKey.addEventListener("input", (e) => {
+      state.questWizard.storageKey = parseInt(e.target.value) || 10001;
+      updateQuestWizardPreview();
+    });
+  }
+
+  if (msgSuccess) {
+    msgSuccess.addEventListener("input", (e) => {
+      state.questWizard.msgSuccess = e.target.value;
+      updateQuestWizardPreview();
+    });
+  }
+
+  if (msgEmpty) {
+    msgEmpty.addEventListener("input", (e) => {
+      state.questWizard.msgEmpty = e.target.value;
+      updateQuestWizardPreview();
+    });
+  }
+
+  // Inserir no moveuse.dat
+  if (btnInsert) {
+    btnInsert.addEventListener("click", () => {
+      insertQuestWizardRule();
+      closeModal();
+    });
+  }
+}
+
+function openQuestWizardModal() {
+  const modal = document.getElementById("quest-wizard-modal");
+  if (!modal) return;
+  modal.style.display = "flex";
+  updateQuestWizardPreview();
+}
+
+function generateQuestWizardRules() {
+  const { chestId, triggerMode, triggerValue, rewardId, rewardCount, storageKey, msgSuccess, msgEmpty } = state.questWizard;
+
+  let triggerCond = "";
+  if (triggerMode === "actionid" && triggerValue) {
+    triggerCond = `, HasAction (Obj1, ${triggerValue})`;
+  } else if (triggerMode === "uniqueid" && triggerValue) {
+    triggerCond = `, HasUnique (Obj1, ${triggerValue})`;
+  } else if (triggerMode === "position" && triggerValue) {
+    triggerCond = `, At (Obj1, ${triggerValue})`;
+  }
+
+  const ruleSuccess = `Use, IsType (Obj1, ${chestId})${triggerCond}, HasQuestValue (User, ${storageKey}, =, 0) -> Create (User, ${rewardId}, ${rewardCount}), SetQuestValue (User, ${storageKey}, 1), SysMessage (User, "${msgSuccess}")`;
+  const ruleEmpty = `Use, IsType (Obj1, ${chestId})${triggerCond}, HasQuestValue (User, ${storageKey}, >, 0) -> SysMessage (User, "${msgEmpty}")`;
+
+  return [ruleSuccess, ruleEmpty];
+}
+
+function updateQuestWizardPreview() {
+  const preview = document.getElementById("qw-code-preview");
+  if (!preview) return;
+
+  const rules = generateQuestWizardRules();
+  preview.textContent = `# Rule 1: Initial Reward (Storage == 0)\n${rules[0]}\n\n# Rule 2: Chest Already Opened (Storage > 0)\n${rules[1]}`;
+}
+
+function insertQuestWizardRule() {
+  const rules = generateQuestWizardRules();
+
+  // Locate or create Quests section
+  if (!state.moveuse.sections || state.moveuse.sections.length === 0) {
+    state.moveuse.sections = [{ name: "Quests", rules: [], count: 0 }];
+    state.moveuse.selectedSectionIndex = 0;
+  }
+
+  let sec = state.moveuse.sections[state.moveuse.selectedSectionIndex];
+  if (!sec) {
+    sec = state.moveuse.sections[0];
+  }
+
+  rules.forEach(r => {
+    sec.rules.push({
+      id: (sec.rules.length + 1),
+      section: sec.name,
+      trigger: "Use",
+      conditions: "",
+      actions: "",
+      raw: r
+    });
+  });
+
+  sec.count = sec.rules.length;
+  setDirty(true);
+  renderMoveUseSections();
+  renderMoveUseRules();
+
+  showToast("Quest and Chest rules successfully added to section!", "success");
+}
+
+// =============================================================================
+// FEATURE 3: CHANGES COMPARATOR (DIFF VIEWER BEFORE SAVE)
+// =============================================================================
+function setupDiffViewer() {
+  const btnOpen = document.getElementById("btn-open-diff");
+  const modal = document.getElementById("diff-viewer-modal");
+  const btnClose = document.getElementById("btn-close-diff");
+  const btnCloseFooter = document.getElementById("btn-close-diff-footer");
+  const btnConfirmSave = document.getElementById("btn-diff-save-confirm");
+
+  if (btnOpen) {
+    btnOpen.addEventListener("click", () => {
+      openDiffViewerModal();
+    });
+  }
+
+  const closeModal = () => {
+    if (modal) modal.style.display = "none";
+  };
+
+  if (btnClose) btnClose.addEventListener("click", closeModal);
+  if (btnCloseFooter) btnCloseFooter.addEventListener("click", closeModal);
+
+  if (btnConfirmSave) {
+    btnConfirmSave.addEventListener("click", () => {
+      closeModal();
+      document.getElementById("btn-global-save")?.click();
+    });
+  }
+}
+
+async function openDiffViewerModal() {
+  const modal = document.getElementById("diff-viewer-modal");
+  if (!modal) return;
+  modal.style.display = "flex";
+
+  const container = document.getElementById("diff-lines-container");
+  const fileBadge = document.getElementById("diff-file-badge");
+  const countAdded = document.getElementById("diff-count-added");
+  const countRemoved = document.getElementById("diff-count-removed");
+  const statusText = document.getElementById("diff-status-text");
+
+  if (container) {
+    container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">Comparing changes with file on disk...</div>`;
+  }
+
+  try {
+    let payload = {};
+
+    if (state.currentTab === "tab-monsters") {
+      const filename = state.monsters.selectedFilename || "monster.mon";
+      fileBadge.textContent = filename;
+
+      const flags = [];
+      document.querySelectorAll("input[name='mon-flag']:checked").forEach(chk => flags.push(chk.value));
+
+      payload = {
+        file_type: "monster",
+        filename: filename,
+        monster: {
+          filename: filename,
+          name: document.getElementById("mon-name")?.value || "",
+          race_number: parseInt(document.getElementById("mon-race")?.value) || 0,
+          outfit_type: parseInt(document.getElementById("mon-outfit")?.value) || 0,
+          outfit_colors: document.getElementById("mon-colors")?.value || "0-0-0-0",
+          hitpoints: parseInt(document.getElementById("mon-hp")?.value) || 100,
+          experience: parseInt(document.getElementById("mon-exp")?.value) || 0,
+          attack: parseInt(document.getElementById("mon-atk")?.value) || 0,
+          defend: parseInt(document.getElementById("mon-def")?.value) || 0,
+          armor: parseInt(document.getElementById("mon-armor")?.value) || 0,
+          speed: parseInt(document.getElementById("mon-speed")?.value) || 50,
+          blood: document.getElementById("mon-blood")?.value || "Blood",
+          corpse: parseInt(document.getElementById("mon-corpse")?.value) || 0,
+          flee_threshold: parseInt(document.getElementById("mon-flee")?.value) || 0,
+          poison: parseInt(document.getElementById("mon-poison")?.value) || 0,
+          flags: flags,
+          spells_raw: currentMonsterSpells || [],
+          talk: currentMonsterTalk || [],
+          inventory: currentMonsterLoot || []
+        }
+      };
+    } else if (state.currentTab === "tab-moveuse") {
+      fileBadge.textContent = "moveuse.dat";
+      payload = {
+        file_type: "moveuse",
+        sections: state.moveuse.sections || []
+      };
+    } else if (state.currentTab === "tab-npcs") {
+      const filename = state.npcs.selectedFilename || "npc.npc";
+      fileBadge.textContent = filename;
+      payload = {
+        file_type: "npc",
+        filename: filename,
+        modified_text: ""
+      };
+    } else if (state.currentTab === "tab-objects") {
+      fileBadge.textContent = "objects.srv";
+      payload = {
+        file_type: "objects",
+        modified_text: ""
+      };
+    } else {
+      fileBadge.textContent = "Editor";
+      if (container) {
+        container.innerHTML = `<div style="padding: 2rem; text-align: center; color: var(--text-muted);">This tab does not have a directly trackable text file for comparison.</div>`;
+      }
+      return;
+    }
+
+    const res = await fetch("/api/diff", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const result = await res.json();
+
+    if (result.error) {
+      if (container) {
+        container.innerHTML = `<div class="error-box" style="padding:1rem;">Error generating diff: ${escapeHtmlText(result.error)}</div>`;
+      }
+      return;
+    }
+
+    if (countAdded) countAdded.textContent = `+${result.added_count || 0} Added`;
+    if (countRemoved) countRemoved.textContent = `-${result.removed_count || 0} Removed`;
+
+    if (!result.has_diff || !result.diff_lines || result.diff_lines.length === 0) {
+      if (statusText) statusText.textContent = "No changes detected compared to the file saved on disk.";
+      if (container) {
+        container.innerHTML = `
+          <div style="padding: 3rem; text-align: center; color: #10b981;">
+            <div style="font-size: 2.5rem; margin-bottom: 0.5rem;">🎉</div>
+            <h4 style="color: #fff; margin-bottom: 0.25rem;">No pending changes</h4>
+            <p style="color: var(--text-muted); font-size: 0.9rem;">The current state is identical to the version saved on disk.</p>
+          </div>
+        `;
+      }
+      return;
+    }
+
+    if (statusText) {
+      statusText.textContent = `Reviewing ${result.diff_lines.length} lines of changes before saving.`;
+    }
+
+    // Rendering Git-styled diff lines
+    if (container) {
+      container.innerHTML = result.diff_lines.map(line => {
+        if (line.startsWith("+") && !line.startsWith("+++")) {
+          return `<div class="diff-line add"><span class="diff-prefix">+</span><span class="diff-text">${escapeHtmlText(line.slice(1))}</span></div>`;
+        } else if (line.startsWith("-") && !line.startsWith("---")) {
+          return `<div class="diff-line del"><span class="diff-prefix">-</span><span class="diff-text">${escapeHtmlText(line.slice(1))}</span></div>`;
+        } else if (line.startsWith("@@")) {
+          return `<div class="diff-line hunk"><span class="diff-prefix">@</span><span class="diff-text">${escapeHtmlText(line)}</span></div>`;
+        } else {
+          return `<div class="diff-line ctx"><span class="diff-prefix">&nbsp;</span><span class="diff-text">${escapeHtmlText(line)}</span></div>`;
+        }
+      }).join("");
+    }
+  } catch (err) {
+    if (container) {
+      container.innerHTML = `<div class="error-box" style="padding:1rem;">Connection error calculating diff: ${err.message}</div>`;
+    }
+  }
+}
+
 

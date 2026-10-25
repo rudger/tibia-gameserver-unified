@@ -36,6 +36,7 @@ CMakeScripts/
 *.o
 *.a
 *.lib
+!deps/lib/*.lib
 *.pch
 *.pdb
 *.pgc
@@ -83,6 +84,9 @@ ehthumbs.db
 Desktop.ini
 $RECYCLE.BIN/
 .DS_Store
+*.code-workspace
+*.png
+*.exe
 
 # Editor backups
 *~
@@ -90,3 +94,8 @@ $RECYCLE.BIN/
 .*.swo
 *.bak
 *.pyc
+
+#############
+## CipSoft Server
+#############
+tibia.db

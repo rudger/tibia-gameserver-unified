@@ -144,3 +144,13 @@ int DB_LoadPlayers(int MinimumCharacterID, int *NumberOfPlayers,
 	if(!g_DBDriver) return 1;
 	return g_DBDriver->LoadPlayers(MinimumCharacterID, NumberOfPlayers, PlayerNames, CharacterIDs);
 }
+
+bool DB_SaveCharacterState(const struct TPlayerData *Slot){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->SaveCharacterState(Slot);
+}
+
+bool DB_LoadCharacterState(struct TPlayerData *Slot){
+	if(!g_DBDriver) return false;
+	return g_DBDriver->LoadCharacterState(Slot);
+}

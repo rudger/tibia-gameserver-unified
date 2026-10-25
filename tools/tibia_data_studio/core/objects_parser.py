@@ -1,6 +1,6 @@
 """
-Parser e Serializador do arquivo objects.srv (CipSoft / OTServ)
-Permite carregar, editar, filtrar, validar e salvar todos os tipos de itens do servidor.
+objects.srv Parser and Serializer (CipSoft / OTServ)
+Allows loading, editing, filtering, validating and saving all server item types.
 """
 
 import os
@@ -75,18 +75,18 @@ class ObjectsParser:
                 self.header_comments.append(line)
                 continue
 
-            # Início de um novo objeto
+            # Start of a new object
             if re.match(r"^TypeID\s*=", stripped, re.IGNORECASE):
                 in_header = False
                 # Salva o objeto anterior
                 if current_obj is not None:
                     self.objects[current_obj.type_id] = current_obj
 
-                # Extrai TypeID e comentário opcional
+                # Extracts TypeID and optional comment
                 comment_match = re.search(r"#\s*(.*)$", stripped)
                 comment = comment_match.group(1).strip() if comment_match else ""
                 
-                # Remove comentário da linha para pegar o número
+                # Strips comment from line to get number
                 clean_line = re.sub(r"#.*$", "", stripped).strip()
                 type_val = int(clean_line.split("=")[1].strip())
                 current_obj = ServerObject(type_id=type_val, comment=comment)
@@ -104,7 +104,7 @@ class ObjectsParser:
                 else:
                     current_obj.name = val_part
 
-            # Descrição
+            # Description
             elif re.match(r"^Description\s*=", stripped, re.IGNORECASE):
                 val_part = stripped.split("=", 1)[1].strip()
                 desc_match = re.search(r'"([^"]*)"', val_part)
@@ -153,7 +153,7 @@ class ObjectsParser:
         if not target_path:
             return False
 
-        # Cria diretório se não existir
+        # Creates directory if not existing
         os.makedirs(os.path.dirname(os.path.abspath(target_path)), exist_ok=True)
 
         lines = []

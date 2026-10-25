@@ -1,6 +1,6 @@
 """
-Parser e Serializador de Arquivos de Monstros (.mon) (CipSoft / OTServ)
-Permite gerenciar atributos, skills, spells, imunidades/flags, falas e a tabela de LOOT completa.
+Monster File (.mon) Parser and Serializer (CipSoft / OTServ)
+Manages attributes, skills, spells, immunities/flags, talk lines and complete LOOT table.
 """
 
 import os
@@ -143,7 +143,7 @@ class MonsterManager:
 
             mon = MonsterData(filename=filename)
 
-            # Extração simples por regex de propriedades escalares
+            # Simple regex extraction of scalar properties
             def get_int(key, default=0):
                 m = re.search(rf"^{key}\s*=\s*(\d+)", content, re.MULTILINE | re.IGNORECASE)
                 return int(m.group(1)) if m else default
@@ -225,7 +225,7 @@ class MonsterManager:
             if spells_m:
                 raw_spells = spells_m.group(1).strip()
                 if raw_spells:
-                    # Quebra por linhas / vírgulas respeitando parâmetros
+                    # Splits by lines / commas respecting parameters
                     mon.spells_raw = [sp.strip() for sp in re.split(r",\s*(?=[A-Za-z])", raw_spells) if sp.strip()]
 
             # Inventory / Loot

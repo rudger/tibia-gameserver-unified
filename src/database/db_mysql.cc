@@ -1,5 +1,6 @@
 #include "db_driver.hh"
 #include "db_common.hh"
+#include "../game/cr.hh"
 
 #if defined(TIBIA_NO_MYSQL)
 #include <cstdio>
@@ -622,6 +623,43 @@ public:
 		if(Rank) Rank[0] = 0;
 		if(Title) Title[0] = 0;
 
+		// Fetch Guild, Rank, and Title from GuildMembers
+		if(Guild && Rank && Title){
+			stmt = mysql_stmt_init(m_MySQL);
+			if(stmt){
+				const char *gSql = "SELECT G.Name, GR.Name, GM.Title FROM GuildMembers GM "
+								   "JOIN Guilds G ON GM.GuildID = G.GuildID "
+								   "JOIN GuildRanks GR ON GM.GuildID = GR.GuildID AND GM.Rank = GR.Rank "
+								   "WHERE GM.CharacterID = ? LIMIT 1";
+				if(mysql_stmt_prepare(stmt, gSql, (unsigned long)strlen(gSql)) == 0){
+					MYSQL_BIND gParams[1];
+					memset(gParams, 0, sizeof(gParams));
+					gParams[0].buffer_type = MYSQL_TYPE_LONG;
+					gParams[0].buffer = &cid;
+					gParams[0].is_unsigned = 1;
+
+					if(mysql_stmt_bind_param(stmt, gParams) == 0 && mysql_stmt_execute(stmt) == 0){
+						char gName[64] = {0}, grName[64] = {0}, gmTitle[64] = {0};
+						unsigned long gLen = 0, grLen = 0, gtLen = 0;
+						MYSQL_BIND gRes[3];
+						memset(gRes, 0, sizeof(gRes));
+						gRes[0].buffer_type = MYSQL_TYPE_STRING; gRes[0].buffer = gName; gRes[0].buffer_length = sizeof(gName) - 1; gRes[0].length = &gLen;
+						gRes[1].buffer_type = MYSQL_TYPE_STRING; gRes[1].buffer = grName; gRes[1].buffer_length = sizeof(grName) - 1; gRes[1].length = &grLen;
+						gRes[2].buffer_type = MYSQL_TYPE_STRING; gRes[2].buffer = gmTitle; gRes[2].buffer_length = sizeof(gmTitle) - 1; gRes[2].length = &gtLen;
+
+						if(mysql_stmt_bind_result(stmt, gRes) == 0 && mysql_stmt_store_result(stmt) == 0){
+							if(mysql_stmt_fetch(stmt) == 0){
+								strncpy(Guild, gName, 30); Guild[30] = 0;
+								strncpy(Rank, grName, 30); Rank[30] = 0;
+								strncpy(Title, gmTitle, 30); Title[30] = 0;
+							}
+						}
+					}
+				}
+				mysql_stmt_close(stmt);
+			}
+		}
+
 		// Mark Online
 		stmt = mysql_stmt_init(m_MySQL);
 		if(stmt){
@@ -1085,6 +1123,418 @@ public:
 
 		mysql_stmt_close(stmt);
 		return 1;
+	}
+
+	bool SaveCharacterState(const TPlayerData *Slot) override {
+		if(!Slot || Slot->CharacterID == 0) return false;
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL) return false;
+
+		ExecSimpleSQL("START TRANSACTION;");
+
+		// 1. Save PlayerState
+		const char *stateSql = "REPLACE INTO PlayerState ("
+			"CharacterID, Race, Profession, "
+			"OrigLookType, OrigLookHead, OrigLookBody, OrigLookLegs, OrigLookFeet, "
+			"CurrLookType, CurrLookHead, CurrLookBody, CurrLookLegs, CurrLookFeet, "
+			"StartX, StartY, StartZ, PosX, PosY, PosZ, PlayerkillerEnd, Spells, Quests, Murders) "
+			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt || mysql_stmt_prepare(stmt, stateSql, (unsigned long)strlen(stateSql)) != 0){
+			if(stmt) mysql_stmt_close(stmt);
+			ExecSimpleSQL("ROLLBACK;");
+			return false;
+		}
+
+		MYSQL_BIND params[23];
+		memset(params, 0, sizeof(params));
+
+		unsigned int cid = Slot->CharacterID;
+		int race = Slot->Race;
+		int prof = Slot->Profession;
+
+		int origType = Slot->OriginalOutfit.OutfitID;
+		int origHead = Slot->OriginalOutfit.Colors[0];
+		int origBody = Slot->OriginalOutfit.Colors[1];
+		int origLegs = Slot->OriginalOutfit.Colors[2];
+		int origFeet = Slot->OriginalOutfit.Colors[3];
+
+		int currType = Slot->CurrentOutfit.OutfitID;
+		int currHead = Slot->CurrentOutfit.Colors[0];
+		int currBody = Slot->CurrentOutfit.Colors[1];
+		int currLegs = Slot->CurrentOutfit.Colors[2];
+		int currFeet = Slot->CurrentOutfit.Colors[3];
+
+		int sx = Slot->startx, sy = Slot->starty, sz = Slot->startz;
+		int px = Slot->posx, py = Slot->posy, pz = Slot->posz;
+		int pkEnd = Slot->PlayerkillerEnd;
+
+		params[0].buffer_type = MYSQL_TYPE_LONG; params[0].buffer = &cid; params[0].is_unsigned = 1;
+		params[1].buffer_type = MYSQL_TYPE_LONG; params[1].buffer = &race;
+		params[2].buffer_type = MYSQL_TYPE_LONG; params[2].buffer = &prof;
+
+		params[3].buffer_type = MYSQL_TYPE_LONG; params[3].buffer = &origType;
+		params[4].buffer_type = MYSQL_TYPE_LONG; params[4].buffer = &origHead;
+		params[5].buffer_type = MYSQL_TYPE_LONG; params[5].buffer = &origBody;
+		params[6].buffer_type = MYSQL_TYPE_LONG; params[6].buffer = &origLegs;
+		params[7].buffer_type = MYSQL_TYPE_LONG; params[7].buffer = &origFeet;
+
+		params[8].buffer_type = MYSQL_TYPE_LONG; params[8].buffer = &currType;
+		params[9].buffer_type = MYSQL_TYPE_LONG; params[9].buffer = &currHead;
+		params[10].buffer_type = MYSQL_TYPE_LONG; params[10].buffer = &currBody;
+		params[11].buffer_type = MYSQL_TYPE_LONG; params[11].buffer = &currLegs;
+		params[12].buffer_type = MYSQL_TYPE_LONG; params[12].buffer = &currFeet;
+
+		params[13].buffer_type = MYSQL_TYPE_LONG; params[13].buffer = &sx;
+		params[14].buffer_type = MYSQL_TYPE_LONG; params[14].buffer = &sy;
+		params[15].buffer_type = MYSQL_TYPE_LONG; params[15].buffer = &sz;
+		params[16].buffer_type = MYSQL_TYPE_LONG; params[16].buffer = &px;
+		params[17].buffer_type = MYSQL_TYPE_LONG; params[17].buffer = &py;
+		params[18].buffer_type = MYSQL_TYPE_LONG; params[18].buffer = &pz;
+		params[19].buffer_type = MYSQL_TYPE_LONG; params[19].buffer = &pkEnd;
+
+		unsigned long spellsLen = sizeof(Slot->SpellList);
+		params[20].buffer_type = MYSQL_TYPE_BLOB;
+		params[20].buffer = (void*)Slot->SpellList;
+		params[20].buffer_length = spellsLen;
+		params[20].length = &spellsLen;
+
+		unsigned long questsLen = sizeof(Slot->QuestValues);
+		params[21].buffer_type = MYSQL_TYPE_BLOB;
+		params[21].buffer = (void*)Slot->QuestValues;
+		params[21].buffer_length = questsLen;
+		params[21].length = &questsLen;
+
+		unsigned long murdersLen = sizeof(Slot->MurderTimestamps);
+		params[22].buffer_type = MYSQL_TYPE_BLOB;
+		params[22].buffer = (void*)Slot->MurderTimestamps;
+		params[22].buffer_length = murdersLen;
+		params[22].length = &murdersLen;
+
+		if(mysql_stmt_bind_param(stmt, params) != 0 || mysql_stmt_execute(stmt) != 0){
+			mysql_stmt_close(stmt);
+			ExecSimpleSQL("ROLLBACK;");
+			return false;
+		}
+		mysql_stmt_close(stmt);
+
+		// 2. Save PlayerSkills
+		const char *skillSql = "REPLACE INTO PlayerSkills ("
+			"CharacterID, SkillID, Actual, Maximum, Minimum, DeltaAct, MagicDeltaAct, "
+			"Cycle, MaxCycle, Count, MaxCount, AddLevel, Experience, FactorPercent, NextLevel, Delta) "
+			"VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?);";
+
+		stmt = mysql_stmt_init(m_MySQL);
+		if(stmt && mysql_stmt_prepare(stmt, skillSql, (unsigned long)strlen(skillSql)) == 0){
+			for(int i = 0; i < 25; i++){
+				if(Slot->Minimum[i] == INT_MIN) continue;
+
+				MYSQL_BIND sp[16];
+				memset(sp, 0, sizeof(sp));
+				unsigned char sid = (unsigned char)i;
+				int act = Slot->Actual[i], mx = Slot->Maximum[i], mn = Slot->Minimum[i];
+				int dact = Slot->DeltaAct[i], mdact = Slot->MagicDeltaAct[i];
+				int cyc = Slot->Cycle[i], mcyc = Slot->MaxCycle[i];
+				int cnt = Slot->Count[i], mcnt = Slot->MaxCount[i];
+				int al = Slot->AddLevel[i], exp = Slot->Experience[i], fp = Slot->FactorPercent[i];
+				int nl = Slot->NextLevel[i], delta = Slot->Delta[i];
+
+				sp[0].buffer_type = MYSQL_TYPE_LONG; sp[0].buffer = &cid; sp[0].is_unsigned = 1;
+				sp[1].buffer_type = MYSQL_TYPE_TINY; sp[1].buffer = &sid; sp[1].is_unsigned = 1;
+				sp[2].buffer_type = MYSQL_TYPE_LONG; sp[2].buffer = &act;
+				sp[3].buffer_type = MYSQL_TYPE_LONG; sp[3].buffer = &mx;
+				sp[4].buffer_type = MYSQL_TYPE_LONG; sp[4].buffer = &mn;
+				sp[5].buffer_type = MYSQL_TYPE_LONG; sp[5].buffer = &dact;
+				sp[6].buffer_type = MYSQL_TYPE_LONG; sp[6].buffer = &mdact;
+				sp[7].buffer_type = MYSQL_TYPE_LONG; sp[7].buffer = &cyc;
+				sp[8].buffer_type = MYSQL_TYPE_LONG; sp[8].buffer = &mcyc;
+				sp[9].buffer_type = MYSQL_TYPE_LONG; sp[9].buffer = &cnt;
+				sp[10].buffer_type = MYSQL_TYPE_LONG; sp[10].buffer = &mcnt;
+				sp[11].buffer_type = MYSQL_TYPE_LONG; sp[11].buffer = &al;
+				sp[12].buffer_type = MYSQL_TYPE_LONG; sp[12].buffer = &exp;
+				sp[13].buffer_type = MYSQL_TYPE_LONG; sp[13].buffer = &fp;
+				sp[14].buffer_type = MYSQL_TYPE_LONG; sp[14].buffer = &nl;
+				sp[15].buffer_type = MYSQL_TYPE_LONG; sp[15].buffer = &delta;
+
+				if(mysql_stmt_bind_param(stmt, sp) == 0){
+					mysql_stmt_execute(stmt);
+				}
+			}
+			mysql_stmt_close(stmt);
+		}
+
+		// 3. Save PlayerInventory
+		if(Slot->Inventory && Slot->InventorySize > 0){
+			const char *invSql = "REPLACE INTO PlayerInventory (CharacterID, Data) VALUES (?, ?);";
+			stmt = mysql_stmt_init(m_MySQL);
+			if(stmt && mysql_stmt_prepare(stmt, invSql, (unsigned long)strlen(invSql)) == 0){
+				MYSQL_BIND ip[2];
+				memset(ip, 0, sizeof(ip));
+				unsigned long invLen = (unsigned long)Slot->InventorySize;
+				ip[0].buffer_type = MYSQL_TYPE_LONG; ip[0].buffer = &cid; ip[0].is_unsigned = 1;
+				ip[1].buffer_type = MYSQL_TYPE_BLOB; ip[1].buffer = Slot->Inventory;
+				ip[1].buffer_length = invLen; ip[1].length = &invLen;
+
+				if(mysql_stmt_bind_param(stmt, ip) == 0){
+					mysql_stmt_execute(stmt);
+				}
+				mysql_stmt_close(stmt);
+			}
+		}
+
+		// 4. Save PlayerDepots
+		for(int d = 0; d < MAX_DEPOTS; d++){
+			if(Slot->Depot[d] && Slot->DepotSize[d] > 0){
+				const char *depotSql = "REPLACE INTO PlayerDepots (CharacterID, DepotID, Data) VALUES (?, ?, ?);";
+				stmt = mysql_stmt_init(m_MySQL);
+				if(stmt && mysql_stmt_prepare(stmt, depotSql, (unsigned long)strlen(depotSql)) == 0){
+					MYSQL_BIND dp[3];
+					memset(dp, 0, sizeof(dp));
+					unsigned char depId = (unsigned char)d;
+					unsigned long depLen = (unsigned long)Slot->DepotSize[d];
+					dp[0].buffer_type = MYSQL_TYPE_LONG; dp[0].buffer = &cid; dp[0].is_unsigned = 1;
+					dp[1].buffer_type = MYSQL_TYPE_TINY; dp[1].buffer = &depId; dp[1].is_unsigned = 1;
+					dp[2].buffer_type = MYSQL_TYPE_BLOB; dp[2].buffer = Slot->Depot[d];
+					dp[2].buffer_length = depLen; dp[2].length = &depLen;
+
+					if(mysql_stmt_bind_param(stmt, dp) == 0){
+						mysql_stmt_execute(stmt);
+					}
+					mysql_stmt_close(stmt);
+				}
+			}
+		}
+
+		ExecSimpleSQL("COMMIT;");
+		return true;
+	}
+
+	bool LoadCharacterState(TPlayerData *Slot) override {
+		if(!Slot || Slot->CharacterID == 0) return false;
+		std::lock_guard<std::mutex> lock(m_Mutex);
+		if(!m_MySQL) return false;
+
+		// 1. Query PlayerState
+		const char *stateSql = "SELECT Race, Profession, "
+			"OrigLookType, OrigLookHead, OrigLookBody, OrigLookLegs, OrigLookFeet, "
+			"CurrLookType, CurrLookHead, CurrLookBody, CurrLookLegs, CurrLookFeet, "
+			"StartX, StartY, StartZ, PosX, PosY, PosZ, PlayerkillerEnd, Spells, Quests, Murders "
+			"FROM PlayerState WHERE CharacterID = ?;";
+
+		MYSQL_STMT *stmt = mysql_stmt_init(m_MySQL);
+		if(!stmt || mysql_stmt_prepare(stmt, stateSql, (unsigned long)strlen(stateSql)) != 0){
+			if(stmt) mysql_stmt_close(stmt);
+			return false;
+		}
+
+		unsigned int cid = Slot->CharacterID;
+		MYSQL_BIND params[1];
+		memset(params, 0, sizeof(params));
+		params[0].buffer_type = MYSQL_TYPE_LONG;
+		params[0].buffer = &cid;
+		params[0].is_unsigned = 1;
+
+		if(mysql_stmt_bind_param(stmt, params) != 0 || mysql_stmt_execute(stmt) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		int race = 0, prof = 0;
+		int origType = 0, origHead = 0, origBody = 0, origLegs = 0, origFeet = 0;
+		int currType = 0, currHead = 0, currBody = 0, currLegs = 0, currFeet = 0;
+		int sx = 0, sy = 0, sz = 0, px = 0, py = 0, pz = 0, pkEnd = 0;
+		uint8 spellsBuf[256] = {0}; unsigned long spellsLen = 0;
+		int questsBuf[500] = {0}; unsigned long questsLen = 0;
+		int murdersBuf[20] = {0}; unsigned long murdersLen = 0;
+
+		MYSQL_BIND results[22];
+		memset(results, 0, sizeof(results));
+		results[0].buffer_type = MYSQL_TYPE_LONG; results[0].buffer = &race;
+		results[1].buffer_type = MYSQL_TYPE_LONG; results[1].buffer = &prof;
+		results[2].buffer_type = MYSQL_TYPE_LONG; results[2].buffer = &origType;
+		results[3].buffer_type = MYSQL_TYPE_LONG; results[3].buffer = &origHead;
+		results[4].buffer_type = MYSQL_TYPE_LONG; results[4].buffer = &origBody;
+		results[5].buffer_type = MYSQL_TYPE_LONG; results[5].buffer = &origLegs;
+		results[6].buffer_type = MYSQL_TYPE_LONG; results[6].buffer = &origFeet;
+		results[7].buffer_type = MYSQL_TYPE_LONG; results[7].buffer = &currType;
+		results[8].buffer_type = MYSQL_TYPE_LONG; results[8].buffer = &currHead;
+		results[9].buffer_type = MYSQL_TYPE_LONG; results[9].buffer = &currBody;
+		results[10].buffer_type = MYSQL_TYPE_LONG; results[10].buffer = &currLegs;
+		results[11].buffer_type = MYSQL_TYPE_LONG; results[11].buffer = &currFeet;
+		results[12].buffer_type = MYSQL_TYPE_LONG; results[12].buffer = &sx;
+		results[13].buffer_type = MYSQL_TYPE_LONG; results[13].buffer = &sy;
+		results[14].buffer_type = MYSQL_TYPE_LONG; results[14].buffer = &sz;
+		results[15].buffer_type = MYSQL_TYPE_LONG; results[15].buffer = &px;
+		results[16].buffer_type = MYSQL_TYPE_LONG; results[16].buffer = &py;
+		results[17].buffer_type = MYSQL_TYPE_LONG; results[17].buffer = &pz;
+		results[18].buffer_type = MYSQL_TYPE_LONG; results[18].buffer = &pkEnd;
+
+		results[19].buffer_type = MYSQL_TYPE_BLOB; results[19].buffer = spellsBuf;
+		results[19].buffer_length = sizeof(spellsBuf); results[19].length = &spellsLen;
+
+		results[20].buffer_type = MYSQL_TYPE_BLOB; results[20].buffer = questsBuf;
+		results[20].buffer_length = sizeof(questsBuf); results[20].length = &questsLen;
+
+		results[21].buffer_type = MYSQL_TYPE_BLOB; results[21].buffer = murdersBuf;
+		results[21].buffer_length = sizeof(murdersBuf); results[21].length = &murdersLen;
+
+		if(mysql_stmt_bind_result(stmt, results) != 0 || mysql_stmt_store_result(stmt) != 0){
+			mysql_stmt_close(stmt);
+			return false;
+		}
+
+		if(mysql_stmt_fetch(stmt) != 0){
+			mysql_stmt_close(stmt);
+			return false; // Character not found in PlayerState table!
+		}
+		mysql_stmt_close(stmt);
+
+		Slot->Race = race;
+		Slot->Profession = prof;
+		Slot->OriginalOutfit.OutfitID = origType;
+		Slot->OriginalOutfit.Colors[0] = (uint8)origHead;
+		Slot->OriginalOutfit.Colors[1] = (uint8)origBody;
+		Slot->OriginalOutfit.Colors[2] = (uint8)origLegs;
+		Slot->OriginalOutfit.Colors[3] = (uint8)origFeet;
+		Slot->CurrentOutfit.OutfitID = currType;
+		Slot->CurrentOutfit.Colors[0] = (uint8)currHead;
+		Slot->CurrentOutfit.Colors[1] = (uint8)currBody;
+		Slot->CurrentOutfit.Colors[2] = (uint8)currLegs;
+		Slot->CurrentOutfit.Colors[3] = (uint8)currFeet;
+		Slot->startx = sx; Slot->starty = sy; Slot->startz = sz;
+		Slot->posx = px; Slot->posy = py; Slot->posz = pz;
+		Slot->PlayerkillerEnd = pkEnd;
+
+		if(spellsLen > 0){
+			memcpy(Slot->SpellList, spellsBuf, spellsLen < sizeof(Slot->SpellList) ? spellsLen : sizeof(Slot->SpellList));
+		}
+		if(questsLen > 0){
+			memcpy(Slot->QuestValues, questsBuf, questsLen < sizeof(Slot->QuestValues) ? questsLen : sizeof(Slot->QuestValues));
+		}
+		if(murdersLen > 0){
+			memcpy(Slot->MurderTimestamps, murdersBuf, murdersLen < sizeof(Slot->MurderTimestamps) ? murdersLen : sizeof(Slot->MurderTimestamps));
+		}
+
+		// 2. Query PlayerSkills
+		const char *skillSql = "SELECT SkillID, Actual, Maximum, Minimum, DeltaAct, MagicDeltaAct, "
+			"Cycle, MaxCycle, Count, MaxCount, AddLevel, Experience, FactorPercent, NextLevel, Delta "
+			"FROM PlayerSkills WHERE CharacterID = ?;";
+
+		stmt = mysql_stmt_init(m_MySQL);
+		if(stmt && mysql_stmt_prepare(stmt, skillSql, (unsigned long)strlen(skillSql)) == 0){
+			memset(params, 0, sizeof(params));
+			params[0].buffer_type = MYSQL_TYPE_LONG; params[0].buffer = &cid; params[0].is_unsigned = 1;
+
+			if(mysql_stmt_bind_param(stmt, params) == 0 && mysql_stmt_execute(stmt) == 0){
+				unsigned char sid = 0;
+				int act = 0, mx = 0, mn = 0, dact = 0, mdact = 0;
+				int cyc = 0, mcyc = 0, cnt = 0, mcnt = 0, al = 0, exp = 0, fp = 0, nl = 0, delta = 0;
+
+				MYSQL_BIND sres[15];
+				memset(sres, 0, sizeof(sres));
+				sres[0].buffer_type = MYSQL_TYPE_TINY; sres[0].buffer = &sid; sres[0].is_unsigned = 1;
+				sres[1].buffer_type = MYSQL_TYPE_LONG; sres[1].buffer = &act;
+				sres[2].buffer_type = MYSQL_TYPE_LONG; sres[2].buffer = &mx;
+				sres[3].buffer_type = MYSQL_TYPE_LONG; sres[3].buffer = &mn;
+				sres[4].buffer_type = MYSQL_TYPE_LONG; sres[4].buffer = &dact;
+				sres[5].buffer_type = MYSQL_TYPE_LONG; sres[5].buffer = &mdact;
+				sres[6].buffer_type = MYSQL_TYPE_LONG; sres[6].buffer = &cyc;
+				sres[7].buffer_type = MYSQL_TYPE_LONG; sres[7].buffer = &mcyc;
+				sres[8].buffer_type = MYSQL_TYPE_LONG; sres[8].buffer = &cnt;
+				sres[9].buffer_type = MYSQL_TYPE_LONG; sres[9].buffer = &mcnt;
+				sres[10].buffer_type = MYSQL_TYPE_LONG; sres[10].buffer = &al;
+				sres[11].buffer_type = MYSQL_TYPE_LONG; sres[11].buffer = &exp;
+				sres[12].buffer_type = MYSQL_TYPE_LONG; sres[12].buffer = &fp;
+				sres[13].buffer_type = MYSQL_TYPE_LONG; sres[13].buffer = &nl;
+				sres[14].buffer_type = MYSQL_TYPE_LONG; sres[14].buffer = &delta;
+
+				if(mysql_stmt_bind_result(stmt, sres) == 0 && mysql_stmt_store_result(stmt) == 0){
+					while(mysql_stmt_fetch(stmt) == 0){
+						if(sid < 25){
+							Slot->Actual[sid] = act;
+							Slot->Maximum[sid] = mx;
+							Slot->Minimum[sid] = mn;
+							Slot->DeltaAct[sid] = dact;
+							Slot->MagicDeltaAct[sid] = mdact;
+							Slot->Cycle[sid] = cyc;
+							Slot->MaxCycle[sid] = mcyc;
+							Slot->Count[sid] = cnt;
+							Slot->MaxCount[sid] = mcnt;
+							Slot->AddLevel[sid] = al;
+							Slot->Experience[sid] = exp;
+							Slot->FactorPercent[sid] = fp;
+							Slot->NextLevel[sid] = nl;
+							Slot->Delta[sid] = delta;
+						}
+					}
+				}
+			}
+			mysql_stmt_close(stmt);
+		}
+
+		// 3. Query PlayerInventory
+		const char *invSql = "SELECT Data FROM PlayerInventory WHERE CharacterID = ?;";
+		stmt = mysql_stmt_init(m_MySQL);
+		if(stmt && mysql_stmt_prepare(stmt, invSql, (unsigned long)strlen(invSql)) == 0){
+			memset(params, 0, sizeof(params));
+			params[0].buffer_type = MYSQL_TYPE_LONG; params[0].buffer = &cid; params[0].is_unsigned = 1;
+			if(mysql_stmt_bind_param(stmt, params) == 0 && mysql_stmt_execute(stmt) == 0){
+				mysql_stmt_store_result(stmt);
+				MYSQL_BIND ires[1];
+				memset(ires, 0, sizeof(ires));
+				unsigned long blobLen = 0;
+				ires[0].buffer_type = MYSQL_TYPE_BLOB;
+				ires[0].length = &blobLen;
+				mysql_stmt_bind_result(stmt, ires);
+
+				if(mysql_stmt_fetch(stmt) == 0 || mysql_stmt_fetch(stmt) == MYSQL_DATA_TRUNCATED){
+					if(blobLen > 0){
+						delete[] Slot->Inventory;
+						Slot->Inventory = new uint8[blobLen];
+						Slot->InventorySize = (int)blobLen;
+
+						ires[0].buffer = Slot->Inventory;
+						ires[0].buffer_length = blobLen;
+						mysql_stmt_fetch_column(stmt, ires, 0, 0);
+					}
+				}
+			}
+			mysql_stmt_close(stmt);
+		}
+
+		// 4. Query PlayerDepots
+		const char *depSql = "SELECT DepotID, Data FROM PlayerDepots WHERE CharacterID = ?;";
+		stmt = mysql_stmt_init(m_MySQL);
+		if(stmt && mysql_stmt_prepare(stmt, depSql, (unsigned long)strlen(depSql)) == 0){
+			memset(params, 0, sizeof(params));
+			params[0].buffer_type = MYSQL_TYPE_LONG; params[0].buffer = &cid; params[0].is_unsigned = 1;
+			if(mysql_stmt_bind_param(stmt, params) == 0 && mysql_stmt_execute(stmt) == 0){
+				mysql_stmt_store_result(stmt);
+				unsigned char did = 0;
+				unsigned long blobLen = 0;
+				MYSQL_BIND dres[2];
+				memset(dres, 0, sizeof(dres));
+				dres[0].buffer_type = MYSQL_TYPE_TINY; dres[0].buffer = &did; dres[0].is_unsigned = 1;
+				dres[1].buffer_type = MYSQL_TYPE_BLOB; dres[1].length = &blobLen;
+				mysql_stmt_bind_result(stmt, dres);
+
+				while(mysql_stmt_fetch(stmt) == 0 || mysql_stmt_fetch(stmt) == MYSQL_DATA_TRUNCATED){
+					if(did < MAX_DEPOTS && blobLen > 0){
+						delete[] Slot->Depot[did];
+						Slot->Depot[did] = new uint8[blobLen];
+						Slot->DepotSize[did] = (int)blobLen;
+
+						dres[1].buffer = Slot->Depot[did];
+						dres[1].buffer_length = blobLen;
+						mysql_stmt_fetch_column(stmt, &dres[1], 1, 0);
+					}
+				}
+			}
+			mysql_stmt_close(stmt);
+		}
+
+		return true;
 	}
 };
 

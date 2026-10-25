@@ -4,41 +4,121 @@
 #include <cstring>
 #include <algorithm>
 
-static void NormalizeDataPath(char *Path, const char *SubDir){
+static void CleanPathString(char *Path){
+	size_t len = strlen(Path);
+	while(len > 1 && (Path[len - 1] == '/' || Path[len - 1] == '\\')){
+		Path[len - 1] = 0;
+		len--;
+	}
+}
+
+static void ResolveGameDataPaths(void){
 	namespace fs = std::filesystem;
-	if(Path[0] != 0){
-		fs::path direct(Path);
-		if(fs::exists(direct) && fs::is_directory(direct)){
-			return;
-		}
-		fs::path sub = direct / SubDir;
-		if(fs::exists(sub) && fs::is_directory(sub)){
-			std::string s = sub.string();
-			strncpy(Path, s.c_str(), 4096);
-			return;
+
+	// 1. Determine root data directory (TFS style data directory)
+	fs::path rootPath;
+	if(DATAPATH[0] != 0){
+		CleanPathString(DATAPATH);
+		fs::path userDir(DATAPATH);
+		// If user pointed to '.../dat', use the parent as data root
+		if(userDir.filename() == "dat" && userDir.has_parent_path()){
+			rootPath = userDir.parent_path();
+		}else{
+			rootPath = userDir;
 		}
 	}
-	const char *candidates[] = {
-		"../CipSoft Server/tibia-game_data",
-		"../../CipSoft Server/tibia-game_data",
-		"../tibia-game_data",
-		"tibia-game_data",
-		"../../tibia-game_data",
-		"../data",
-		"data",
-		"."
-	};
-	for(const char *cand : candidates){
-		fs::path p;
-		if(strcmp(cand, ".") == 0){
-			p = fs::path(SubDir);
-		}else{
-			p = fs::path(cand) / SubDir;
+
+	// If no data_path specified or folder does not exist, look for known default candidates
+	if(rootPath.empty() || !fs::exists(rootPath)){
+		const char *candidates[] = {
+			"../CipSoft Server/tibia-game_data",
+			"../../CipSoft Server/tibia-game_data",
+			"../tibia-game_data",
+			"tibia-game_data",
+			"../../tibia-game_data",
+			"../data",
+			"data",
+			"."
+		};
+		for(const char *cand : candidates){
+			fs::path p(cand);
+			if(fs::exists(p) && fs::is_directory(p)){
+				if(fs::exists(p / "dat") || fs::exists(p / "map") || fs::exists(p / "objects.srv")){
+					rootPath = p;
+					break;
+				}
+			}
 		}
-		if(fs::exists(p) && fs::is_directory(p)){
-			std::string s = p.string();
-			strncpy(Path, s.c_str(), 4096);
-			return;
+	}
+
+	// Helper to resolve an individual subfolder from rootPath (unless user explicitly overrode it)
+	auto resolveSub = [&](char *target, const char *subName, bool allowCreate = false){
+		if(target[0] != 0){
+			CleanPathString(target);
+			fs::path direct(target);
+			if(fs::exists(direct) && fs::is_directory(direct)){
+				std::string s = direct.generic_string();
+				strncpy(target, s.c_str(), 4095);
+				target[4095] = 0;
+				return;
+			}
+		}
+
+		if(!rootPath.empty()){
+			fs::path sub = rootPath / subName;
+			if(fs::exists(sub) && fs::is_directory(sub)){
+				std::string s = sub.generic_string();
+				strncpy(target, s.c_str(), 4095);
+				target[4095] = 0;
+				return;
+			}
+			if(allowCreate){
+				std::error_code ec;
+				fs::create_directories(sub, ec);
+				if(fs::exists(sub, ec)){
+					std::string s = sub.generic_string();
+					strncpy(target, s.c_str(), 4095);
+					target[4095] = 0;
+					return;
+				}
+			}
+		}
+
+		if(!rootPath.empty()){
+			std::string s = rootPath.generic_string();
+			strncpy(target, s.c_str(), 4095);
+			target[4095] = 0;
+		}
+	};
+
+	// Resolve DATAPATH (prefer dat/ subfolder, fallback to rootPath)
+	if(DATAPATH[0] != 0 && (fs::path(DATAPATH).filename() == "dat" && fs::exists(DATAPATH))){
+		CleanPathString(DATAPATH);
+	}else if(!rootPath.empty() && fs::exists(rootPath / "dat") && fs::is_directory(rootPath / "dat")){
+		std::string s = (rootPath / "dat").generic_string();
+		strncpy(DATAPATH, s.c_str(), 4095);
+		DATAPATH[4095] = 0;
+	}else if(!rootPath.empty()){
+		std::string s = rootPath.generic_string();
+		strncpy(DATAPATH, s.c_str(), 4095);
+		DATAPATH[4095] = 0;
+	}
+
+	// Automatically resolve all other subdirectories from data root (TFS style)
+	resolveSub(MAPPATH, "map");
+	resolveSub(MONSTERPATH, "mon");
+	resolveSub(NPCPATH, "npc");
+	resolveSub(USERPATH, "usr");
+	resolveSub(SAVEPATH, "save", true);
+	resolveSub(LOGPATH, "log", true);
+	resolveSub(BINPATH, "bin");
+
+	if(ORIGMAPPATH[0] == 0){
+		if(!rootPath.empty() && fs::exists(rootPath / "origmap")){
+			resolveSub(ORIGMAPPATH, "origmap");
+		}else{
+			strncpy(ORIGMAPPATH, MAPPATH, 4095);
+			ORIGMAPPATH[4095] = 0;
 		}
 	}
 }
@@ -85,15 +165,21 @@ TDatabaseSettings MANAGER_DATABASE;
 int NumberOfQueryManagers;
 TQueryManagerSettings QUERY_MANAGER[10];
 
-// Database Engine Configuration (SQLite / MySQL / MariaDB)
+// Database Engine Configuration (SQLite / MySQL / MariaDB / PostgreSQL)
 char DB_Type[16];
 char DB_File[256];
+char PlayerStorageMode[16] = "database";
 char MySQL_Host[128];
 int  MySQL_Port;
 char MySQL_User[64];
 char MySQL_Password[64];
 char MySQL_Database[64];
 bool MySQL_Reconnect;
+char PG_Host[128] = "127.0.0.1";
+int  PG_Port = 5432;
+char PG_User[64] = "postgres";
+char PG_Password[64] = "";
+char PG_Database[64] = "tibia";
 
 // Gameplay / Rates & Multipliers
 int RateExp;
@@ -163,6 +249,15 @@ int  LoginPort;
 char WorldAddress[64];
 char MotdText[256];
 bool FreePremium;
+
+// Status Server & OTServList Configuration
+char ServerName[64];
+char OwnerName[64];
+char OwnerEmail[64];
+char ServerURL[128];
+char ServerLocation[64];
+int  StatusTimeout;
+char LoadedConfigFile[4096] = {0};
 
 static char PasswordKey[9] = "Pm-,o%yD";
 
@@ -294,17 +389,29 @@ void ReadConfig(void){
 	strncpy(MotdText, "Welcome to Tibia 7.72!", sizeof(MotdText) - 1);
 	FreePremium = false;
 
+	strncpy(ServerName, "Tibia 7.72 Classic", sizeof(ServerName) - 1);
+	strncpy(OwnerName, "Admin", sizeof(OwnerName) - 1);
+	strncpy(OwnerEmail, "admin@tibia.local", sizeof(OwnerEmail) - 1);
+	strncpy(ServerURL, "https://otservlist.org", sizeof(ServerURL) - 1);
+	strncpy(ServerLocation, "Brazil", sizeof(ServerLocation) - 1);
+	StatusTimeout = 5000;
+
+	LoadedConfigFile[0] = 0;
 	char FileName[4096] = {0};
 	const char *configCandidates[] = {
+		"config.cfg",
+		"../config.cfg",
 		".tibia",
 		"../tibia-game_data/.tibia",
 		"tibia-game_data/.tibia",
-		"../../tibia-game_data/.tibia",
-		"config.cfg"
+		"../../tibia-game_data/.tibia"
 	};
 	for(const char *cand : configCandidates){
 		if(FileExists(cand)){
-			strncpy(FileName, cand, sizeof(FileName));
+			strncpy(FileName, cand, sizeof(FileName) - 1);
+			FileName[sizeof(FileName) - 1] = 0;
+			strncpy(LoadedConfigFile, FileName, sizeof(LoadedConfigFile) - 1);
+			LoadedConfigFile[sizeof(LoadedConfigFile) - 1] = 0;
 			break;
 		}
 	}
@@ -330,7 +437,9 @@ void ReadConfig(void){
 			strncpy(MAPPATH, Script.readString(), sizeof(MAPPATH) - 1);
 		}else if(strcmp(Identifier, "origmappath") == 0 || strcmp(Identifier, "orig_map_path") == 0){
 			strncpy(ORIGMAPPATH, Script.readString(), sizeof(ORIGMAPPATH) - 1);
-		}else if(strcmp(Identifier, "datapath") == 0 || strcmp(Identifier, "data_path") == 0){
+		}else if(strcmp(Identifier, "datapath") == 0 || strcmp(Identifier, "data_path") == 0
+		      || strcmp(Identifier, "datadirectory") == 0 || strcmp(Identifier, "data_directory") == 0
+		      || strcmp(Identifier, "datadir") == 0 || strcmp(Identifier, "data_dir") == 0){
 			strncpy(DATAPATH, Script.readString(), sizeof(DATAPATH) - 1);
 		}else if(strcmp(Identifier, "monsterpath") == 0 || strcmp(Identifier, "monster_path") == 0){
 			strncpy(MONSTERPATH, Script.readString(), sizeof(MONSTERPATH) - 1);
@@ -362,6 +471,44 @@ void ReadConfig(void){
 			Script.readNumber();
 		}else if(strcmp(Identifier, "connectiontimeout") == 0 || strcmp(Identifier, "connection_timeout") == 0){
 			Script.readNumber();
+		}else if(strcmp(Identifier, "servername") == 0 || strcmp(Identifier, "server_name") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(ServerName, val, sizeof(ServerName) - 1);
+				ServerName[sizeof(ServerName) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "ownername") == 0 || strcmp(Identifier, "owner_name") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(OwnerName, val, sizeof(OwnerName) - 1);
+				OwnerName[sizeof(OwnerName) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "owneremail") == 0 || strcmp(Identifier, "owner_email") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(OwnerEmail, val, sizeof(OwnerEmail) - 1);
+				OwnerEmail[sizeof(OwnerEmail) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "serverurl") == 0 || strcmp(Identifier, "server_url") == 0 || strcmp(Identifier, "url") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(ServerURL, val, sizeof(ServerURL) - 1);
+				ServerURL[sizeof(ServerURL) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "serverlocation") == 0 || strcmp(Identifier, "server_location") == 0 || strcmp(Identifier, "location") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(ServerLocation, val, sizeof(ServerLocation) - 1);
+				ServerLocation[sizeof(ServerLocation) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "statustimeout") == 0 || strcmp(Identifier, "status_timeout") == 0){
+			StatusTimeout = Script.readNumber();
+		}else if(strcmp(Identifier, "motd") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(MotdText, val, sizeof(MotdText) - 1);
+				MotdText[sizeof(MotdText) - 1] = 0;
+			}
 		}else if(strcmp(Identifier, "db_type") == 0 || strcmp(Identifier, "dbtype") == 0 || strcmp(Identifier, "sql_type") == 0){
 			const char *val = Script.readString();
 			if(val){
@@ -403,6 +550,38 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "mysql_reconnect") == 0 || strcmp(Identifier, "sql_reconnect") == 0){
 			const char *val = Script.readIdentifier();
 			MySQL_Reconnect = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "player_storage_mode") == 0 || strcmp(Identifier, "playerstoragemode") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(PlayerStorageMode, val, sizeof(PlayerStorageMode) - 1);
+				PlayerStorageMode[sizeof(PlayerStorageMode) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "pg_host") == 0 || strcmp(Identifier, "postgres_host") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(PG_Host, val, sizeof(PG_Host) - 1);
+				PG_Host[sizeof(PG_Host) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "pg_port") == 0 || strcmp(Identifier, "postgres_port") == 0){
+			PG_Port = Script.readNumber();
+		}else if(strcmp(Identifier, "pg_user") == 0 || strcmp(Identifier, "postgres_user") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(PG_User, val, sizeof(PG_User) - 1);
+				PG_User[sizeof(PG_User) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "pg_password") == 0 || strcmp(Identifier, "postgres_password") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(PG_Password, val, sizeof(PG_Password) - 1);
+				PG_Password[sizeof(PG_Password) - 1] = 0;
+			}
+		}else if(strcmp(Identifier, "pg_database") == 0 || strcmp(Identifier, "postgres_database") == 0){
+			const char *val = Script.readString();
+			if(val){
+				strncpy(PG_Database, val, sizeof(PG_Database) - 1);
+				PG_Database[sizeof(PG_Database) - 1] = 0;
+			}
 		}else if(strcmp(Identifier, "rate_exp") == 0 || strcmp(Identifier, "rateexp") == 0){
 			RateExp = Script.readNumber();
 		}else if(strcmp(Identifier, "rate_skill") == 0 || strcmp(Identifier, "rateskill") == 0){
@@ -663,15 +842,8 @@ void ReadConfig(void){
 		}
 	}
 
-	NormalizeDataPath(BINPATH, "bin");
-	NormalizeDataPath(MAPPATH, "map");
-	NormalizeDataPath(ORIGMAPPATH, "origmap");
-	NormalizeDataPath(DATAPATH, "dat");
-	NormalizeDataPath(MONSTERPATH, "mon");
-	NormalizeDataPath(NPCPATH, "npc");
-	NormalizeDataPath(USERPATH, "usr");
-	NormalizeDataPath(LOGPATH, "log");
-	NormalizeDataPath(SAVEPATH, "save");
+	// Resolve all game data directories from root data directory (TFS style)
+	ResolveGameDataPaths();
 
 	if(GamePort == 0){
 		GamePort = 7172;

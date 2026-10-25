@@ -1070,6 +1070,27 @@ void TCreature::ToDoMove(int ObjX, int ObjY, int ObjZ, ObjectType Type, uint8 RN
 		if(!ObjectInRange(this->ID, Obj, 1)){
 			this->ToDoGo(ObjX, ObjY, ObjZ, false, INT_MAX);
 		}
+	}else if(ObjY >= CONTAINER_FIRST && ObjY <= CONTAINER_LAST){
+		// Source is an open container: verify accessibility of the root container
+		Object RootCon = GetBodyContainer(this->ID, ObjY);
+		if(RootCon != NONE && !ObjectAccessible(this->ID, RootCon, 1)){
+			throw NOTACCESSIBLE;
+		}
+	}
+
+	if(DestX == 0xFFFF && DestY >= CONTAINER_FIRST && DestY <= CONTAINER_LAST){
+		// Destination is an open container: verify accessibility of the destination root container
+		Object DestRootCon = GetBodyContainer(this->ID, DestY);
+		if(DestRootCon != NONE && !ObjectAccessible(this->ID, DestRootCon, 1)){
+			throw NOTACCESSIBLE;
+		}
+	}else if(DestX != 0xFFFF && !Obj.getObjectType().isCreatureContainer()){
+		// Destination is map: prevent throwing items to upper floor or beyond 1 floor down
+		if(DestZ < this->posz){
+			throw UPSTAIRS;
+		}else if(DestZ > (this->posz + 1)){
+			throw DOWNSTAIRS;
+		}
 	}
 
 	int Delay = 100;
@@ -1212,6 +1233,18 @@ void TCreature::ToDoUse(uint8 Count, int ObjX1, int ObjY1, int ObjZ1, ObjectType
 
 		if(!ObjectInRange(this->ID, Obj1, 1)){
 			this->ToDoGo(ObjX1, ObjY1, ObjZ1, false, INT_MAX);
+		}
+	}else if(ObjY1 >= CONTAINER_FIRST && ObjY1 <= CONTAINER_LAST){
+		Object RootCon = GetBodyContainer(this->ID, ObjY1);
+		if(RootCon != NONE && !ObjectAccessible(this->ID, RootCon, 1)){
+			throw NOTACCESSIBLE;
+		}
+	}
+
+	if(Count >= 2 && ObjX2 == 0xFFFF && ObjY2 >= CONTAINER_FIRST && ObjY2 <= CONTAINER_LAST){
+		Object RootCon2 = GetBodyContainer(this->ID, ObjY2);
+		if(RootCon2 != NONE && !ObjectAccessible(this->ID, RootCon2, 1)){
+			throw NOTACCESSIBLE;
 		}
 	}
 

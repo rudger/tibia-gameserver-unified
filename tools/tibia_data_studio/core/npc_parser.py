@@ -1,6 +1,6 @@
 """
-Parser e Serializador de Arquivos de NPC (.npc) (CipSoft / OTServ)
-Permite gerenciar propriedades gerais (Nome, Sexo, Outfit, Posição Home) e regras de Diálogo/Comportamento.
+NPC File (.npc) Parser and Serializer (CipSoft / OTServ)
+Manages general properties (Name, Sex, Outfit, Home Position) and Dialogue/Behaviour rules.
 """
 
 import os
@@ -133,6 +133,7 @@ class NpcManager:
     def get_all_list(self) -> List[Dict[str, Any]]:
         result = []
         for fname, npc in self.npcs.items():
+            is_item = (npc.outfit_type == 0 and npc.outfit_colors.isdigit())
             result.append({
                 "filename": npc.filename,
                 "name": npc.name,
@@ -140,6 +141,8 @@ class NpcManager:
                 "race": npc.race,
                 "outfit_type": npc.outfit_type,
                 "outfit_colors": npc.outfit_colors,
+                "is_item_outfit": is_item,
+                "item_outfit_id": int(npc.outfit_colors) if is_item else 0,
                 "home_pos": npc.home_pos,
                 "radius": npc.radius,
                 "go_strength": npc.go_strength,

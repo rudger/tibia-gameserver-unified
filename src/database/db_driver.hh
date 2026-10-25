@@ -52,6 +52,10 @@ public:
 	virtual int DecrementIsOnline(uint32 CharacterID) = 0;
 	virtual int LoadPlayers(int MinimumCharacterID, int *NumberOfPlayers,
 			char (*PlayerNames)[30], uint32 *CharacterIDs) = 0;
+
+	// Player Persistence Queries (Modern Database Mode)
+	virtual bool SaveCharacterState(const struct TPlayerData *Slot) = 0;
+	virtual bool LoadCharacterState(struct TPlayerData *Slot) = 0;
 };
 
 #endif // TIBIA_DB_DRIVER_HH_

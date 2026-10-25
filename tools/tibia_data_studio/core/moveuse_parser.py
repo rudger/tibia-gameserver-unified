@@ -1,6 +1,6 @@
 """
-Parser e Serializador do arquivo moveuse.dat (CipSoft / OTServ)
-Organiza regras por seções (ex: Beds, Doors, Furniture, Keys, Fun) com suporte a adição, edição e deleção.
+moveuse.dat Parser and Serializer (CipSoft / OTServ)
+Organizes rules by sections (e.g., Beds, Doors, Furniture, Keys, Fun) with support for adding, editing and deleting.
 """
 
 import os
@@ -22,7 +22,7 @@ class MoveUseRule:
     def from_line(cls, rule_id: int, section: str, line: str) -> "MoveUseRule":
         rule = cls(id=rule_id, section=section, raw_rule=line)
         
-        # Extrai IDs de itens mencionados na regra para visualização rápida
+        # Extracts item IDs mentioned in the rule for quick preview
         found_ids = [int(m) for m in re.findall(r"\b\d{3,5}\b", line)]
         rule.item_ids = list(dict.fromkeys(found_ids)) # Unique
 
@@ -82,7 +82,7 @@ class MoveUseParser:
                 self.header_comments.append(line)
                 continue
 
-            # Início de seção: BEGIN "Nome"
+            # Section start: BEGIN "Name"
             begin_match = re.match(r'^BEGIN\s+"?([^"]*)"?', stripped, re.IGNORECASE)
             if begin_match:
                 in_header = False
@@ -91,12 +91,12 @@ class MoveUseParser:
                 self.sections.append(current_section)
                 continue
 
-            # Fim de seção: END
+            # Section end: END
             if re.match(r"^END\b", stripped, re.IGNORECASE):
                 current_section = None
                 continue
 
-            # Comentários dentro do arquivo
+            # Comments inside file
             if stripped.startswith("#"):
                 continue
 

@@ -1,5 +1,6 @@
 #include "db_driver.hh"
 #include "db_common.hh"
+#include "../game/cr.hh"
 #include "sqlite3.h"
 #include <mutex>
 #include <string>
@@ -540,6 +541,247 @@ public:
 			return 0;
 		}
 		return 1;
+	}
+
+	bool SaveCharacterState(const TPlayerData *Slot) override {
+		if(!Slot || Slot->CharacterID == 0 || !m_DB) return false;
+		std::lock_guard<std::mutex> lock(m_Mutex);
+
+		sqlite3_exec(m_DB, "BEGIN TRANSACTION;", nullptr, nullptr, nullptr);
+
+		// 1. Save PlayerState
+		const char *stateSql = "REPLACE INTO PlayerState ("
+			"CharacterID, Race, Profession, "
+			"OrigLookType, OrigLookHead, OrigLookBody, OrigLookLegs, OrigLookFeet, "
+			"CurrLookType, CurrLookHead, CurrLookBody, CurrLookLegs, CurrLookFeet, "
+			"StartX, StartY, StartZ, PosX, PosY, PosZ, PlayerkillerEnd, Spells, Quests, Murders) "
+			"VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16, ?17, ?18, ?19, ?20, ?21, ?22, ?23);";
+
+		sqlite3_stmt *stmt = nullptr;
+		if(sqlite3_prepare_v2(m_DB, stateSql, -1, &stmt, nullptr) != SQLITE_OK){
+			sqlite3_exec(m_DB, "ROLLBACK;", nullptr, nullptr, nullptr);
+			return false;
+		}
+
+		sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+		sqlite3_bind_int(stmt, 2, Slot->Race);
+		sqlite3_bind_int(stmt, 3, Slot->Profession);
+		sqlite3_bind_int(stmt, 4, Slot->OriginalOutfit.OutfitID);
+		sqlite3_bind_int(stmt, 5, Slot->OriginalOutfit.Colors[0]);
+		sqlite3_bind_int(stmt, 6, Slot->OriginalOutfit.Colors[1]);
+		sqlite3_bind_int(stmt, 7, Slot->OriginalOutfit.Colors[2]);
+		sqlite3_bind_int(stmt, 8, Slot->OriginalOutfit.Colors[3]);
+		sqlite3_bind_int(stmt, 9, Slot->CurrentOutfit.OutfitID);
+		sqlite3_bind_int(stmt, 10, Slot->CurrentOutfit.Colors[0]);
+		sqlite3_bind_int(stmt, 11, Slot->CurrentOutfit.Colors[1]);
+		sqlite3_bind_int(stmt, 12, Slot->CurrentOutfit.Colors[2]);
+		sqlite3_bind_int(stmt, 13, Slot->CurrentOutfit.Colors[3]);
+		sqlite3_bind_int(stmt, 14, Slot->startx);
+		sqlite3_bind_int(stmt, 15, Slot->starty);
+		sqlite3_bind_int(stmt, 16, Slot->startz);
+		sqlite3_bind_int(stmt, 17, Slot->posx);
+		sqlite3_bind_int(stmt, 18, Slot->posy);
+		sqlite3_bind_int(stmt, 19, Slot->posz);
+		sqlite3_bind_int(stmt, 20, Slot->PlayerkillerEnd);
+		sqlite3_bind_blob(stmt, 21, Slot->SpellList, sizeof(Slot->SpellList), SQLITE_STATIC);
+		sqlite3_bind_blob(stmt, 22, Slot->QuestValues, sizeof(Slot->QuestValues), SQLITE_STATIC);
+		sqlite3_bind_blob(stmt, 23, Slot->MurderTimestamps, sizeof(Slot->MurderTimestamps), SQLITE_STATIC);
+
+		if(sqlite3_step(stmt) != SQLITE_DONE){
+			sqlite3_finalize(stmt);
+			sqlite3_exec(m_DB, "ROLLBACK;", nullptr, nullptr, nullptr);
+			return false;
+		}
+		sqlite3_finalize(stmt);
+
+		// 2. Save PlayerSkills
+		const char *skillSql = "REPLACE INTO PlayerSkills ("
+			"CharacterID, SkillID, Actual, Maximum, Minimum, DeltaAct, MagicDeltaAct, "
+			"Cycle, MaxCycle, Count, MaxCount, AddLevel, Experience, FactorPercent, NextLevel, Delta) "
+			"VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13, ?14, ?15, ?16);";
+
+		if(sqlite3_prepare_v2(m_DB, skillSql, -1, &stmt, nullptr) == SQLITE_OK){
+			for(int i = 0; i < 25; i++){
+				if(Slot->Minimum[i] == INT_MIN) continue;
+
+				sqlite3_reset(stmt);
+				sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+				sqlite3_bind_int(stmt, 2, i);
+				sqlite3_bind_int(stmt, 3, Slot->Actual[i]);
+				sqlite3_bind_int(stmt, 4, Slot->Maximum[i]);
+				sqlite3_bind_int(stmt, 5, Slot->Minimum[i]);
+				sqlite3_bind_int(stmt, 6, Slot->DeltaAct[i]);
+				sqlite3_bind_int(stmt, 7, Slot->MagicDeltaAct[i]);
+				sqlite3_bind_int(stmt, 8, Slot->Cycle[i]);
+				sqlite3_bind_int(stmt, 9, Slot->MaxCycle[i]);
+				sqlite3_bind_int(stmt, 10, Slot->Count[i]);
+				sqlite3_bind_int(stmt, 11, Slot->MaxCount[i]);
+				sqlite3_bind_int(stmt, 12, Slot->AddLevel[i]);
+				sqlite3_bind_int(stmt, 13, Slot->Experience[i]);
+				sqlite3_bind_int(stmt, 14, Slot->FactorPercent[i]);
+				sqlite3_bind_int(stmt, 15, Slot->NextLevel[i]);
+				sqlite3_bind_int(stmt, 16, Slot->Delta[i]);
+				sqlite3_step(stmt);
+			}
+			sqlite3_finalize(stmt);
+		}
+
+		// 3. Save PlayerInventory
+		if(Slot->Inventory && Slot->InventorySize > 0){
+			const char *invSql = "REPLACE INTO PlayerInventory (CharacterID, Data) VALUES (?1, ?2);";
+			if(sqlite3_prepare_v2(m_DB, invSql, -1, &stmt, nullptr) == SQLITE_OK){
+				sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+				sqlite3_bind_blob(stmt, 2, Slot->Inventory, Slot->InventorySize, SQLITE_STATIC);
+				sqlite3_step(stmt);
+				sqlite3_finalize(stmt);
+			}
+		}
+
+		// 4. Save PlayerDepots
+		for(int d = 0; d < MAX_DEPOTS; d++){
+			if(Slot->Depot[d] && Slot->DepotSize[d] > 0){
+				const char *depotSql = "REPLACE INTO PlayerDepots (CharacterID, DepotID, Data) VALUES (?1, ?2, ?3);";
+				if(sqlite3_prepare_v2(m_DB, depotSql, -1, &stmt, nullptr) == SQLITE_OK){
+					sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+					sqlite3_bind_int(stmt, 2, d);
+					sqlite3_bind_blob(stmt, 3, Slot->Depot[d], Slot->DepotSize[d], SQLITE_STATIC);
+					sqlite3_step(stmt);
+					sqlite3_finalize(stmt);
+				}
+			}
+		}
+
+		sqlite3_exec(m_DB, "COMMIT;", nullptr, nullptr, nullptr);
+		return true;
+	}
+
+	bool LoadCharacterState(TPlayerData *Slot) override {
+		if(!Slot || Slot->CharacterID == 0 || !m_DB) return false;
+		std::lock_guard<std::mutex> lock(m_Mutex);
+
+		// 1. Query PlayerState
+		const char *stateSql = "SELECT Race, Profession, "
+			"OrigLookType, OrigLookHead, OrigLookBody, OrigLookLegs, OrigLookFeet, "
+			"CurrLookType, CurrLookHead, CurrLookBody, CurrLookLegs, CurrLookFeet, "
+			"StartX, StartY, StartZ, PosX, PosY, PosZ, PlayerkillerEnd, Spells, Quests, Murders "
+			"FROM PlayerState WHERE CharacterID = ?1;";
+
+		sqlite3_stmt *stmt = nullptr;
+		if(sqlite3_prepare_v2(m_DB, stateSql, -1, &stmt, nullptr) != SQLITE_OK){
+			return false;
+		}
+
+		sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+		if(sqlite3_step(stmt) != SQLITE_ROW){
+			sqlite3_finalize(stmt);
+			return false;
+		}
+
+		Slot->Race = sqlite3_column_int(stmt, 0);
+		Slot->Profession = sqlite3_column_int(stmt, 1);
+		Slot->OriginalOutfit.OutfitID = sqlite3_column_int(stmt, 2);
+		Slot->OriginalOutfit.Colors[0] = (uint8)sqlite3_column_int(stmt, 3);
+		Slot->OriginalOutfit.Colors[1] = (uint8)sqlite3_column_int(stmt, 4);
+		Slot->OriginalOutfit.Colors[2] = (uint8)sqlite3_column_int(stmt, 5);
+		Slot->OriginalOutfit.Colors[3] = (uint8)sqlite3_column_int(stmt, 6);
+		Slot->CurrentOutfit.OutfitID = sqlite3_column_int(stmt, 7);
+		Slot->CurrentOutfit.Colors[0] = (uint8)sqlite3_column_int(stmt, 8);
+		Slot->CurrentOutfit.Colors[1] = (uint8)sqlite3_column_int(stmt, 9);
+		Slot->CurrentOutfit.Colors[2] = (uint8)sqlite3_column_int(stmt, 10);
+		Slot->CurrentOutfit.Colors[3] = (uint8)sqlite3_column_int(stmt, 11);
+		Slot->startx = sqlite3_column_int(stmt, 12);
+		Slot->starty = sqlite3_column_int(stmt, 13);
+		Slot->startz = sqlite3_column_int(stmt, 14);
+		Slot->posx = sqlite3_column_int(stmt, 15);
+		Slot->posy = sqlite3_column_int(stmt, 16);
+		Slot->posz = sqlite3_column_int(stmt, 17);
+		Slot->PlayerkillerEnd = sqlite3_column_int(stmt, 18);
+
+		const void *spells = sqlite3_column_blob(stmt, 19);
+		int spellsLen = sqlite3_column_bytes(stmt, 19);
+		if(spells && spellsLen > 0){
+			memcpy(Slot->SpellList, spells, spellsLen < sizeof(Slot->SpellList) ? spellsLen : sizeof(Slot->SpellList));
+		}
+
+		const void *quests = sqlite3_column_blob(stmt, 20);
+		int questsLen = sqlite3_column_bytes(stmt, 20);
+		if(quests && questsLen > 0){
+			memcpy(Slot->QuestValues, quests, questsLen < sizeof(Slot->QuestValues) ? questsLen : sizeof(Slot->QuestValues));
+		}
+
+		const void *murders = sqlite3_column_blob(stmt, 21);
+		int murdersLen = sqlite3_column_bytes(stmt, 21);
+		if(murders && murdersLen > 0){
+			memcpy(Slot->MurderTimestamps, murders, murdersLen < sizeof(Slot->MurderTimestamps) ? murdersLen : sizeof(Slot->MurderTimestamps));
+		}
+
+		sqlite3_finalize(stmt);
+
+		// 2. Query PlayerSkills
+		const char *skillSql = "SELECT SkillID, Actual, Maximum, Minimum, DeltaAct, MagicDeltaAct, "
+			"Cycle, MaxCycle, Count, MaxCount, AddLevel, Experience, FactorPercent, NextLevel, Delta "
+			"FROM PlayerSkills WHERE CharacterID = ?1;";
+
+		if(sqlite3_prepare_v2(m_DB, skillSql, -1, &stmt, nullptr) == SQLITE_OK){
+			sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+			while(sqlite3_step(stmt) == SQLITE_ROW){
+				int sid = sqlite3_column_int(stmt, 0);
+				if(sid >= 0 && sid < 25){
+					Slot->Actual[sid] = sqlite3_column_int(stmt, 1);
+					Slot->Maximum[sid] = sqlite3_column_int(stmt, 2);
+					Slot->Minimum[sid] = sqlite3_column_int(stmt, 3);
+					Slot->DeltaAct[sid] = sqlite3_column_int(stmt, 4);
+					Slot->MagicDeltaAct[sid] = sqlite3_column_int(stmt, 5);
+					Slot->Cycle[sid] = sqlite3_column_int(stmt, 6);
+					Slot->MaxCycle[sid] = sqlite3_column_int(stmt, 7);
+					Slot->Count[sid] = sqlite3_column_int(stmt, 8);
+					Slot->MaxCount[sid] = sqlite3_column_int(stmt, 9);
+					Slot->AddLevel[sid] = sqlite3_column_int(stmt, 10);
+					Slot->Experience[sid] = sqlite3_column_int(stmt, 11);
+					Slot->FactorPercent[sid] = sqlite3_column_int(stmt, 12);
+					Slot->NextLevel[sid] = sqlite3_column_int(stmt, 13);
+					Slot->Delta[sid] = sqlite3_column_int(stmt, 14);
+				}
+			}
+			sqlite3_finalize(stmt);
+		}
+
+		// 3. Query PlayerInventory
+		const char *invSql = "SELECT Data FROM PlayerInventory WHERE CharacterID = ?1;";
+		if(sqlite3_prepare_v2(m_DB, invSql, -1, &stmt, nullptr) == SQLITE_OK){
+			sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+			if(sqlite3_step(stmt) == SQLITE_ROW){
+				const void *blob = sqlite3_column_blob(stmt, 0);
+				int blobLen = sqlite3_column_bytes(stmt, 0);
+				if(blob && blobLen > 0){
+					delete[] Slot->Inventory;
+					Slot->Inventory = new uint8[blobLen];
+					Slot->InventorySize = blobLen;
+					memcpy(Slot->Inventory, blob, blobLen);
+				}
+			}
+			sqlite3_finalize(stmt);
+		}
+
+		// 4. Query PlayerDepots
+		const char *depSql = "SELECT DepotID, Data FROM PlayerDepots WHERE CharacterID = ?1;";
+		if(sqlite3_prepare_v2(m_DB, depSql, -1, &stmt, nullptr) == SQLITE_OK){
+			sqlite3_bind_int(stmt, 1, Slot->CharacterID);
+			while(sqlite3_step(stmt) == SQLITE_ROW){
+				int did = sqlite3_column_int(stmt, 0);
+				const void *blob = sqlite3_column_blob(stmt, 1);
+				int blobLen = sqlite3_column_bytes(stmt, 1);
+				if(did >= 0 && did < MAX_DEPOTS && blob && blobLen > 0){
+					delete[] Slot->Depot[did];
+					Slot->Depot[did] = new uint8[blobLen];
+					Slot->DepotSize[did] = blobLen;
+					memcpy(Slot->Depot[did], blob, blobLen);
+				}
+			}
+			sqlite3_finalize(stmt);
+		}
+
+		return true;
 	}
 };
 

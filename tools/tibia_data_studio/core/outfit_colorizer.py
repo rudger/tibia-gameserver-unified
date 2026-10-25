@@ -1,6 +1,6 @@
 """
-Colorizador de Outfits e Criaturas do Tibia (Paleta Oficial de 133 Cores CipSoft)
-Aplica as máscaras de Head (Amarelo), Body (Vermelho), Legs (Verde) e Feet (Azul) sobre a camada base.
+Tibia Outfits and Creatures Colorizer (Official 133 CipSoft Color Palette)
+Applies Head (Yellow), Body (Red), Legs (Green) and Feet (Blue) color masks over base outfit layers.
 """
 
 import re
@@ -43,17 +43,17 @@ def _hex_to_rgb(hex_str: str) -> Tuple[int, int, int]:
 TIBIA_PALETTE: List[Tuple[int, int, int]] = [_hex_to_rgb(h) for h in OFFICIAL_TIBIA_HEX]
 
 def get_palette_rgb(color_id: int) -> Tuple[int, int, int]:
-    """Retorna o valor RGB (0..255) para um índice de cor da paleta oficial do Tibia (0..132)"""
+    """Returns RGB value (0..255) for an official Tibia palette color index (0..132)"""
     if 0 <= color_id < len(TIBIA_PALETTE):
         return TIBIA_PALETTE[color_id]
     return (255, 255, 255)
 
 def parse_outfit_colors(colors_str: str) -> Tuple[int, int, int, int]:
-    """Converte string de cores em qualquer formato (ex: '113 120 95 115', '113-120-95-115', '113, 120, 95, 115') em 4 inteiros"""
+    """Converts color string in any format (e.g. '113 120 95 115', '113-120-95-115', '113, 120, 95, 115') into 4 integers"""
     if not colors_str:
         return (0, 0, 0, 0)
     
-    # Extrai todos os números da string
+    # Extracts all numbers from string
     parts = re.findall(r"\d+", str(colors_str))
     
     head = int(parts[0]) if len(parts) > 0 else 0
@@ -64,7 +64,7 @@ def parse_outfit_colors(colors_str: str) -> Tuple[int, int, int, int]:
     return (head, body, legs, feet)
 
 def colorize_tile(base_img: Image.Image, mask_img: Image.Image, head_id: int, body_id: int, legs_id: int, feet_id: int) -> Image.Image:
-    """Aplica a colorização sobre um tile de 32x32 combinando a camada base e a máscara de cores da CipSoft"""
+    """Applies colorization over a 32x32 tile combining base layer and CipSoft color mask"""
     if not mask_img:
         return base_img
 
@@ -100,17 +100,17 @@ def colorize_tile(base_img: Image.Image, mask_img: Image.Image, head_id: int, bo
 
         target_color = None
         if m_a > 0:
-            # Amarelo puro (Head)
-            if m_r > 200 and m_g > 200 and m_b < 50:
+            # Amarelo (Head)
+            if m_r > 150 and m_g > 150 and m_b < 80:
                 target_color = head_rgb
-            # Vermelho puro (Body)
-            elif m_r > 200 and m_g < 50 and m_b < 50:
+            # Vermelho (Body - inclui variantes CipSoft como 191,54,0 e 255,0,0)
+            elif m_r > 140 and m_g < 80 and m_b < 80:
                 target_color = body_rgb
-            # Verde puro (Legs)
-            elif m_r < 50 and m_g > 200 and m_b < 50:
+            # Verde (Legs)
+            elif m_r < 80 and m_g > 140 and m_b < 80:
                 target_color = legs_rgb
-            # Azul puro (Feet)
-            elif m_r < 50 and m_g < 50 and m_b > 200:
+            # Azul (Feet)
+            elif m_r < 80 and m_g < 80 and m_b > 140:
                 target_color = feet_rgb
 
         if target_color:

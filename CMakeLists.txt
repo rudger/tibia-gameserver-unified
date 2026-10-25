@@ -26,8 +26,16 @@ file(GLOB_RECURSE SERVER_SOURCES
 add_executable(tibia-server ${SERVER_SOURCES})
 
 if(WIN32)
-    # Check vcpkg default include & lib paths if present
-    if(EXISTS "D:/vcpkg/installed/x64-windows/include")
+    # Check bundled deps first, then fallback to vcpkg default include & lib paths
+    if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/deps/include")
+        target_include_directories(tibia-server PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/include"
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/include/mysql"
+        )
+        target_link_directories(tibia-server PRIVATE
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/lib"
+        )
+    elseif(EXISTS "D:/vcpkg/installed/x64-windows/include")
         target_include_directories(tibia-server PRIVATE
             "D:/vcpkg/installed/x64-windows/include"
         )
@@ -50,6 +58,7 @@ if(WIN32)
         PATHS
             "${MYSQL_ROOT}/include"
             "${MYSQL_ROOT}/include/mysql"
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/include/mysql"
             "D:/vcpkg/installed/x64-windows/include/mysql"
             "C:/vcpkg/installed/x64-windows/include/mysql"
             "C:/Program Files/MariaDB/MariaDB Connector C 64-bit/include"
@@ -60,6 +69,7 @@ if(WIN32)
         PATHS
             "${MYSQL_ROOT}/lib"
             "${MYSQL_ROOT}/lib/mariadb"
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/lib"
             "D:/vcpkg/installed/x64-windows/lib"
             "C:/vcpkg/installed/x64-windows/lib"
             "C:/Program Files/MariaDB/MariaDB Connector C 64-bit/lib"
@@ -73,6 +83,7 @@ if(WIN32)
     # code (Uint1024.hh) when mpir.h is not found.
     find_path(MPIR_INCLUDE_DIR NAMES mpir.h
         PATHS
+            "${CMAKE_CURRENT_SOURCE_DIR}/deps/include"
             "D:/vcpkg/installed/x64-windows/include"
             "C:/vcpkg/installed/x64-windows/include"
         NO_DEFAULT_PATH
@@ -81,6 +92,7 @@ if(WIN32)
         find_library(MPIR_LIBRARY NAMES mpir
             PATHS
                 "${CMAKE_SOURCE_DIR}"
+                "${CMAKE_CURRENT_SOURCE_DIR}/deps/lib"
                 "D:/vcpkg/installed/x64-windows/lib"
                 "C:/vcpkg/installed/x64-windows/lib"
             NO_DEFAULT_PATH

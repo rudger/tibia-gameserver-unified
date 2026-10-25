@@ -1,5 +1,6 @@
 #include "magic.hh"
 #include "config.hh"
+#include "connections.hh"
 #include "houses.hh"
 #include "info.hh"
 #include "operate.hh"
@@ -2520,6 +2521,116 @@ void CancelInvisibility(TCreature *Actor, Object Target, int ManaPoints, int Sou
 	}
 }
 
+static bool TileHasOtherCreature(int x, int y, int z, uint32 SelfID){
+	Object Obj = GetFirstObject(x, y, z);
+	while(Obj != NONE){
+		if(Obj.getObjectType().isCreatureContainer()){
+			uint32 CreatureID = Obj.getCreatureID();
+			if(CreatureID != 0 && CreatureID != SelfID){
+				return true;
+			}
+		}
+		Obj = Obj.getNextObject();
+	}
+	return false;
+}
+
+void GamemasterInvisibility(TCreature *Actor){
+	if(Actor == NULL){
+		error("GamemasterInvisibility: Ungültige Kreatur übergeben.\n");
+		throw ERROR;
+	}
+
+	if(Actor->Type != PLAYER){
+		error("GamemasterInvisibility: Zauberspruch kann nur von Spielern angewendet werden.\n");
+		throw ERROR;
+	}
+
+	if(!CheckRight(Actor->ID, GAMEMASTER_OUTFIT) && !CheckRight(Actor->ID, NO_STATISTICS)){
+		return;
+	}
+
+	TPlayer *GM = (TPlayer*)Actor;
+
+	if(GM->GhostMode){
+		if(TileHasOtherCreature(GM->posx, GM->posy, GM->posz, GM->ID)){
+			int DestX = GM->posx;
+			int DestY = GM->posy;
+			int DestZ = GM->posz;
+			uint16 HouseID = GetHouseID(DestX, DestY, DestZ);
+			bool FoundFree = false;
+
+			for(int Dist = 1; Dist <= 2; ++Dist){
+				int TestX = GM->posx;
+				int TestY = GM->posy;
+				int TestZ = GM->posz;
+				if(SearchFreeField(&TestX, &TestY, &TestZ, Dist, HouseID, false)){
+					if(!TileHasOtherCreature(TestX, TestY, TestZ, GM->ID)){
+						DestX = TestX;
+						DestY = TestY;
+						DestZ = TestZ;
+						FoundFree = true;
+						break;
+					}
+				}
+			}
+
+			if(!FoundFree){
+				SendMessage(GM->Connection, TALK_FAILURE_MESSAGE, "There is not enough room to become visible.");
+				return;
+			}
+
+			try{
+				Object Dest = GetMapContainer(DestX, DestY, DestZ);
+				Move(0, GM->CrObject, Dest, -1, false, NONE);
+			}catch(...){
+				SendMessage(GM->Connection, TALK_FAILURE_MESSAGE, "There is not enough room to become visible.");
+				return;
+			}
+		}
+	}
+
+	GM->GhostMode = !GM->GhostMode;
+	GM->Outfit = GM->OrgOutfit;
+
+	TFindCreatures Search(16, 14, GM->posx, GM->posy, FIND_PLAYERS);
+	while(true){
+		uint32 SpectatorID = Search.getNext();
+		if(SpectatorID == 0){
+			break;
+		}
+
+		if(SpectatorID == GM->ID){
+			continue;
+		}
+
+		TPlayer *Spectator = GetPlayer(SpectatorID);
+		if(Spectator == NULL || Spectator->Connection == NULL){
+			continue;
+		}
+
+		bool SpectatorHasAccess = CheckRight(Spectator->ID, GAMEMASTER_OUTFIT)
+		                       || CheckRight(Spectator->ID, NO_STATISTICS)
+		                       || CheckRight(Spectator->ID, READ_GAMEMASTER_CHANNEL);
+
+		if(!SpectatorHasAccess){
+			if(GM->GhostMode){
+				SendDeleteField(Spectator->Connection, GM->posx, GM->posy, GM->posz, GM->CrObject);
+			}else{
+				SendAddField(Spectator->Connection, GM->posx, GM->posy, GM->posz, GM->CrObject);
+			}
+		}
+	}
+
+	if(GM->GhostMode){
+		SendMessage(GM->Connection, TALK_INFO_MESSAGE, "You are now invisible.");
+		GraphicalEffect(GM->posx, GM->posy, GM->posz, EFFECT_MAGIC_BLUE);
+	}else{
+		SendMessage(GM->Connection, TALK_INFO_MESSAGE, "You are visible again.");
+		GraphicalEffect(GM->posx, GM->posy, GM->posz, EFFECT_POFF);
+	}
+}
+
 void CreatureIllusion(TCreature *Actor, int ManaPoints, int SoulPoints, const char *RaceName, int Duration){
 	if(Actor == NULL){
 		error("CreatureIllusion: Ungültige Kreatur übergeben.\n");
@@ -3427,6 +3538,7 @@ static void CharacterRightSpell(uint32 CreatureID, int SpellNr, const char (*Spe
 		case 100: ClearQuestValues(Actor); 							break;
 		case 101: KillAllMonsters(Actor, EFFECT_DEATH, 2); 			break;
 		case 102: StartMonsterraid(Actor, SpellStr[4]); 			break;
+		case 103: GamemasterInvisibility(Actor); 					break;
 	}
 }
 
@@ -5399,6 +5511,12 @@ static void InitSpells(void){
 	Spell->Level = 0;
 	Spell->Flags = 0;
 	Spell->Comment = "Start Monsterraid";
+
+	Spell = CreateSpell(103, "al", "ana", "vid", "");
+	Spell->Mana = 0;
+	Spell->Level = 0;
+	Spell->Flags = 0;
+	Spell->Comment = "Gamemaster Invisibility";
 }
 
 void InitMagic(void){

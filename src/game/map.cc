@@ -1,6 +1,7 @@
 #include "map.hh"
 #include "containers.hh"
 #include "config.hh"
+#include "cr.hh"
 #include "enums.hh"
 #include "houses.hh"
 #include "info.hh"
@@ -281,6 +282,15 @@ void CronExpire(Object Obj, int Delay){
 
 	ObjectType ObjType = Obj.getObjectType();
 	if(ObjType.getFlag(EXPIRE)){
+		if(!RemoveWeaponCharges){
+			int BodyPos = (int)ObjType.getAttribute(BODYPOSITION);
+			int CurPos = GetObjectBodyPosition(Obj);
+			if(BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK
+					|| CurPos == INVENTORY_FINGER || CurPos == INVENTORY_NECK){
+				return;
+			}
+		}
+
 		if(Delay == -1){
 			CronSet(Obj, ObjType.getAttribute(TOTALEXPIRETIME));
 		}else{
@@ -2029,6 +2039,12 @@ void ChangeObject(Object Obj, ObjectType NewType){
 	}
 
 	if(NewType.getFlag(EXPIRESTOP)){
+		if(!RemoveWeaponCharges){
+			int BodyPos = (int)NewType.getAttribute(BODYPOSITION);
+			if(BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK){
+				SavedExpireTime = NewType.getAttribute(TOTALEXPIRETIME);
+			}
+		}
 		Obj.setAttribute(SAVEDEXPIRETIME, SavedExpireTime);
 	}
 
@@ -2470,6 +2486,14 @@ bool CoordinateFlag(int x, int y, int z, FLAG Flag){
 	bool Result = false;
 	Object Obj = GetFirstObject(x, y, z);
 	while(Obj != NONE){
+		if(Obj.getObjectType().isCreatureContainer()){
+			TCreature *Cr = GetCreature(Obj);
+			if(Cr != NULL && Cr->Type == PLAYER && ((TPlayer*)Cr)->GhostMode){
+				Obj = Obj.getNextObject();
+				continue;
+			}
+		}
+
 		if(Obj.getObjectType().getFlag(Flag)){
 			Result = true;
 			break;
