@@ -3821,6 +3821,21 @@ static void CastSpell(uint32 CreatureID, int SpellNr, const char (*SpellStr)[512
 	}
 }
 
+// NOTE: Turns a blank rune into a spell rune. With a stack of (cumulative)
+// blank runes only one of them is used: the new runes go into the inventory.
+static void ConjureRune(TCreature *Actor, Object Blank, ObjectType RuneType, int Amount){
+	if(Blank.getObjectType().getFlag(CUMULATIVE)){
+		uint32 Count = Blank.getAttribute(AMOUNT);
+		if(Count > 1){
+			CreateAtCreature(Actor->ID, RuneType, (uint32)Amount);
+			Change(Blank, AMOUNT, Count - 1);
+			return;
+		}
+	}
+
+	Change(Blank, RuneType, Amount);
+}
+
 static void RuneSpell(uint32 CreatureID, int SpellNr){
 	TCreature *Actor = GetCreature(CreatureID);
 	if(Actor == NULL){
@@ -3855,7 +3870,7 @@ static void RuneSpell(uint32 CreatureID, int SpellNr){
 	if(RightHand.exists() && RightHand.getObjectType() == BlankType){
 		CheckMana(Actor, ManaPoints, SoulPoints, 1000);
 		ObjectType RuneType = GetNewObjectType(RuneGr, RuneNr);
-		Change(RightHand, RuneType, Amount);
+		ConjureRune(Actor, RightHand, RuneType, Amount);
 		RuneCreated = true;
 	}
 
@@ -3867,7 +3882,7 @@ static void RuneSpell(uint32 CreatureID, int SpellNr){
 		try{
 			CheckMana(Actor, ManaPoints, SoulPoints, 1000);
 			ObjectType RuneType = GetNewObjectType(RuneGr, RuneNr);
-			Change(LeftHand, RuneType, Amount);
+			ConjureRune(Actor, LeftHand, RuneType, Amount);
 			RuneCreated = true;
 		}catch(RESULT r){
 			if(!RuneCreated){
