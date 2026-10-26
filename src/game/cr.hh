@@ -643,6 +643,9 @@ struct TCreature: TSkillBase {
 	uint32 NextWakeup;
 	bool Stop;
 	bool LockToDo;
+	bool HasBufferedGo;
+	int BufferedGoX;
+	int BufferedGoY;
 	uint8 Profession;
 	TConnection *Connection;
 };

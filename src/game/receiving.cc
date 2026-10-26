@@ -180,6 +180,18 @@ void CGoDirection(TConnection *Connection, int OffsetX, int OffsetY){
 		return;
 	}
 
+	// NOTE: When the previous direction step is still waiting for its walk
+	// time (network jitter can make the next key arrive a bit early), keep this
+	// step for afterwards instead of dropping the waiting one with a snapback.
+	if(Player->LockToDo && !Player->Stop
+			&& Player->NrToDo - Player->ActToDo == 1
+			&& Player->ToDoList.at(Player->ActToDo)->Code == TDGo){
+		Player->HasBufferedGo = true;
+		Player->BufferedGoX = OffsetX;
+		Player->BufferedGoY = OffsetY;
+		return;
+	}
+
 	try{
 		if(Player->ToDoClear()){
 			SendSnapback(Connection);

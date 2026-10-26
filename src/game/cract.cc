@@ -732,7 +732,22 @@ void TCreature::Execute(void){
 		}
 
 		if(this->NrToDo <= this->ActToDo){
+			// NOTE: A direction key that arrived while the previous step was
+			// still waiting (see `CGoDirection`) continues the walk here.
+			bool BufferedGo = this->HasBufferedGo;
+			int GoX = this->posx + this->BufferedGoX;
+			int GoY = this->posy + this->BufferedGoY;
 			this->ToDoClear();
+			if(BufferedGo && this->Type == PLAYER){
+				TToDoEntry TD = {};
+				TD.Code = TDGo;
+				TD.Go.x = GoX;
+				TD.Go.y = GoY;
+				TD.Go.z = this->posz;
+				this->ToDoAdd(TD);
+				this->ToDoStart();
+				break;
+			}
 			this->IdleStimulus();
 			break;
 		}
@@ -930,6 +945,7 @@ bool TCreature::ToDoClear(void){
 	this->ActToDo = 0;
 	this->NrToDo = 0;
 	this->Stop = false;
+	this->HasBufferedGo = false;
 	return SnapbackNecessary;
 }
 

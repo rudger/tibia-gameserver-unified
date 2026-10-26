@@ -168,6 +168,9 @@ TCreature::TCreature(void) :
 	this->NextWakeup = 0;
 	this->Stop = false;
 	this->LockToDo = false;
+	this->HasBufferedGo = false;
+	this->BufferedGoX = 0;
+	this->BufferedGoY = 0;
 	this->Connection = NULL;
 
 	for(int i = 0; i < NARRAY(this->Skills); i += 1){
