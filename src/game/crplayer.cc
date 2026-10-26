@@ -47,6 +47,7 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 	this->OldFoodMinutes = -1;
 	this->StaminaCombatRound = 0;
 	this->StaminaNextRound = 0;
+	this->ShopNPC = 0;
 	this->Request = 0;
 	this->RequestTimestamp = 0;
 	this->RequestProcessingGamemaster = 0;
@@ -1446,6 +1447,7 @@ void TPlayer::SyncState(void){
 	this->OldFoodMinutes = -1;
 	this->StaminaCombatRound = 0;
 	this->StaminaNextRound = 0;
+	this->ShopNPC = 0;
 	this->CheckState();
 }
 

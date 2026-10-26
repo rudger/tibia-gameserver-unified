@@ -1746,6 +1746,76 @@ void SendSnapback(TConnection *Connection){
 	FinishSendData(Connection);
 }
 
+// NOTE: Not part of the 7.72 protocol (send_npc_trade). The NPC trade window
+// of later clients: the item list with prices, and the money and items the
+// player has for selling.
+void SendNpcTradeWindow(TConnection *Connection, const std::vector<TShopItem> *Shop){
+	if(Shop == NULL || !BeginSendData(Connection)){
+		return;
+	}
+
+	int Count = std::min<int>((int)Shop->size(), UINT8_MAX);
+	SendByte(Connection, SV_CMD_NPC_TRADE);
+	SendByte(Connection, (uint8)Count);
+	for(int i = 0; i < Count; i += 1){
+		const TShopItem &Item = Shop->at(i);
+		ObjectType Type(Item.TypeID);
+		SendWord(Connection, (uint16)Item.TypeID);
+		SendByte(Connection, 0);
+		SendString(Connection, Type.getName(-1));
+		SendQuad(Connection, (uint32)Type.getAttribute(WEIGHT));
+		SendQuad(Connection, (uint32)GetShopPrice(Item.TypeID, Item.BuyPrice));
+		SendQuad(Connection, (uint32)GetShopPrice(Item.TypeID, Item.SellPrice));
+	}
+	FinishSendData(Connection);
+}
+
+void SendNpcGoods(TConnection *Connection, const std::vector<TShopItem> *Shop){
+	if(Shop == NULL || !BeginSendData(Connection)){
+		return;
+	}
+
+	TPlayer *Player = Connection->GetPlayer();
+	if(Player == NULL){
+		return;
+	}
+
+	int Goods[UINT8_MAX];
+	int GoodsCount[UINT8_MAX];
+	int Count = 0;
+	for(int i = 0; i < (int)Shop->size() && Count < UINT8_MAX; i += 1){
+		const TShopItem &Item = Shop->at(i);
+		if(Item.SellPrice <= 0){
+			continue;
+		}
+
+		int Amount = CountInventoryObjects(Player->ID, ObjectType(Item.TypeID), 0);
+		if(Amount > 0){
+			Goods[Count] = Item.TypeID;
+			GoodsCount[Count] = std::min<int>(Amount, UINT8_MAX);
+			Count += 1;
+		}
+	}
+
+	SendByte(Connection, SV_CMD_NPC_GOODS);
+	SendQuad(Connection, (uint32)CountInventoryMoney(Player->ID));
+	SendByte(Connection, (uint8)Count);
+	for(int i = 0; i < Count; i += 1){
+		SendWord(Connection, (uint16)Goods[i]);
+		SendByte(Connection, (uint8)GoodsCount[i]);
+	}
+	FinishSendData(Connection);
+}
+
+void SendNpcCloseTrade(TConnection *Connection){
+	if(!BeginSendData(Connection)){
+		return;
+	}
+
+	SendByte(Connection, SV_CMD_NPC_CLOSE_TRADE);
+	FinishSendData(Connection);
+}
+
 void SendOutfit(TConnection *Connection){
 	if(!BeginSendData(Connection)){
 		return;

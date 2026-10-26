@@ -37,6 +37,10 @@ enum ClientCommand: int {
 	CL_CMD_USE_TWO_OBJECTS			= 131,
 	CL_CMD_USE_ON_CREATURE			= 132,
 	CL_CMD_TURN_OBJECT				= 133,
+	CL_CMD_NPC_LOOK					= 121,	// send_npc_trade
+	CL_CMD_NPC_BUY					= 122,	// send_npc_trade
+	CL_CMD_NPC_SELL					= 123,	// send_npc_trade
+	CL_CMD_NPC_CLOSE				= 124,	// send_npc_trade
 	CL_CMD_CLOSE_CONTAINER			= 135,
 	CL_CMD_UP_CONTAINER				= 136,
 	CL_CMD_EDIT_TEXT				= 137,
@@ -97,6 +101,9 @@ enum ServerCommand: int {
 	SV_CMD_DELETE_IN_CONTAINER		= 114,
 	SV_CMD_SET_INVENTORY			= 120,
 	SV_CMD_DELETE_INVENTORY			= 121,
+	SV_CMD_NPC_TRADE				= 122,	// send_npc_trade
+	SV_CMD_NPC_GOODS				= 123,	// send_npc_trade
+	SV_CMD_NPC_CLOSE_TRADE			= 124,	// send_npc_trade
 	SV_CMD_TRADE_OFFER_OWN			= 125,
 	SV_CMD_TRADE_OFFER_PARTNER		= 126,
 	SV_CMD_CLOSE_TRADE				= 127,
@@ -237,6 +244,10 @@ void ExitConnections(void);
 // sending.cc
 void SendAll(void);
 bool BeginSendData(TConnection *Connection);
+struct TShopItem;
+void SendNpcTradeWindow(TConnection *Connection, const std::vector<TShopItem> *Shop);
+void SendNpcGoods(TConnection *Connection, const std::vector<TShopItem> *Shop);
+void SendNpcCloseTrade(TConnection *Connection);
 void FinishSendData(TConnection *Connection);
 void SkipFlush(TConnection *Connection);
 void SendMapObject(TConnection *Connection, Object Obj);

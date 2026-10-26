@@ -918,6 +918,7 @@ struct TPlayer: TCreature {
 	int OldFoodMinutes;
 	uint32 StaminaCombatRound;
 	uint32 StaminaNextRound;
+	uint32 ShopNPC;
 	uint32 Request;
 	int RequestTimestamp;
 	uint32 RequestProcessingGamemaster;
@@ -1025,6 +1026,20 @@ struct TOutfitEntry {
 };
 
 int GetOutfitCount(void);
+
+struct TShopItem {
+	int TypeID;
+	int BuyPrice;		// What the player pays, 0 = not for sale.
+	int SellPrice;		// What the player gets, 0 = not bought.
+};
+
+void LoadNpcShops(void);
+const std::vector<TShopItem> *GetNpcShop(const char *NpcName);
+int GetShopPrice(int TypeID, int Price);
+TNPC *GetShopNpc(TPlayer *Player);
+bool OpenNpcTrade(TNPC *Npc, uint32 PlayerID);
+void BuyFromNpc(TPlayer *Player, int TypeID, int Amount);
+void SellToNpc(TPlayer *Player, int TypeID, int Amount);
 const TOutfitEntry *GetOutfitEntry(int Index);
 bool IsOutfitAllowed(TPlayer *Player, int OutfitID, bool CheckPremium);
 TPlayer *GetPlayer(const char *Name);

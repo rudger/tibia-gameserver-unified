@@ -7,6 +7,10 @@
 #include "writer.hh"
 
 #include <filesystem>
+#include <fstream>
+#include <map>
+#include <string>
+#include <vector>
 namespace fs = std::filesystem;
 
 static vector<TNonplayer*> NonplayerList(0, 10000, 1000, NULL);
@@ -1705,6 +1709,15 @@ void TNPC::TalkStimulus(uint32 SpeakerID, const char *Text){
 
 	if(this->State == TALKING || this->QueueLength != 0){
 		uint32 InterlocutorID = this->Interlocutor;
+		// NOTE: "trade" opens the trade window when the NPC has a shop list
+		// (send_npc_trade, see npcshops.dat).
+		if(SpeakerID == InterlocutorID && SendNpcTrade
+				&& stricmp(Text, "trade") == 0
+				&& OpenNpcTrade(this, SpeakerID)){
+			this->LastTalk = RoundNr;
+			return;
+		}
+
 		if(SpeakerID == InterlocutorID){
 			this->LastTalk = RoundNr;
 			this->Behaviour->react(this, Text, DEFAULT);
@@ -3203,6 +3216,7 @@ void InitNonplayer(void){
 	print(1, "Initializing Nonplayers ...\n");
 	FirstFreeNonplayer = 0;
 	InitNPCs();
+	LoadNpcShops();
 	LoadMonsterhomes();
 }
 
@@ -3219,4 +3233,228 @@ void ExitNonplayer(void){
 	// because we'd usually exit after calling this function but if we wanted
 	// to cleanup all memory, we'd need to add some `freeAll` method to the
 	// `store` container.
+}
+
+// NPC Trade Window (send_npc_trade)
+// =============================================================================
+// NOTE: The shop lists come from `npcshops.dat` in the data directory:
+//		"NPC name"
+//		TypeID BuyPrice SellPrice
+// A price of 0 means the NPC doesn't sell (or buy) that object.
+static std::map<std::string, std::vector<TShopItem>> NpcShops;
+
+static std::string ShopKey(const char *Name){
+	std::string Key = (Name != NULL ? Name : "");
+	for(char &c: Key){
+		c = (char)tolower((unsigned char)c);
+	}
+	return Key;
+}
+
+void LoadNpcShops(void){
+	NpcShops.clear();
+
+	char FileName[4096];
+	snprintf(FileName, sizeof(FileName), "%s/npcshops.dat", DATAPATH);
+	std::ifstream InFile(FileName);
+	if(InFile.fail()){
+		print(1, "LoadNpcShops: %s not found, NPC trade windows disabled.\n", FileName);
+		return;
+	}
+
+	std::string Line;
+	std::vector<TShopItem> *Shop = NULL;
+	int Items = 0;
+	while(std::getline(InFile, Line)){
+		size_t Start = Line.find_first_not_of(" \t\r");
+		if(Start == std::string::npos || Line[Start] == '#'){
+			continue;
+		}
+
+		if(Line[Start] == '"'){
+			size_t End = Line.find('"', Start + 1);
+			if(End == std::string::npos){
+				continue;
+			}
+			Shop = &NpcShops[ShopKey(Line.substr(Start + 1, End - Start - 1).c_str())];
+			continue;
+		}
+
+		int TypeID = 0, BuyPrice = 0, SellPrice = 0;
+		if(Shop == NULL || sscanf(Line.c_str() + Start, "%d %d %d", &TypeID, &BuyPrice, &SellPrice) != 3){
+			continue;
+		}
+
+		if(!ObjectTypeExists(TypeID)){
+			error("LoadNpcShops: Unbekannter Objekttyp %d.\n", TypeID);
+			continue;
+		}
+
+		Shop->push_back({TypeID, BuyPrice, SellPrice});
+		Items += 1;
+	}
+	print(1, "LoadNpcShops: %d shops with %d items.\n", (int)NpcShops.size(), Items);
+}
+
+const std::vector<TShopItem> *GetNpcShop(const char *NpcName){
+	auto It = NpcShops.find(ShopKey(NpcName));
+	if(It == NpcShops.end() || It->second.empty()){
+		return NULL;
+	}
+	return &It->second;
+}
+
+int GetShopPrice(int TypeID, int Price){
+	if(Price > 0 && RateNpcRunePrice > 1 && ObjectTypeExists(TypeID)
+			&& ObjectType(TypeID).getFlag(RUNE)){
+		Price *= RateNpcRunePrice;
+	}
+	return Price;
+}
+
+TNPC *GetShopNpc(TPlayer *Player){
+	if(Player == NULL || Player->ShopNPC == 0){
+		return NULL;
+	}
+
+	TCreature *Creature = GetCreature(Player->ShopNPC);
+	if(Creature == NULL || Creature->Type != NPC || Creature->posz != Player->posz
+			|| std::abs(Creature->posx - Player->posx) > 3
+			|| std::abs(Creature->posy - Player->posy) > 3){
+		Player->ShopNPC = 0;
+		if(Player->Connection != NULL){
+			SendNpcCloseTrade(Player->Connection);
+		}
+		return NULL;
+	}
+	return (TNPC*)Creature;
+}
+
+bool OpenNpcTrade(TNPC *Npc, uint32 PlayerID){
+	const std::vector<TShopItem> *Shop = GetNpcShop(Npc->Name);
+	TPlayer *Player = GetPlayer(PlayerID);
+	if(Shop == NULL || Player == NULL || Player->Connection == NULL){
+		return false;
+	}
+
+	Player->ShopNPC = Npc->ID;
+	Talk(Npc->ID, TALK_SAY, NULL, "Of course, just browse through my wares.", false);
+	SendNpcTradeWindow(Player->Connection, Shop);
+	SendNpcGoods(Player->Connection, Shop);
+	return true;
+}
+
+static const TShopItem *FindShopItem(const std::vector<TShopItem> *Shop, int TypeID){
+	for(const TShopItem &Item: *Shop){
+		if(Item.TypeID == TypeID){
+			return &Item;
+		}
+	}
+	return NULL;
+}
+
+static void GiveCoins(uint32 PlayerID, ObjectType Type, int Amount){
+	while(Amount > 0){
+		int Stack = std::min<int>(Amount, 100);
+		CreateAtCreature(PlayerID, Type, (uint32)Stack);
+		Amount -= Stack;
+	}
+}
+
+// NOTE: Pays with the coins the player carries, giving change like NPCs do.
+static void TakePlayerMoney(uint32 PlayerID, int Amount){
+	int Crystal  = CountInventoryObjects(PlayerID, GetSpecialObject(MONEY_TENTHOUSAND), 0);
+	int Platinum = CountInventoryObjects(PlayerID, GetSpecialObject(MONEY_HUNDRED), 0);
+	int Gold     = CountInventoryObjects(PlayerID, GetSpecialObject(MONEY_ONE), 0);
+	CalculateChange(Amount, &Gold, &Platinum, &Crystal);
+
+	if(Gold > 0){
+		DeleteAtCreature(PlayerID, GetSpecialObject(MONEY_ONE), Gold, 0);
+	}else if(Gold < 0){
+		GiveCoins(PlayerID, GetSpecialObject(MONEY_ONE), -Gold);
+	}
+
+	if(Platinum > 0){
+		DeleteAtCreature(PlayerID, GetSpecialObject(MONEY_HUNDRED), Platinum, 0);
+	}else if(Platinum < 0){
+		GiveCoins(PlayerID, GetSpecialObject(MONEY_HUNDRED), -Platinum);
+	}
+
+	if(Crystal > 0){
+		DeleteAtCreature(PlayerID, GetSpecialObject(MONEY_TENTHOUSAND), Crystal, 0);
+	}
+}
+
+static void GivePlayerMoney(uint32 PlayerID, int Amount){
+	GiveCoins(PlayerID, GetSpecialObject(MONEY_TENTHOUSAND), Amount / 10000);
+	GiveCoins(PlayerID, GetSpecialObject(MONEY_HUNDRED), (Amount % 10000) / 100);
+	GiveCoins(PlayerID, GetSpecialObject(MONEY_ONE), Amount % 100);
+}
+
+void BuyFromNpc(TPlayer *Player, int TypeID, int Amount){
+	TNPC *Npc = GetShopNpc(Player);
+	if(Npc == NULL || Amount <= 0 || Amount > 100){
+		return;
+	}
+
+	const std::vector<TShopItem> *Shop = GetNpcShop(Npc->Name);
+	const TShopItem *Item = (Shop != NULL ? FindShopItem(Shop, TypeID) : NULL);
+	if(Item == NULL || Item->BuyPrice <= 0){
+		return;
+	}
+
+	int Price = GetShopPrice(TypeID, Item->BuyPrice) * Amount;
+	if(CountInventoryMoney(Player->ID) < Price){
+		SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "You do not have enough money.");
+		return;
+	}
+
+	try{
+		ObjectType Type(TypeID);
+		TakePlayerMoney(Player->ID, Price);
+		if(Type.getFlag(CUMULATIVE)){
+			CreateAtCreature(Player->ID, Type, (uint32)Amount);
+		}else{
+			for(int i = 0; i < Amount; i += 1){
+				CreateAtCreature(Player->ID, Type, 0);
+			}
+		}
+		Log("npc", "%s -> %u: %d %s (trade window, %d gold)\n", Npc->Name, Player->ID, Amount, Type.getName(1), Price);
+		SendMessage(Player->Connection, TALK_INFO_MESSAGE, "Bought %d x %s for %d gold.", Amount, Type.getName(-1), Price);
+	}catch(RESULT r){
+		SendResult(Player->Connection, r);
+	}
+
+	SendNpcGoods(Player->Connection, Shop);
+}
+
+void SellToNpc(TPlayer *Player, int TypeID, int Amount){
+	TNPC *Npc = GetShopNpc(Player);
+	if(Npc == NULL || Amount <= 0 || Amount > 100){
+		return;
+	}
+
+	const std::vector<TShopItem> *Shop = GetNpcShop(Npc->Name);
+	const TShopItem *Item = (Shop != NULL ? FindShopItem(Shop, TypeID) : NULL);
+	if(Item == NULL || Item->SellPrice <= 0){
+		return;
+	}
+
+	ObjectType Type(TypeID);
+	if(CountInventoryObjects(Player->ID, Type, 0) < Amount){
+		SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "You do not have so many.");
+		return;
+	}
+
+	try{
+		int Price = GetShopPrice(TypeID, Item->SellPrice) * Amount;
+		DeleteAtCreature(Player->ID, Type, Amount, 0);
+		GivePlayerMoney(Player->ID, Price);
+		Log("npc", "%s <- %u: %d %s (trade window, %d gold)\n", Npc->Name, Player->ID, Amount, Type.getName(1), Price);
+		SendMessage(Player->Connection, TALK_INFO_MESSAGE, "Sold %d x %s for %d gold.", Amount, Type.getName(-1), Price);
+	}catch(RESULT r){
+		SendResult(Player->Connection, r);
+	}
+
+	SendNpcGoods(Player->Connection, Shop);
 }

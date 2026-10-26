@@ -1446,6 +1446,51 @@ void CGetOutfit(TConnection *Connection, TReadBuffer *Buffer){
 	SendOutfit(Connection);
 }
 
+// NOTE: NPC trade window commands (send_npc_trade).
+void CNpcLook(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	int TypeID = Buffer->readWord();
+	Buffer->readByte(); // count
+	if(Player == NULL || GetShopNpc(Player) == NULL || !ObjectTypeExists(TypeID)){
+		return;
+	}
+
+	ObjectType Type(TypeID);
+	int Weight = (int)Type.getAttribute(WEIGHT);
+	SendMessage(Connection, TALK_INFO_MESSAGE, "You see %s. It weighs %d.%02d oz.",
+			Type.getName(1), Weight / 100, Weight % 100);
+}
+
+void CNpcBuy(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	int TypeID = Buffer->readWord();
+	Buffer->readByte(); // subtype
+	int Amount = Buffer->readByte();
+	Buffer->readByte(); // ignore capacity
+	Buffer->readByte(); // buy with backpacks
+	if(Player != NULL && ObjectTypeExists(TypeID)){
+		BuyFromNpc(Player, TypeID, Amount);
+	}
+}
+
+void CNpcSell(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	int TypeID = Buffer->readWord();
+	Buffer->readByte(); // subtype
+	int Amount = Buffer->readByte();
+	Buffer->readByte(); // ignore equipped
+	if(Player != NULL && ObjectTypeExists(TypeID)){
+		SellToNpc(Player, TypeID, Amount);
+	}
+}
+
+void CNpcClose(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	if(Player != NULL){
+		Player->ShopNPC = 0;
+	}
+}
+
 void CSetOutfit(TConnection *Connection, TReadBuffer *Buffer){
 	if(Connection == NULL){
 		error("CSetOutfit: Connection ist NULL.\n");
@@ -1816,6 +1861,10 @@ void ReceiveData(TConnection *Connection){
 			case CL_CMD_BUG_REPORT:				CBugReport(Connection, &Buffer); break;
 			case CL_CMD_RULE_VIOLATION:			CRuleViolation(Connection, &Buffer); break;
 			case CL_CMD_ERROR_FILE_ENTRY:		CErrorFileEntry(Connection, &Buffer); break;
+			case CL_CMD_NPC_LOOK:				CNpcLook(Connection, &Buffer); break;
+			case CL_CMD_NPC_BUY:				CNpcBuy(Connection, &Buffer); break;
+			case CL_CMD_NPC_SELL:				CNpcSell(Connection, &Buffer); break;
+			case CL_CMD_NPC_CLOSE:				CNpcClose(Connection, &Buffer); break;
 			default:{
 				print(3, "Unbekanntes Kommando %d.\n", Command);
 				break;
