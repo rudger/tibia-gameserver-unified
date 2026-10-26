@@ -696,8 +696,9 @@ int CountObjects(Object Obj, ObjectType Type, uint32 Value){
 		ObjectType ObjType = Obj.getObjectType();
 		if(ObjType.getFlag(CONTAINER)){
 			Object Help = GetFirstContainerObject(Obj);
-			// BUG(fusion): We probably meant to pass `Value` down the the call stack?
-			Count += CountObjects(Help, Type, 0);
+			// NOTE(rudger): Pass `Value` down, so liquids and key numbers in
+			// containers are counted too.
+			Count += CountObjects(Help, Type, Value);
 		}
 
 		if(ObjType == Type

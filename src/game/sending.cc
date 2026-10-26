@@ -1761,8 +1761,8 @@ void SendNpcTradeWindow(TConnection *Connection, const std::vector<TShopItem> *S
 		const TShopItem &Item = Shop->at(i);
 		ObjectType Type(Item.TypeID);
 		SendWord(Connection, (uint16)Item.TypeID);
-		SendByte(Connection, 0);
-		SendString(Connection, Type.getName(-1));
+		SendByte(Connection, GetShopSubtype(Shop, i));
+		SendString(Connection, GetShopItemName(&Item).c_str());
 		SendQuad(Connection, (uint32)Type.getAttribute(WEIGHT));
 		SendQuad(Connection, (uint32)GetShopPrice(Item.TypeID, Item.BuyPrice));
 		SendQuad(Connection, (uint32)GetShopPrice(Item.TypeID, Item.SellPrice));
@@ -1789,8 +1789,16 @@ void SendNpcGoods(TConnection *Connection, const std::vector<TShopItem> *Shop){
 			continue;
 		}
 
-		int Amount = CountInventoryObjects(Player->ID, ObjectType(Item.TypeID), 0);
-		if(Amount > 0){
+		// NOTE(rudger): The client counts goods by type only, so a type is sent
+		// once, with the most of one shop item.
+		int Amount = CountInventoryObjects(Player->ID, ObjectType(Item.TypeID), (uint32)Item.Data);
+		int Known = 0;
+		while(Known < Count && Goods[Known] != Item.TypeID){
+			Known += 1;
+		}
+		if(Known < Count){
+			GoodsCount[Known] = std::max<int>(GoodsCount[Known], std::min<int>(Amount, UINT8_MAX));
+		}else if(Amount > 0){
 			Goods[Count] = Item.TypeID;
 			GoodsCount[Count] = std::min<int>(Amount, UINT8_MAX);
 			Count += 1;

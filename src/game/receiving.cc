@@ -1464,23 +1464,23 @@ void CNpcLook(TConnection *Connection, TReadBuffer *Buffer){
 void CNpcBuy(TConnection *Connection, TReadBuffer *Buffer){
 	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
 	int TypeID = Buffer->readWord();
-	Buffer->readByte(); // subtype
+	int Subtype = Buffer->readByte();
 	int Amount = Buffer->readByte();
 	Buffer->readByte(); // ignore capacity
 	Buffer->readByte(); // buy with backpacks
 	if(Player != NULL && ObjectTypeExists(TypeID)){
-		BuyFromNpc(Player, TypeID, Amount);
+		BuyFromNpc(Player, TypeID, Subtype, Amount);
 	}
 }
 
 void CNpcSell(TConnection *Connection, TReadBuffer *Buffer){
 	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
 	int TypeID = Buffer->readWord();
-	Buffer->readByte(); // subtype
+	int Subtype = Buffer->readByte();
 	int Amount = Buffer->readByte();
 	Buffer->readByte(); // ignore equipped
 	if(Player != NULL && ObjectTypeExists(TypeID)){
-		SellToNpc(Player, TypeID, Amount);
+		SellToNpc(Player, TypeID, Subtype, Amount);
 	}
 }
 

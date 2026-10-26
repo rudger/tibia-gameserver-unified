@@ -3280,8 +3280,8 @@ void LoadNpcShops(void){
 			continue;
 		}
 
-		int TypeID = 0, BuyPrice = 0, SellPrice = 0;
-		if(Shop == NULL || sscanf(Line.c_str() + Start, "%d %d %d", &TypeID, &BuyPrice, &SellPrice) != 3){
+		int TypeID = 0, BuyPrice = 0, SellPrice = 0, Data = 0;
+		if(Shop == NULL || sscanf(Line.c_str() + Start, "%d %d %d %d", &TypeID, &BuyPrice, &SellPrice, &Data) < 3){
 			continue;
 		}
 
@@ -3290,7 +3290,7 @@ void LoadNpcShops(void){
 			continue;
 		}
 
-		Shop->push_back({TypeID, BuyPrice, SellPrice});
+		Shop->push_back({TypeID, BuyPrice, SellPrice, Data});
 		Items += 1;
 	}
 	print(1, "LoadNpcShops: %d shops with %d items.\n", (int)NpcShops.size(), Items);
@@ -3344,13 +3344,49 @@ bool OpenNpcTrade(TNPC *Npc, uint32 PlayerID){
 	return true;
 }
 
-static const TShopItem *FindShopItem(const std::vector<TShopItem> *Shop, int TypeID){
-	for(const TShopItem &Item: *Shop){
-		if(Item.TypeID == TypeID){
-			return &Item;
+// NOTE(rudger): The client tells shop items apart by type and subtype. Liquid
+// containers send their liquid, so they are drawn filled; other items send
+// their place among the items of the same type, so e.g. two keys with
+// different key numbers stay apart.
+uint8 GetShopSubtype(const std::vector<TShopItem> *Shop, int Index){
+	const TShopItem &Item = Shop->at(Index);
+	ObjectType Type(Item.TypeID);
+	if(Type.getFlag(LIQUIDCONTAINER)){
+		return GetClientLiquid(Item.Data);
+	}
+
+	int Subtype = 0;
+	for(int i = 0; i < Index; i += 1){
+		if(Shop->at(i).TypeID == Item.TypeID){
+			Subtype += 1;
 		}
 	}
-	return NULL;
+	return (uint8)Subtype;
+}
+
+std::string GetShopItemName(const TShopItem *Item){
+	ObjectType Type(Item->TypeID);
+	std::string Name = Type.getName(-1);
+	if(Type.getFlag(LIQUIDCONTAINER) && Item->Data != 0){
+		Name += " of ";
+		Name += GetLiquidName(Item->Data);
+	}
+	return Name;
+}
+
+const TShopItem *FindShopItem(const std::vector<TShopItem> *Shop, int TypeID, int Subtype){
+	const TShopItem *Result = NULL;
+	for(int i = 0; i < (int)Shop->size(); i += 1){
+		const TShopItem &Item = Shop->at(i);
+		if(Item.TypeID == TypeID){
+			if(GetShopSubtype(Shop, i) == Subtype){
+				return &Item;
+			}else if(Result == NULL){
+				Result = &Item;
+			}
+		}
+	}
+	return Result;
 }
 
 static void GiveCoins(uint32 PlayerID, ObjectType Type, int Amount){
@@ -3391,14 +3427,14 @@ static void GivePlayerMoney(uint32 PlayerID, int Amount){
 	GiveCoins(PlayerID, GetSpecialObject(MONEY_ONE), Amount % 100);
 }
 
-void BuyFromNpc(TPlayer *Player, int TypeID, int Amount){
+void BuyFromNpc(TPlayer *Player, int TypeID, int Subtype, int Amount){
 	TNPC *Npc = GetShopNpc(Player);
 	if(Npc == NULL || Amount <= 0 || Amount > 100){
 		return;
 	}
 
 	const std::vector<TShopItem> *Shop = GetNpcShop(Npc->Name);
-	const TShopItem *Item = (Shop != NULL ? FindShopItem(Shop, TypeID) : NULL);
+	const TShopItem *Item = (Shop != NULL ? FindShopItem(Shop, TypeID, Subtype) : NULL);
 	if(Item == NULL || Item->BuyPrice <= 0){
 		return;
 	}
@@ -3416,11 +3452,12 @@ void BuyFromNpc(TPlayer *Player, int TypeID, int Amount){
 			CreateAtCreature(Player->ID, Type, (uint32)Amount);
 		}else{
 			for(int i = 0; i < Amount; i += 1){
-				CreateAtCreature(Player->ID, Type, 0);
+				CreateAtCreature(Player->ID, Type, (uint32)Item->Data);
 			}
 		}
-		Log("npc", "%s -> %u: %d %s (trade window, %d gold)\n", Npc->Name, Player->ID, Amount, Type.getName(1), Price);
-		SendMessage(Player->Connection, TALK_INFO_MESSAGE, "Bought %d x %s for %d gold.", Amount, Type.getName(-1), Price);
+		std::string Name = GetShopItemName(Item);
+		Log("npc", "%s -> %u: %d %s (trade window, %d gold)\n", Npc->Name, Player->ID, Amount, Name.c_str(), Price);
+		SendMessage(Player->Connection, TALK_INFO_MESSAGE, "Bought %d x %s for %d gold.", Amount, Name.c_str(), Price);
 	}catch(RESULT r){
 		SendResult(Player->Connection, r);
 	}
@@ -3428,30 +3465,31 @@ void BuyFromNpc(TPlayer *Player, int TypeID, int Amount){
 	SendNpcGoods(Player->Connection, Shop);
 }
 
-void SellToNpc(TPlayer *Player, int TypeID, int Amount){
+void SellToNpc(TPlayer *Player, int TypeID, int Subtype, int Amount){
 	TNPC *Npc = GetShopNpc(Player);
 	if(Npc == NULL || Amount <= 0 || Amount > 100){
 		return;
 	}
 
 	const std::vector<TShopItem> *Shop = GetNpcShop(Npc->Name);
-	const TShopItem *Item = (Shop != NULL ? FindShopItem(Shop, TypeID) : NULL);
+	const TShopItem *Item = (Shop != NULL ? FindShopItem(Shop, TypeID, Subtype) : NULL);
 	if(Item == NULL || Item->SellPrice <= 0){
 		return;
 	}
 
 	ObjectType Type(TypeID);
-	if(CountInventoryObjects(Player->ID, Type, 0) < Amount){
+	if(CountInventoryObjects(Player->ID, Type, (uint32)Item->Data) < Amount){
 		SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "You do not have so many.");
 		return;
 	}
 
 	try{
 		int Price = GetShopPrice(TypeID, Item->SellPrice) * Amount;
-		DeleteAtCreature(Player->ID, Type, Amount, 0);
+		DeleteAtCreature(Player->ID, Type, Amount, (uint32)Item->Data);
 		GivePlayerMoney(Player->ID, Price);
-		Log("npc", "%s <- %u: %d %s (trade window, %d gold)\n", Npc->Name, Player->ID, Amount, Type.getName(1), Price);
-		SendMessage(Player->Connection, TALK_INFO_MESSAGE, "Sold %d x %s for %d gold.", Amount, Type.getName(-1), Price);
+		std::string Name = GetShopItemName(Item);
+		Log("npc", "%s <- %u: %d %s (trade window, %d gold)\n", Npc->Name, Player->ID, Amount, Name.c_str(), Price);
+		SendMessage(Player->Connection, TALK_INFO_MESSAGE, "Sold %d x %s for %d gold.", Amount, Name.c_str(), Price);
 	}catch(RESULT r){
 		SendResult(Player->Connection, r);
 	}
