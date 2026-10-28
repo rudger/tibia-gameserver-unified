@@ -155,6 +155,7 @@ TCreature::TCreature(void) :
 	this->EarliestTradeChannelRound = 0;
 	this->EarliestSpellTime = 0;
 	this->EarliestMultiuseTime = 0;
+	this->EarliestInstantUseTime = 0;
 	this->EarliestWalkTime = 0;
 	this->LifeEndRound = 0;
 	this->FirstKnowingConnection = NULL;

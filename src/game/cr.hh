@@ -629,6 +629,7 @@ struct TCreature: TSkillBase {
 	uint32 EarliestTradeChannelRound;
 	uint32 EarliestSpellTime;
 	uint32 EarliestMultiuseTime;
+	uint32 EarliestInstantUseTime;
 	uint32 EarliestWalkTime;
 	uint32 LifeEndRound;
 	TKnownCreature *FirstKnowingConnection;

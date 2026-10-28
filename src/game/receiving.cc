@@ -1,9 +1,12 @@
+#include "config.hh"
 #include "connections.hh"
 #include "houses.hh"
 #include "info.hh"
 #include "writer.hh"
 
 #include <signal.h>
+#include <functional>
+#include <vector>
 
 bool CommandAllowed(TConnection *Connection, int Command){
 	if(Connection == NULL){
@@ -242,6 +245,105 @@ void CRotate(TConnection *Connection, int Direction){
 	}
 }
 
+// NOTE(rudger): one_action_delay = false. An action is built into an empty
+// ToDo list first, with the walk put aside. When it needs no walking, it runs
+// right away and the walk goes on; otherwise it replaces the walk like before.
+// Uses stay limited to one per 100 milliseconds, like the 7.72 delay.
+static bool InstantAction(TPlayer *Player, bool IsUse, const std::function<void(void)> &Build){
+	if(OneActionDelay || (IsUse && Player->EarliestInstantUseTime > ServerMilliseconds)){
+		return false;
+	}
+
+	std::vector<TToDoEntry> Saved;
+	for(int i = 0; i < Player->NrToDo; i += 1){
+		Saved.push_back(*Player->ToDoList.at(i));
+	}
+	int SavedActToDo = Player->ActToDo;
+	bool SavedLockToDo = Player->LockToDo;
+	bool SavedStop = Player->Stop;
+	auto Restore = [&](void){
+		for(int i = 0; i < (int)Saved.size(); i += 1){
+			*Player->ToDoList.at(i) = Saved[i];
+		}
+		Player->NrToDo = (int)Saved.size();
+		Player->ActToDo = SavedActToDo;
+		Player->LockToDo = SavedLockToDo;
+		Player->Stop = SavedStop;
+	};
+
+	Player->NrToDo = 0;
+	Player->ActToDo = 0;
+	Player->LockToDo = false;
+	Player->Stop = false;
+	std::vector<TToDoEntry> Action;
+	try{
+		Build();
+	}catch(RESULT r){
+		Restore();
+		if(r != NOERROR){
+			SendResult(Player->Connection, r);
+		}
+		return true;
+	}
+	for(int i = 0; i < Player->NrToDo; i += 1){
+		Action.push_back(*Player->ToDoList.at(i));
+	}
+	Restore();
+
+	bool Instant = true;
+	for(const TToDoEntry &TD: Action){
+		if(TD.Code == TDMove){
+			if(Object(TD.Move.Obj).getObjectType().isCreatureContainer()){
+				Instant = false;
+			}
+		}else if(TD.Code == TDUse){
+			if(TD.Use.Obj2 != 0){
+				Object Obj1(TD.Use.Obj1);
+				Object Obj2(TD.Use.Obj2);
+				if(Player->EarliestMultiuseTime > ServerMilliseconds
+						|| (!Obj1.getObjectType().getFlag(DISTUSE)
+							&& !ObjectInRange(Player->ID, Obj2, 1))){
+					Instant = false;
+				}
+			}
+		}else if(TD.Code != TDWait && TD.Code != TDTurn){
+			Instant = false;
+		}
+	}
+
+	if(!Instant){
+		if(Player->LockToDo && Player->ToDoClear()){
+			SendSnapback(Player->Connection);
+		}
+		for(const TToDoEntry &TD: Action){
+			Player->ToDoAdd(TD);
+		}
+		Player->ToDoStart();
+		return true;
+	}
+
+	if(IsUse){
+		Player->EarliestInstantUseTime = ServerMilliseconds + 100;
+	}
+
+	try{
+		for(const TToDoEntry &TD: Action){
+			if(TD.Code == TDMove){
+				Player->Move(Object(TD.Move.Obj), TD.Move.x, TD.Move.y, TD.Move.z, (uint8)TD.Move.Count);
+			}else if(TD.Code == TDUse){
+				Player->Use(Object(TD.Use.Obj1), Object(TD.Use.Obj2), TD.Use.Dummy);
+			}else if(TD.Code == TDTurn){
+				Player->Turn(Object(TD.Turn.Obj));
+			}
+		}
+	}catch(RESULT r){
+		if(r != NOERROR){
+			SendResult(Player->Connection, r);
+		}
+	}
+	return true;
+}
+
 void CMoveObject(TConnection *Connection, TReadBuffer *Buffer){
 	if(Connection == NULL){
 		error("CMoveObject: Connection ist NULL.\n");
@@ -286,6 +388,12 @@ void CMoveObject(TConnection *Connection, TReadBuffer *Buffer){
 	// for that. Perhaps they're set to the same value.
 	if(OrigX != 0xFFFF){
 		RNum = 1;
+	}
+
+	if(InstantAction(Player, false, [&](void){
+				Player->ToDoMove(OrigX, OrigY, OrigZ, Type, RNum, DestX, DestY, DestZ, Count);
+			})){
+		return;
 	}
 
 	try{
@@ -474,6 +582,12 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
+	if(InstantAction(Player, true, [&](void){
+				Player->ToDoUse(1, ObjX, ObjY, ObjZ, Type, RNum, Dummy, 0, 0, 0, 0, 0);
+			})){
+		return;
+	}
+
 	try{
 		Player->ToDoWait(100);
 		Player->ToDoUse(1, ObjX, ObjY, ObjZ, Type, RNum, Dummy, 0, 0, 0, 0, 0);
@@ -524,6 +638,13 @@ void CUseTwoObjects(TConnection *Connection, TReadBuffer *Buffer){
 	}
 
 	SendHotkeyUseMessage(Connection, Player, ObjX1, ObjY1, Type1, RNum1);
+
+	if(InstantAction(Player, true, [&](void){
+				Player->ToDoUse(2, ObjX1, ObjY1, ObjZ1, Type1, RNum1, 0,
+									ObjX2, ObjY2, ObjZ2, Type2, RNum2);
+			})){
+		return;
+	}
 
 	try{
 		Player->ToDoWait(100);
@@ -597,6 +718,12 @@ void CUseOnCreature(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
+	if(InstantAction(Player, true, [&](void){
+				Player->ToDoUse(2, Obj, Target->CrObject);
+			})){
+		return;
+	}
+
 	try{
 		Player->ToDoWait(100);
 		Player->ToDoUse(2, Obj, Target->CrObject);
@@ -636,6 +763,12 @@ void CTurnObject(TConnection *Connection, TReadBuffer *Buffer){
 	}
 
 	if(ObjX != 0xFFFF && !CheckVisibility(CL_CMD_TURN_OBJECT, Connection, ObjX, ObjY, ObjZ)){
+		return;
+	}
+
+	if(InstantAction(Player, false, [&](void){
+				Player->ToDoTurn(ObjX, ObjY, ObjZ, Type, RNum);
+			})){
 		return;
 	}
 
