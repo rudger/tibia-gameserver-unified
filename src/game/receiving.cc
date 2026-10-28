@@ -451,6 +451,29 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
+	// NOTE(rudger): Opening a container from the inventory while walking (e.g.
+	// auto walk after a map click) used to clear the walk with a snapback.
+	// Open it right away and leave the walk as it is, like later servers do.
+	if(ObjX == 0xFFFF && Type.getFlag(CONTAINER) && Player->LockToDo){
+		try{
+			if(ObjY >= CONTAINER_FIRST && ObjY <= CONTAINER_LAST){
+				Object RootCon = GetBodyContainer(Player->ID, ObjY);
+				if(RootCon != NONE && !ObjectAccessible(Player->ID, RootCon, 1)){
+					throw NOTACCESSIBLE;
+				}
+			}
+
+			Object Obj = GetObject(Player->ID, ObjX, ObjY, ObjZ, RNum, Type);
+			if(!Obj.exists()){
+				throw NOTACCESSIBLE;
+			}
+			Player->Use(Obj, NONE, Dummy);
+		}catch(RESULT r){
+			SendResult(Connection, r);
+		}
+		return;
+	}
+
 	try{
 		Player->ToDoWait(100);
 		Player->ToDoUse(1, ObjX, ObjY, ObjZ, Type, RNum, Dummy, 0, 0, 0, 0, 0);
