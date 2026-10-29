@@ -184,6 +184,7 @@ void AdvanceGame(int Delay){
 		SetRoundNr(RoundNr);
 
 		ProcessConnections();
+		ProcessLootEffects();
 		ProcessMonsterhomes();
 		ProcessMonsterRaids();
 		ProcessCommunicationControl();

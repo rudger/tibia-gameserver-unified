@@ -91,6 +91,7 @@ extern bool SendLiquidType;
 extern bool SendStamina;
 extern bool SendOutfitList;
 extern bool SendNpcTrade;
+extern bool SendLootEffect;
 extern bool OneActionDelay;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;

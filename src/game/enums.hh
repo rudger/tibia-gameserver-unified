@@ -198,6 +198,7 @@ enum EffectType: int {
 	EFFECT_MELODY_PURPLE		= 23,
 	EFFECT_MELODY_BLUE			= 24,
 	EFFECT_MELODY_WHITE			= 25,
+	EFFECT_LOOT					= 26, // NOTE: Added to Tibia.dat (send_loot_effect).
 };
 
 enum FLAG: int {

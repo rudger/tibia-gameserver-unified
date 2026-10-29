@@ -207,6 +207,55 @@ static void AppendLoot(char *Text, int TextSize, Object Con, bool *First){
 
 // Sends "Loot of a rat: 3 gold coins, a cheese." to the player as a green
 // info message, and to the Loot channel if the player has it open.
+// NOTE(rudger): Loot effect (send_loot_effect). A monster corpse with items
+// sparkles until a player opens it or it decays.
+struct TLootEffect {
+	Object Corpse;
+	ObjectType Type;
+};
+
+static std::vector<TLootEffect> LootEffects;
+
+void AddLootEffect(Object Corpse){
+	if(!SendLootEffect || !Corpse.exists()){
+		return;
+	}
+
+	ObjectType Type = Corpse.getObjectType();
+	if(!Type.getFlag(CONTAINER) || GetFirstContainerObject(Corpse) == NONE){
+		return;
+	}
+
+	LootEffects.push_back({Corpse, Type});
+	GraphicalEffect(Corpse, EFFECT_LOOT);
+}
+
+void RemoveLootEffect(Object Con){
+	for(size_t i = 0; i < LootEffects.size(); i += 1){
+		if(LootEffects[i].Corpse == Con){
+			LootEffects.erase(LootEffects.begin() + i);
+			return;
+		}
+	}
+}
+
+void ProcessLootEffects(void){
+	size_t Next = 0;
+	for(size_t i = 0; i < LootEffects.size(); i += 1){
+		TLootEffect Effect = LootEffects[i];
+		if(!SendLootEffect || !Effect.Corpse.exists()
+				|| Effect.Corpse.getObjectType() != Effect.Type
+				|| GetFirstContainerObject(Effect.Corpse) == NONE){
+			continue;
+		}
+
+		GraphicalEffect(Effect.Corpse, EFFECT_LOOT);
+		LootEffects[Next] = Effect;
+		Next += 1;
+	}
+	LootEffects.resize(Next);
+}
+
 static void SendLootMessage(uint32 PlayerID, int Race, Object Corpse){
 	TPlayer *Player = GetPlayer(PlayerID);
 	if(Player == NULL || Player->Connection == NULL){
@@ -327,6 +376,10 @@ TCreature::~TCreature(void){
 
 			if(this->Type != PLAYER && this->LootReceiver != 0){
 				SendLootMessage(this->LootReceiver, this->Race, Corpse);
+			}
+
+			if(this->Type != PLAYER){
+				AddLootEffect(Corpse);
 			}
 		}catch(RESULT r){
 			error("TCreature::~TCreature: Kann Leiche/Inventory nicht ablegen (Exc %d, Pos [%d,%d,%d], %s).\n",

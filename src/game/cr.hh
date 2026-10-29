@@ -961,6 +961,9 @@ void InsertChainCreature(TCreature *Creature, int CoordX, int CoordY);
 void DeleteChainCreature(TCreature *Creature);
 void MoveChainCreature(TCreature *Creature, int CoordX, int CoordY);
 void ProcessCreatures(void);
+void AddLootEffect(Object Corpse);
+void RemoveLootEffect(Object Con);
+void ProcessLootEffects(void);
 void ProcessSkills(void);
 void MoveCreatures(int Delay);
 

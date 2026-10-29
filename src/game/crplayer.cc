@@ -796,6 +796,10 @@ void TPlayer::SetOpenContainer(int ContainerNr, Object Con){
 		return;
 	}
 
+	if(Con != NONE){
+		RemoveLootEffect(Con);
+	}
+
 	this->OpenContainer[ContainerNr] = Con;
 }
 
