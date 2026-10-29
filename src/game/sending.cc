@@ -189,6 +189,20 @@ static void SendItem(TConnection *Connection, Object Obj){
 	if(ObjType.getFlag(CUMULATIVE)){
 		SendByte(Connection, (uint8)Obj.getAttribute(AMOUNT));
 	}
+
+	// NOTE: Not part of the 7.72 protocol (send_item_duration). The seconds
+	// an object still lasts (up to 0x7FFF), for the types sent after the
+	// init game packet. 0x8000 is set while the time runs (e.g. a worn ring).
+	if(HasItemDuration(ObjType.getDisguise())){
+		uint16 Duration = 0;
+		if(HasItemDuration(ObjType)){
+			Duration = (uint16)std::min<int>(GetItemDuration(Obj), 0x7FFF);
+			if(ObjType.getFlag(EXPIRE)){
+				Duration |= 0x8000;
+			}
+		}
+		SendWord(Connection, Duration);
+	}
 }
 
 void SkipFlush(TConnection *Connection){
@@ -382,6 +396,18 @@ void SendInitGame(TConnection *Connection, uint32 CreatureID){
 	SendWord(Connection, (uint16)Beat);
 	SendByte(Connection, CheckRight(CreatureID, SEND_BUGREPORTS) ? 1 : 0);
 	FinishSendData(Connection);
+
+	// NOTE: Not part of the 7.72 protocol (send_item_duration). The object
+	// types that carry a duration, before any object is sent.
+	if(SendItemDuration && BeginSendData(Connection)){
+		std::vector<int> Types = GetItemDurationTypes();
+		SendByte(Connection, SV_CMD_DURATION_TYPES);
+		SendWord(Connection, (uint16)Types.size());
+		for(int TypeID: Types){
+			SendWord(Connection, (uint16)TypeID);
+		}
+		FinishSendData(Connection);
+	}
 }
 
 void SendRights(TConnection *Connection){

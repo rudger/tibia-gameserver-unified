@@ -1,4 +1,6 @@
 #include "info.hh"
+#include <map>
+#include <string>
 #include "cr.hh"
 #include "config.hh"
 #include "magic.hh"
@@ -1584,4 +1586,94 @@ void InitInfo(void){
 
 void ExitInfo(void){
 	// no-op
+}
+
+// NOTE(rudger): Item durations (send_item_duration). Takeable objects that
+// expire (e.g. lit torches, worn rings) or keep their expire time while not
+// in use (e.g. unworn rings) show the seconds they still last.
+static std::map<int, int> FullItemDuration;
+static bool FullItemDurationLoaded = false;
+
+static void LoadFullItemDurations(void){
+	// NOTE(rudger): An object that keeps its expire time and is brand-new has
+	// the full time of the expiring object it turns into, which has the same
+	// name, or "lit" in front of it. Take the closest type number.
+	FullItemDurationLoaded = true;
+	std::map<std::string, std::vector<int>> Expiring;
+	for(int TypeID = 100; ObjectTypeExists(TypeID); TypeID += 1){
+		ObjectType Type(TypeID);
+		if(!Type.isCreatureContainer() && Type.getFlag(EXPIRE)){
+			Expiring[Type.getName(1)].push_back(TypeID);
+		}
+	}
+
+	for(int TypeID = 100; ObjectTypeExists(TypeID); TypeID += 1){
+		ObjectType Type(TypeID);
+		if(Type.isCreatureContainer() || !Type.getFlag(EXPIRESTOP)){
+			continue;
+		}
+
+		std::string Name = Type.getName(1);
+		auto It = Expiring.find(Name);
+		if(It == Expiring.end() && Name.compare(0, 2, "a ") == 0){
+			It = Expiring.find("a lit " + Name.substr(2));
+		}else if(It == Expiring.end() && Name.compare(0, 3, "an ") == 0){
+			It = Expiring.find("a lit " + Name.substr(3));
+		}
+
+		if(It != Expiring.end()){
+			int Best = It->second[0];
+			for(int Other: It->second){
+				if(std::abs(Other - TypeID) < std::abs(Best - TypeID)){
+					Best = Other;
+				}
+			}
+			FullItemDuration[TypeID] = (int)ObjectType(Best).getAttribute(TOTALEXPIRETIME);
+		}
+	}
+}
+
+bool HasItemDuration(ObjectType Type){
+	if(!SendItemDuration || Type.isCreatureContainer() || !Type.getFlag(TAKE)
+			|| (!Type.getFlag(EXPIRE) && !Type.getFlag(EXPIRESTOP))){
+		return false;
+	}
+
+	// NOTE(rudger): Rings and amulets don't run out without charge removal
+	// (see `Look`).
+	int BodyPos = (int)Type.getAttribute(BODYPOSITION);
+	if(!RemoveWeaponCharges && (BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK)){
+		return false;
+	}
+	return true;
+}
+
+int GetItemDuration(Object Obj){
+	ObjectType Type = Obj.getObjectType();
+	int Seconds = 0;
+	if(Type.getFlag(EXPIRE)){
+		Seconds = (int)CronInfo(Obj, false);
+	}else{
+		Seconds = (int)Obj.getAttribute(SAVEDEXPIRETIME);
+		if(Seconds == 0){
+			if(!FullItemDurationLoaded){
+				LoadFullItemDurations();
+			}
+			auto It = FullItemDuration.find(Type.TypeID);
+			if(It != FullItemDuration.end()){
+				Seconds = It->second;
+			}
+		}
+	}
+	return std::max<int>(0, std::min<int>(Seconds, UINT16_MAX));
+}
+
+std::vector<int> GetItemDurationTypes(void){
+	std::vector<int> Result;
+	for(int TypeID = 100; ObjectTypeExists(TypeID); TypeID += 1){
+		if(HasItemDuration(ObjectType(TypeID))){
+			Result.push_back(TypeID);
+		}
+	}
+	return Result;
 }

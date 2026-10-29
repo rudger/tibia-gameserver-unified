@@ -104,6 +104,7 @@ enum ServerCommand: int {
 	SV_CMD_NPC_TRADE				= 122,	// send_npc_trade
 	SV_CMD_NPC_GOODS				= 123,	// send_npc_trade
 	SV_CMD_NPC_CLOSE_TRADE			= 124,	// send_npc_trade
+	SV_CMD_DURATION_TYPES			= 137,	// send_item_duration
 	SV_CMD_TRADE_OFFER_OWN			= 125,
 	SV_CMD_TRADE_OFFER_PARTNER		= 126,
 	SV_CMD_CLOSE_TRADE				= 127,

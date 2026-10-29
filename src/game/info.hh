@@ -1,12 +1,16 @@
 #ifndef TIBIA_INFO_HH_
 #define TIBIA_INFO_HH_ 1
 
+#include <vector>
 #include "common.hh"
 #include "map.hh"
 
 const char *GetLiquidName(int LiquidType);
 uint8 GetLiquidColor(int LiquidType);
 uint8 GetClientLiquid(int LiquidType);
+bool HasItemDuration(ObjectType Type);
+int GetItemDuration(Object Obj);
+std::vector<int> GetItemDurationTypes(void);
 ObjectType GetVialType(void);
 ObjectType GetFilledVialType(int LiquidType);
 int GetFilledVialLiquid(ObjectType Type);
