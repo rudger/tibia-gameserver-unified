@@ -93,6 +93,7 @@ extern bool SendOutfitList;
 extern bool SendNpcTrade;
 extern bool SendLootEffect;
 extern bool SendItemDuration;
+extern bool SendItemValues;
 extern bool OneActionDelay;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;

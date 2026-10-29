@@ -3304,6 +3304,21 @@ const std::vector<TShopItem> *GetNpcShop(const char *NpcName){
 	return &It->second;
 }
 
+// NOTE(rudger): Item values for loot frames (send_item_values): the most an
+// NPC pays for an object type.
+std::vector<std::pair<int, int>> GetItemValues(void){
+	std::map<int, int> Values;
+	for(const auto &Shop: NpcShops){
+		for(const TShopItem &Item: Shop.second){
+			int Value = GetShopPrice(Item.TypeID, Item.SellPrice);
+			if(Value > 0 && Value > Values[Item.TypeID]){
+				Values[Item.TypeID] = Value;
+			}
+		}
+	}
+	return std::vector<std::pair<int, int>>(Values.begin(), Values.end());
+}
+
 int GetShopPrice(int TypeID, int Price){
 	if(Price > 0 && RateNpcRunePrice > 1 && ObjectTypeExists(TypeID)
 			&& ObjectType(TypeID).getFlag(RUNE)){

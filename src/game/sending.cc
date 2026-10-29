@@ -408,6 +408,29 @@ void SendInitGame(TConnection *Connection, uint32 CreatureID){
 		}
 		FinishSendData(Connection);
 	}
+
+	// NOTE: Not part of the 7.72 protocol (send_item_values). The value of
+	// object types, for loot frames.
+	if(SendItemValues){
+		std::vector<std::pair<int, int>> Values = GetItemValues();
+		size_t Start = 0;
+		do{
+			// NOTE: Split into packets of at most 1000 entries.
+			size_t Count = std::min<size_t>(Values.size() - Start, 1000);
+			if(!BeginSendData(Connection)){
+				break;
+			}
+			SendByte(Connection, SV_CMD_ITEM_VALUES);
+			SendByte(Connection, (Start == 0 ? 1 : 0));
+			SendWord(Connection, (uint16)Count);
+			for(size_t i = Start; i < Start + Count; i += 1){
+				SendWord(Connection, (uint16)Values[i].first);
+				SendQuad(Connection, (uint32)Values[i].second);
+			}
+			FinishSendData(Connection);
+			Start += Count;
+		}while(Start < Values.size());
+	}
 }
 
 void SendRights(TConnection *Connection){

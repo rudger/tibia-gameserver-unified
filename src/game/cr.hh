@@ -1043,6 +1043,7 @@ struct TShopItem {
 void LoadNpcShops(void);
 const std::vector<TShopItem> *GetNpcShop(const char *NpcName);
 int GetShopPrice(int TypeID, int Price);
+std::vector<std::pair<int, int>> GetItemValues(void);
 TNPC *GetShopNpc(TPlayer *Player);
 bool OpenNpcTrade(TNPC *Npc, uint32 PlayerID);
 uint8 GetShopSubtype(const std::vector<TShopItem> *Shop, int Index);
