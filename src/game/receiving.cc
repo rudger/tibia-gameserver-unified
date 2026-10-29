@@ -262,8 +262,8 @@ static bool IsWalking(TPlayer *Player){
 
 // NOTE(rudger): An action is built into an empty ToDo list first, with the
 // walk put aside. When it needs no walking, it runs right away and the walk
-// goes on. While walking, uses, "use with" and moving objects inside the own
-// inventory (`WalkSafe`) never stop the walk: when such an action would need
+// goes on. While walking, using objects from the own inventory (also "use
+// with") and moving objects inside it (`WalkSafe`) never stop the walk: when such an action would need
 // its own walk or has to wait, it is refused instead. Other actions replace
 // the walk like in 7.72.
 //  With one_action_delay = false the same goes when standing still, without
@@ -403,6 +403,12 @@ static bool IsInventorySlot(TPlayer *Player, int Y){
 	}
 
 	return false;
+}
+
+// NOTE(rudger): Whether a used object is in the own inventory (also through
+// a hotkey, which only uses objects from the inventory).
+static bool IsInventoryUse(TPlayer *Player, int ObjX, int ObjY){
+	return ObjX == 0xFFFF && (ObjY == INVENTORY_ANY || IsInventorySlot(Player, ObjY));
 }
 
 static bool IsInventoryMove(TPlayer *Player, int OrigX, int OrigY, int DestX, int DestY){
@@ -631,7 +637,7 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
-	if(InstantAction(Player, true, true, [&](void){
+	if(InstantAction(Player, true, IsInventoryUse(Player, ObjX, ObjY), [&](void){
 				Player->ToDoUse(1, ObjX, ObjY, ObjZ, Type, RNum, Dummy, 0, 0, 0, 0, 0);
 			})){
 		return;
@@ -688,7 +694,7 @@ void CUseTwoObjects(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX1, ObjY1, Type1, RNum1);
 
-	if(InstantAction(Player, true, true, [&](void){
+	if(InstantAction(Player, true, IsInventoryUse(Player, ObjX1, ObjY1), [&](void){
 				Player->ToDoUse(2, ObjX1, ObjY1, ObjZ1, Type1, RNum1, 0,
 									ObjX2, ObjY2, ObjZ2, Type2, RNum2);
 			})){
@@ -767,7 +773,7 @@ void CUseOnCreature(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
-	if(InstantAction(Player, true, true, [&](void){
+	if(InstantAction(Player, true, IsInventoryUse(Player, ObjX, ObjY), [&](void){
 				Player->ToDoUse(2, Obj, Target->CrObject);
 			})){
 		return;
