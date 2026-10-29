@@ -18,6 +18,8 @@ enum BonusKind: int {
 	BONUS_AMULET	= 3,
 	BONUS_MAGIC		= 4,
 	BONUS_WAND		= 5,
+	BONUS_DISTANCE	= 6,
+	BONUS_DEFENSE	= 7,
 };
 
 int GetBonusKind(ObjectType Type);

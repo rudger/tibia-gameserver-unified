@@ -1697,8 +1697,12 @@ int GetBonusKind(ObjectType Type){
 		return BONUS_WAND;
 	}
 
+	if(Type.getFlag(BOW)){
+		return BONUS_DISTANCE;
+	}
+
 	if(Type.getFlag(SHIELD)){
-		return BONUS_ARMOR;
+		return BONUS_DEFENSE;
 	}
 
 	if(Type.getFlag(CLOTHES)){
@@ -1763,6 +1767,8 @@ void RollLootBonus(Object Obj){
 			case BONUS_AMULET:	Range = AmuletArmorBonus; break;
 			case BONUS_MAGIC:	Range = SpellbookMagicLevelBonus; break;
 			case BONUS_WAND:	Range = WandDamageBonus; break;
+			case BONUS_DISTANCE:	Range = DistanceAttackBonus; break;
+			case BONUS_DEFENSE:	Range = ShieldDefenseBonus; break;
 		}
 
 		int Bonus = random(Range.Min, Range.Max);

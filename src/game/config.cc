@@ -210,6 +210,8 @@ TBonusRange ArmorBonus = {1, 2};
 TBonusRange AmuletArmorBonus = {1, 2};
 TBonusRange SpellbookMagicLevelBonus = {1, 1};
 TBonusRange WandDamageBonus = {1, 5};
+TBonusRange DistanceAttackBonus = {1, 3};
+TBonusRange ShieldDefenseBonus = {1, 3};
 bool OneActionDelay;
 bool RemoveChargesFromVials;
 bool RemoveWeaponAmmunition;
@@ -916,6 +918,10 @@ void ReadAttributesConfig(void){
 		{"spellbook_magic_level_max",	&SpellbookMagicLevelBonus.Max},
 		{"wand_damage_min",				&WandDamageBonus.Min},
 		{"wand_damage_max",				&WandDamageBonus.Max},
+		{"distance_attack_min",			&DistanceAttackBonus.Min},
+		{"distance_attack_max",			&DistanceAttackBonus.Max},
+		{"shield_defense_min",			&ShieldDefenseBonus.Min},
+		{"shield_defense_max",			&ShieldDefenseBonus.Max},
 	};
 
 	char Line[512];
@@ -946,7 +952,8 @@ void ReadAttributesConfig(void){
 	fclose(File);
 
 	for(TBonusRange *Range: {&WeaponAttackBonus, &ArmorBonus, &AmuletArmorBonus,
-			&SpellbookMagicLevelBonus, &WandDamageBonus}){
+			&SpellbookMagicLevelBonus, &WandDamageBonus, &DistanceAttackBonus,
+			&ShieldDefenseBonus}){
 		Range->Min = std::max<int>(Range->Min, 0);
 		Range->Max = std::max<int>(Range->Max, Range->Min);
 	}

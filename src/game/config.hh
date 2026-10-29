@@ -107,6 +107,8 @@ extern TBonusRange ArmorBonus;
 extern TBonusRange AmuletArmorBonus;
 extern TBonusRange SpellbookMagicLevelBonus;
 extern TBonusRange WandDamageBonus;
+extern TBonusRange DistanceAttackBonus;
+extern TBonusRange ShieldDefenseBonus;
 void ReadAttributesConfig(void);
 extern bool OneActionDelay;
 extern bool RemoveChargesFromVials;

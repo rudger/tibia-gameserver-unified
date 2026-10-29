@@ -2011,6 +2011,8 @@ void Look(uint32 CreatureID, Object Obj){
 		// NOTE(rudger): Extra attributes of dropped loot (attributes.cfg) are
 		// shown next to the stats, e.g. "(Atk:14 +2 Def:12)".
 		int AttackBonus = GetObjectBonus(Obj, BONUS_ATTACK);
+		int DistanceBonus = GetObjectBonus(Obj, BONUS_DISTANCE);
+		int DefenseBonus = GetObjectBonus(Obj, BONUS_DEFENSE);
 		int ArmorBonus = GetObjectBonus(Obj, BONUS_ARMOR) + GetObjectBonus(Obj, BONUS_AMULET);
 
 		if(ObjType.getFlag(WEAPON)){
@@ -2034,9 +2036,9 @@ void Look(uint32 CreatureID, Object Obj){
 		}
 
 		if(ObjType.getFlag(SHIELD)){
-			if(ArmorBonus > 0){
-				snprintf(Help, sizeof(Help), " (Def:%u Arm:+%d)",
-						ObjType.getAttribute(SHIELDDEFENDVALUE), ArmorBonus);
+			if(DefenseBonus > 0){
+				snprintf(Help, sizeof(Help), " (Def:%u +%d)",
+						ObjType.getAttribute(SHIELDDEFENDVALUE), DefenseBonus);
 			}else{
 				snprintf(Help, sizeof(Help), " (Def:%u)",
 						ObjType.getAttribute(SHIELDDEFENDVALUE));
@@ -2053,8 +2055,13 @@ void Look(uint32 CreatureID, Object Obj){
 						ObjType.getAttribute(ARMORVALUE));
 			}
 			strcat(Description, Help);
-		}else if(!ObjType.getFlag(SHIELD) && ArmorBonus > 0){
+		}else if(ArmorBonus > 0){
 			snprintf(Help, sizeof(Help), " (Arm:+%d)", ArmorBonus);
+			strcat(Description, Help);
+		}
+
+		if(DistanceBonus > 0){
+			snprintf(Help, sizeof(Help), " (Atk:+%d)", DistanceBonus);
 			strcat(Description, Help);
 		}
 

@@ -170,7 +170,8 @@ void TCombat::GetAttackValue(int *Value, int *SkillNr){
 		WeaponType = (int)CloseType.getAttribute(WEAPONTYPE);
 	}else if(this->Missile != NONE){
 		ObjectType AmmoType = this->Ammo.getObjectType();
-		AttackValue = (int)AmmoType.getAttribute(AMMOATTACKVALUE);
+		AttackValue = (int)AmmoType.getAttribute(AMMOATTACKVALUE)
+				+ GetObjectBonus(this->Missile, BONUS_DISTANCE);
 		WeaponType = WEAPON_AMMO;
 	}else if(this->Throw != NONE){
 		ObjectType ThrowType = this->Throw.getObjectType();
@@ -193,7 +194,8 @@ void TCombat::GetDefendValue(int *Value, int *SkillNr){
 	int WeaponType;
 	if(this->Shield != NONE){
 		ObjectType ShieldType = this->Shield.getObjectType();
-		DefenseValue = (int)ShieldType.getAttribute(SHIELDDEFENDVALUE);
+		DefenseValue = (int)ShieldType.getAttribute(SHIELDDEFENDVALUE)
+				+ GetObjectBonus(this->Shield, BONUS_DEFENSE);
 		WeaponType = WEAPON_SHIELD;
 	}else if(this->Close != NONE){
 		ObjectType CloseType = this->Close.getObjectType();
@@ -298,12 +300,8 @@ int TCombat::GetArmorStrength(void){
 			}
 
 			// NOTE(rudger): Extra armor of dropped loot (attributes.cfg), for
-			// worn armor and amulets and for shields in a hand.
-			if(ObjType.getFlag(SHIELD)){
-				if(Position == INVENTORY_RIGHTHAND || Position == INVENTORY_LEFTHAND){
-					Armor += GetObjectBonus(Obj, BONUS_ARMOR);
-				}
-			}else if(ObjType.getFlag(CLOTHES) && (int)ObjType.getAttribute(BODYPOSITION) == Position){
+			// worn armor and amulets.
+			if(ObjType.getFlag(CLOTHES) && (int)ObjType.getAttribute(BODYPOSITION) == Position){
 				Armor += GetObjectBonus(Obj, BONUS_ARMOR) + GetObjectBonus(Obj, BONUS_AMULET);
 			}
 		}
