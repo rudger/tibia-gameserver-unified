@@ -532,6 +532,7 @@ struct TCreature: TSkillBase {
 	void Rotate(TCreature *Target);
 	void Move(Object Obj, int DestX, int DestY, int DestZ, uint8 Count);
 	void Trade(Object Obj, uint32 TradePartner);
+	void AttackWhileWalking(void);
 	void Use(Object Obj1, Object Obj2, uint8 Dummy);
 	void Turn(Object Obj);
 	void Attack(void);

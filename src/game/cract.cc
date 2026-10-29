@@ -725,6 +725,31 @@ void TCreature::Attack(void){
 	this->Combat.Attack();
 }
 
+// NOTE(rudger): Players attack their target while walking, like later
+// servers (TFS). Originally attacks only happen when the walk is done.
+void TCreature::AttackWhileWalking(void){
+	if(this->Type != PLAYER || this->Combat.AttackDest == 0 || this->Combat.Following){
+		return;
+	}
+
+	uint32 EarliestAttackTime = this->Combat.EarliestAttackTime;
+	if(EarliestAttackTime < this->EarliestSpellTime){
+		EarliestAttackTime = this->EarliestSpellTime;
+	}
+
+	if(EarliestAttackTime > ServerMilliseconds){
+		return;
+	}
+
+	try{
+		this->Combat.Attack();
+	}catch(RESULT r){
+		if(r != NOERROR && r != TARGETOUTOFRANGE && r != ERROR){
+			SendResult(this->Connection, r);
+		}
+	}
+}
+
 void TCreature::Execute(void){
 	while(true){
 		if(!this->LockToDo || this->IsDead || this->NextWakeup > ServerMilliseconds){
@@ -771,6 +796,7 @@ void TCreature::Execute(void){
 		try{
 			switch(TD.Code){
 				case TDGo:{
+					this->AttackWhileWalking();
 					this->Go(TD.Go.x, TD.Go.y, TD.Go.z);
 					break;
 				}

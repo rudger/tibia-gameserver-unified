@@ -260,18 +260,17 @@ static bool IsWalking(TPlayer *Player){
 	return Player->HasBufferedGo;
 }
 
-// NOTE(rudger): An action is built into an empty ToDo list first, with the
-// walk put aside. When it needs no walking, it runs right away and the walk
-// goes on. While walking, using objects from the own inventory (also "use
-// with") and moving objects inside it (`WalkSafe`) never stop the walk: when such an action would need
-// its own walk or has to wait, it is refused instead. Other actions replace
-// the walk like in 7.72.
+// NOTE(rudger): Like later servers (TFS). An action is built into an empty
+// ToDo list first, with the walk put aside. When everything is within reach
+// (inventory or next to the player), it runs right away and the walk goes on.
+// When the player has to walk to it first, the new route replaces the walk.
+// While walking, an exhausted rune or a too fast push is refused instead of
+// stopping the walk.
 //  With one_action_delay = false the same goes when standing still, without
 // the short 7.72 delay. Uses stay limited to one per 100 milliseconds.
-static bool InstantAction(TPlayer *Player, bool IsUse, bool WalkSafe,
-		const std::function<void(void)> &Build){
+static bool InstantAction(TPlayer *Player, bool IsUse, const std::function<void(void)> &Build){
 	bool Walking = IsWalking(Player);
-	if((OneActionDelay && !Walking) || (Walking && !WalkSafe)){
+	if(OneActionDelay && !Walking){
 		return false;
 	}
 
@@ -316,6 +315,7 @@ static bool InstantAction(TPlayer *Player, bool IsUse, bool WalkSafe,
 	Restore();
 
 	RESULT Refuse = NOERROR;
+	bool Replace = false;
 	bool PushCreature = false;
 	for(const TToDoEntry &TD: Action){
 		if(TD.Code == TDMove){
@@ -331,26 +331,22 @@ static bool InstantAction(TPlayer *Player, bool IsUse, bool WalkSafe,
 				Object Obj2(TD.Use.Obj2);
 				if(!Obj1.getObjectType().getFlag(DISTUSE)
 						&& !ObjectInRange(Player->ID, Obj2, 1)){
-					Refuse = OUTOFRANGE;
+					Replace = true;
 				}else if(Player->EarliestMultiuseTime > ServerMilliseconds){
 					Refuse = EXHAUSTED;
 				}
 			}
-		}else if(TD.Code == TDGo){
-			Refuse = OUTOFRANGE;
 		}else if(TD.Code != TDWait && TD.Code != TDTurn && TD.Code != TDTrade){
-			Refuse = ERROR;
+			Replace = true;
 		}
 	}
 
-	if(Refuse != NOERROR || (PushCreature && !Walking)){
-		if(Walking){
-			if(Refuse != ERROR){
-				SendResult(Player->Connection, Refuse);
-			}
-			return true;
-		}
+	if(!Replace && Walking && Refuse != NOERROR){
+		SendResult(Player->Connection, Refuse);
+		return true;
+	}
 
+	if(Replace || Refuse != NOERROR || (PushCreature && !Walking)){
 		// NOTE(rudger): Like before, the action replaces the ToDo list.
 		if(Player->LockToDo && Player->ToDoClear()){
 			SendSnapback(Player->Connection);
@@ -388,32 +384,6 @@ static bool InstantAction(TPlayer *Player, bool IsUse, bool WalkSafe,
 		}
 	}
 	return true;
-}
-
-// NOTE(rudger): Whether an object is moved from the own inventory or an open
-// container carried by the player to another such place.
-static bool IsInventorySlot(TPlayer *Player, int Y){
-	if(Y >= INVENTORY_FIRST && Y <= INVENTORY_LAST){
-		return true;
-	}
-
-	if(Y >= CONTAINER_FIRST && Y <= CONTAINER_LAST){
-		Object Con = GetBodyContainer(Player->ID, Y);
-		return Con != NONE && GetObjectCreatureID(Con) == Player->ID;
-	}
-
-	return false;
-}
-
-// NOTE(rudger): Whether a used object is in the own inventory (also through
-// a hotkey, which only uses objects from the inventory).
-static bool IsInventoryUse(TPlayer *Player, int ObjX, int ObjY){
-	return ObjX == 0xFFFF && (ObjY == INVENTORY_ANY || IsInventorySlot(Player, ObjY));
-}
-
-static bool IsInventoryMove(TPlayer *Player, int OrigX, int OrigY, int DestX, int DestY){
-	return OrigX == 0xFFFF && DestX == 0xFFFF && IsInventorySlot(Player, OrigY)
-		&& (DestY == INVENTORY_ANY || IsInventorySlot(Player, DestY));
 }
 
 void CMoveObject(TConnection *Connection, TReadBuffer *Buffer){
@@ -462,7 +432,7 @@ void CMoveObject(TConnection *Connection, TReadBuffer *Buffer){
 		RNum = 1;
 	}
 
-	if(InstantAction(Player, false, IsInventoryMove(Player, OrigX, OrigY, DestX, DestY), [&](void){
+	if(InstantAction(Player, false, [&](void){
 				Player->ToDoMove(OrigX, OrigY, OrigZ, Type, RNum, DestX, DestY, DestZ, Count);
 			})){
 		return;
@@ -515,7 +485,7 @@ void CTradeObject(TConnection *Connection, TReadBuffer *Buffer){
 		RNum = 1;
 	}
 
-	if(InstantAction(Player, false, false, [&](void){
+	if(InstantAction(Player, false, [&](void){
 				Player->ToDoTrade(ObjX, ObjY, ObjZ, Type, RNum, TradePartner);
 			})){
 		return;
@@ -637,7 +607,7 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
-	if(InstantAction(Player, true, IsInventoryUse(Player, ObjX, ObjY), [&](void){
+	if(InstantAction(Player, true, [&](void){
 				Player->ToDoUse(1, ObjX, ObjY, ObjZ, Type, RNum, Dummy, 0, 0, 0, 0, 0);
 			})){
 		return;
@@ -694,7 +664,7 @@ void CUseTwoObjects(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX1, ObjY1, Type1, RNum1);
 
-	if(InstantAction(Player, true, IsInventoryUse(Player, ObjX1, ObjY1), [&](void){
+	if(InstantAction(Player, true, [&](void){
 				Player->ToDoUse(2, ObjX1, ObjY1, ObjZ1, Type1, RNum1, 0,
 									ObjX2, ObjY2, ObjZ2, Type2, RNum2);
 			})){
@@ -773,7 +743,7 @@ void CUseOnCreature(TConnection *Connection, TReadBuffer *Buffer){
 
 	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
 
-	if(InstantAction(Player, true, IsInventoryUse(Player, ObjX, ObjY), [&](void){
+	if(InstantAction(Player, true, [&](void){
 				Player->ToDoUse(2, Obj, Target->CrObject);
 			})){
 		return;
@@ -821,7 +791,7 @@ void CTurnObject(TConnection *Connection, TReadBuffer *Buffer){
 		return;
 	}
 
-	if(InstantAction(Player, false, false, [&](void){
+	if(InstantAction(Player, false, [&](void){
 				Player->ToDoTurn(ObjX, ObjY, ObjZ, Type, RNum);
 			})){
 		return;
@@ -1147,6 +1117,14 @@ void CTalk(TConnection *Connection, TReadBuffer *Buffer){
 		Player->RequestTimestamp = RoundNr;
 		Player->RequestProcessingGamemaster = 0;
 		CreateGamemasterRequest(Player->Name, Text);
+	}else if(IsWalking(Player)){
+		// NOTE(rudger): Talk and cast spells without stopping the walk, like
+		// later servers (TFS).
+		try{
+			Talk(Player->ID, Mode, Addressee, Text, true);
+		}catch(RESULT r){
+			SendResult(Connection, r);
+		}
 	}else{
 		try{
 			Player->ToDoTalk(Mode, Addressee, Text, true);
@@ -1392,6 +1370,19 @@ void CAttack(TConnection *Connection, TReadBuffer *Buffer, bool Follow){
 	}
 
 	uint32 TargetID = Buffer->readQuad();
+	if(!Follow && Player->Combat.ChaseMode == CHASE_MODE_NONE && IsWalking(Player)){
+		// NOTE(rudger): Choose the target without stopping the walk, the
+		// attacks go on while walking (see `TCreature::Execute`).
+		try{
+			Player->Combat.SetAttackDest(TargetID, Follow);
+		}catch(RESULT r){
+			if(r != NOERROR){
+				SendResult(Connection, r);
+			}
+		}
+		return;
+	}
+
 	try{
 		Player->Combat.SetAttackDest(TargetID, Follow);
 		Player->ToDoAttack();
