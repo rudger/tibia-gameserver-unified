@@ -807,7 +807,8 @@ int ComputeDamage(TCreature *Actor, int SpellNr, int Damage, int Variation){
 
 	if(Actor != NULL && Actor->Type == PLAYER){
 		int Level = Actor->Skills[SKILL_LEVEL]->Get();
-		int MagicLevel = Actor->Skills[SKILL_MAGIC_LEVEL]->Get();
+		int MagicLevel = Actor->Skills[SKILL_MAGIC_LEVEL]->Get()
+				+ GetMagicLevelBonus(Actor->ID); // NOTE(rudger): Spellbook bonus (attributes.cfg).
 		int Multiplier = Level * 2 + MagicLevel * 3;
 		if(SpellNr != 0){
 			if((SpellList[SpellNr].Flags & 4) != 0 && Multiplier > 100){

@@ -2008,10 +2008,21 @@ void Look(uint32 CreatureID, Object Obj){
 			strcat(Description, Help);
 		}
 
+		// NOTE(rudger): Extra attributes of dropped loot (attributes.cfg) are
+		// shown next to the stats, e.g. "(Atk:14 +2 Def:12)".
+		int AttackBonus = GetObjectBonus(Obj, BONUS_ATTACK);
+		int ArmorBonus = GetObjectBonus(Obj, BONUS_ARMOR) + GetObjectBonus(Obj, BONUS_AMULET);
+
 		if(ObjType.getFlag(WEAPON)){
-			snprintf(Help, sizeof(Help), " (Atk:%u Def:%u)",
-					ObjType.getAttribute(WEAPONATTACKVALUE),
-					ObjType.getAttribute(WEAPONDEFENDVALUE));
+			if(AttackBonus > 0){
+				snprintf(Help, sizeof(Help), " (Atk:%u +%d Def:%u)",
+						ObjType.getAttribute(WEAPONATTACKVALUE), AttackBonus,
+						ObjType.getAttribute(WEAPONDEFENDVALUE));
+			}else{
+				snprintf(Help, sizeof(Help), " (Atk:%u Def:%u)",
+						ObjType.getAttribute(WEAPONATTACKVALUE),
+						ObjType.getAttribute(WEAPONDEFENDVALUE));
+			}
 			strcat(Description, Help);
 		}
 
@@ -2023,14 +2034,39 @@ void Look(uint32 CreatureID, Object Obj){
 		}
 
 		if(ObjType.getFlag(SHIELD)){
-			snprintf(Help, sizeof(Help), " (Def:%u)",
-					ObjType.getAttribute(SHIELDDEFENDVALUE));
+			if(ArmorBonus > 0){
+				snprintf(Help, sizeof(Help), " (Def:%u Arm:+%d)",
+						ObjType.getAttribute(SHIELDDEFENDVALUE), ArmorBonus);
+			}else{
+				snprintf(Help, sizeof(Help), " (Def:%u)",
+						ObjType.getAttribute(SHIELDDEFENDVALUE));
+			}
 			strcat(Description, Help);
 		}
 
 		if(ObjType.getFlag(ARMOR)){
-			snprintf(Help, sizeof(Help), " (Arm:%u)",
-					ObjType.getAttribute(ARMORVALUE));
+			if(ArmorBonus > 0){
+				snprintf(Help, sizeof(Help), " (Arm:%u +%d)",
+						ObjType.getAttribute(ARMORVALUE), ArmorBonus);
+			}else{
+				snprintf(Help, sizeof(Help), " (Arm:%u)",
+						ObjType.getAttribute(ARMORVALUE));
+			}
+			strcat(Description, Help);
+		}else if(!ObjType.getFlag(SHIELD) && ArmorBonus > 0){
+			snprintf(Help, sizeof(Help), " (Arm:+%d)", ArmorBonus);
+			strcat(Description, Help);
+		}
+
+		int MagicBonus = GetObjectBonus(Obj, BONUS_MAGIC);
+		if(MagicBonus > 0){
+			snprintf(Help, sizeof(Help), " (magic level +%d)", MagicBonus);
+			strcat(Description, Help);
+		}
+
+		int WandBonus = GetObjectBonus(Obj, BONUS_WAND);
+		if(WandBonus > 0){
+			snprintf(Help, sizeof(Help), " (damage +%d)", WandBonus);
 			strcat(Description, Help);
 		}
 

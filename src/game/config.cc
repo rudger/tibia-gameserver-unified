@@ -203,6 +203,13 @@ bool SendNpcTrade;
 bool SendLootEffect;
 bool SendItemDuration;
 bool SendItemValues;
+
+int LootBonusChance = 5;
+TBonusRange WeaponAttackBonus = {1, 3};
+TBonusRange ArmorBonus = {1, 2};
+TBonusRange AmuletArmorBonus = {1, 2};
+TBonusRange SpellbookMagicLevelBonus = {1, 1};
+TBonusRange WandDamageBonus = {1, 5};
 bool OneActionDelay;
 bool RemoveChargesFromVials;
 bool RemoveWeaponAmmunition;
@@ -869,6 +876,7 @@ void ReadConfig(void){
 
 	// Resolve all game data directories from root data directory (TFS style)
 	ResolveGameDataPaths();
+	ReadAttributesConfig();
 
 	if(GamePort == 0){
 		GamePort = 7172;
@@ -876,4 +884,71 @@ void ReadConfig(void){
 	if(Beat == 0){
 		Beat = 50;
 	}
+}
+
+// NOTE(rudger): attributes.cfg, next to config.cfg. Lines "key = value", '#'
+// starts a comment. Missing keys keep their default.
+void ReadAttributesConfig(void){
+	std::string FileName = "attributes.cfg";
+	if(LoadedConfigFile[0] != 0){
+		std::filesystem::path Dir = std::filesystem::path(LoadedConfigFile).parent_path();
+		FileName = (Dir / "attributes.cfg").string();
+	}
+
+	FILE *File = fopen(FileName.c_str(), "r");
+	if(File == NULL){
+		print(1, "ReadAttributesConfig: %s not found, using the defaults.\n", FileName.c_str());
+		return;
+	}
+
+	struct{
+		const char *Key;
+		int *Value;
+	} Keys[] = {
+		{"chance",						&LootBonusChance},
+		{"weapon_attack_min",			&WeaponAttackBonus.Min},
+		{"weapon_attack_max",			&WeaponAttackBonus.Max},
+		{"armor_min",					&ArmorBonus.Min},
+		{"armor_max",					&ArmorBonus.Max},
+		{"amulet_armor_min",			&AmuletArmorBonus.Min},
+		{"amulet_armor_max",			&AmuletArmorBonus.Max},
+		{"spellbook_magic_level_min",	&SpellbookMagicLevelBonus.Min},
+		{"spellbook_magic_level_max",	&SpellbookMagicLevelBonus.Max},
+		{"wand_damage_min",				&WandDamageBonus.Min},
+		{"wand_damage_max",				&WandDamageBonus.Max},
+	};
+
+	char Line[512];
+	while(fgets(Line, sizeof(Line), File) != NULL){
+		char *Comment = strchr(Line, '#');
+		if(Comment != NULL){
+			*Comment = 0;
+		}
+
+		char Key[128];
+		int Value;
+		if(sscanf(Line, " %127[a-zA-Z_] = %d", Key, &Value) != 2){
+			continue;
+		}
+
+		bool Known = false;
+		for(auto &Entry: Keys){
+			if(strcmp(Entry.Key, Key) == 0){
+				*Entry.Value = Value;
+				Known = true;
+			}
+		}
+
+		if(!Known){
+			print(1, "ReadAttributesConfig: Unknown key \"%s\".\n", Key);
+		}
+	}
+	fclose(File);
+
+	for(TBonusRange *Range: {&WeaponAttackBonus, &ArmorBonus, &AmuletArmorBonus,
+			&SpellbookMagicLevelBonus, &WandDamageBonus}){
+		Range->Min = std::max<int>(Range->Min, 0);
+		Range->Max = std::max<int>(Range->Max, Range->Min);
+	}
+	LootBonusChance = std::max<int>(0, std::min<int>(LootBonusChance, 100));
 }

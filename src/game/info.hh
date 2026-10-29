@@ -10,6 +10,20 @@ uint8 GetLiquidColor(int LiquidType);
 uint8 GetClientLiquid(int LiquidType);
 bool HasItemDuration(ObjectType Type);
 int GetItemDuration(Object Obj);
+
+enum BonusKind: int {
+	BONUS_NONE		= 0,
+	BONUS_ATTACK	= 1,
+	BONUS_ARMOR		= 2,
+	BONUS_AMULET	= 3,
+	BONUS_MAGIC		= 4,
+	BONUS_WAND		= 5,
+};
+
+int GetBonusKind(ObjectType Type);
+int GetObjectBonus(Object Obj, int Kind);
+int GetMagicLevelBonus(uint32 CreatureID);
+void RollLootBonus(Object Obj);
 std::vector<int> GetItemDurationTypes(void);
 ObjectType GetVialType(void);
 ObjectType GetFilledVialType(int LiquidType);

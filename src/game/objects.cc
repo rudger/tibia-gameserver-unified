@@ -76,7 +76,7 @@ static FLAG TypeAttributeFlags[62] = {
 	BANK, 					// MEANING
 };
 
-static FLAG InstanceAttributeFlags[18] = {
+static FLAG InstanceAttributeFlags[19] = {
 	CONTAINER,				// CONTENT
 	CHEST,					// CHESTQUESTNUMBER
 	CUMULATIVE,				// AMOUNT
@@ -95,6 +95,7 @@ static FLAG InstanceAttributeFlags[18] = {
 	EXPIRE,					// REMAININGEXPIRETIME
 	EXPIRESTOP,				// SAVEDEXPIRETIME
 	WEAROUT,				// REMAININGUSES
+	TAKE,					// BONUS
 };
 
 static const char FlagNames[66][30] = {
@@ -231,7 +232,7 @@ static const char TypeAttributeNames[62][30] = {
 	"Meaning",						// MEANING
 };
 
-static const char InstanceAttributeNames[18][30] = {
+static const char InstanceAttributeNames[19][30] = {
 	"Content",						// CONTENT
 	"ChestQuestNumber",				// CHESTQUESTNUMBER
 	"Amount",						// AMOUNT
@@ -250,6 +251,7 @@ static const char InstanceAttributeNames[18][30] = {
 	"RemainingExpireTime",			// REMAININGEXPIRETIME
 	"SavedExpireTime",				// SAVEDEXPIRETIME
 	"RemainingUses",				// REMAININGUSES
+	"Bonus",						// BONUS
 };
 
 // ObjectType

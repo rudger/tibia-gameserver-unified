@@ -1156,7 +1156,7 @@ void SaveObjects(Object Obj, TWriteStream *Stream, bool Stop){
 		}else{
 			ASSERT(Obj != NONE);
 			ObjectType ObjType = Obj.getObjectType();
-			for(int Attribute = 1; Attribute <= 17; Attribute += 1){
+			for(int Attribute = 1; Attribute <= BONUS; Attribute += 1){
 				if(ObjType.getAttributeOffset((INSTANCEATTRIBUTE)Attribute) != -1){
 					uint32 Value = 0;
 					if(Attribute == REMAININGEXPIRETIME){
@@ -1977,10 +1977,15 @@ void ChangeObject(Object Obj, ObjectType NewType){
 
 	uint32 Amount = 0;
 	uint32 SavedExpireTime = 0;
+	uint32 Bonus = 0;
 	int Delay = -1;
 
 	ObjectType OldType = Obj.getObjectType();
 	if(!OldType.isMapContainer()){
+		if(OldType.getFlag(TAKE)){
+			Bonus = Obj.getAttribute(BONUS);
+		}
+
 		if(OldType.getFlag(CUMULATIVE)){
 			Amount = Obj.getAttribute(AMOUNT);
 		}
@@ -2012,6 +2017,12 @@ void ChangeObject(Object Obj, ObjectType NewType){
 	}
 
 	Obj.setObjectType(NewType);
+
+	// NOTE(rudger): The attribute slots stay as they are when the type
+	// changes, so the bonus is set again (or cleared) for the new type.
+	if(NewType.getFlag(TAKE)){
+		Obj.setAttribute(BONUS, (GetBonusKind(NewType) != BONUS_NONE ? Bonus : 0));
+	}
 
 	if(NewType.getFlag(CUMULATIVE)){
 		if(Amount <= 0){

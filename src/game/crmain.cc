@@ -365,6 +365,11 @@ TCreature::~TCreature(void){
 					if(this->LoseInventory == LOSE_INVENTORY_ALL
 							|| Item.getObjectType().getFlag(CONTAINER)
 							|| random(0, 9) == 0){
+						// NOTE(rudger): A small chance on an extra attribute
+						// for monster loot (attributes.cfg).
+						if(this->Type != PLAYER){
+							RollLootBonus(Item);
+						}
 						::Move(0, Item, Corpse, -1, false, NONE);
 					}
 				}

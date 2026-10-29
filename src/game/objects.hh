@@ -99,7 +99,7 @@ struct TObjectType {
 	const char *Description;
 	uint8 Flags[9];
 	uint32 Attributes[62];
-	int AttributeOffsets[18];
+	int AttributeOffsets[19];
 };
 
 int GetFlagByName(const char *Name);

@@ -302,6 +302,7 @@ enum INSTANCEATTRIBUTE: int {
 	REMAININGEXPIRETIME			= 15,
 	SAVEDEXPIRETIME				= 16,
 	REMAININGUSES				= 17,
+	BONUS						= 18, // NOTE: Extra attribute of dropped loot (attributes.cfg).
 };
 
 // NOTE(fusion): Not in debug symbols.

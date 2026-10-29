@@ -165,7 +165,8 @@ void TCombat::GetAttackValue(int *Value, int *SkillNr){
 	int WeaponType;
 	if(this->Close != NONE){
 		ObjectType CloseType = this->Close.getObjectType();
-		AttackValue = (int)CloseType.getAttribute(WEAPONATTACKVALUE);
+		AttackValue = (int)CloseType.getAttribute(WEAPONATTACKVALUE)
+				+ GetObjectBonus(this->Close, BONUS_ATTACK);
 		WeaponType = (int)CloseType.getAttribute(WEAPONTYPE);
 	}else if(this->Missile != NONE){
 		ObjectType AmmoType = this->Ammo.getObjectType();
@@ -294,6 +295,16 @@ int TCombat::GetArmorStrength(void){
 			if(ObjType.getFlag(CLOTHES) && ObjType.getFlag(ARMOR)
 			&& (int)ObjType.getAttribute(BODYPOSITION) == Position){
 				Armor += (int)ObjType.getAttribute(ARMORVALUE);
+			}
+
+			// NOTE(rudger): Extra armor of dropped loot (attributes.cfg), for
+			// worn armor and amulets and for shields in a hand.
+			if(ObjType.getFlag(SHIELD)){
+				if(Position == INVENTORY_RIGHTHAND || Position == INVENTORY_LEFTHAND){
+					Armor += GetObjectBonus(Obj, BONUS_ARMOR);
+				}
+			}else if(ObjType.getFlag(CLOTHES) && (int)ObjType.getAttribute(BODYPOSITION) == Position){
+				Armor += GetObjectBonus(Obj, BONUS_ARMOR) + GetObjectBonus(Obj, BONUS_AMULET);
 			}
 		}
 	}
@@ -720,7 +731,8 @@ void TCombat::WandAttack(TCreature *Target){
 		}
 	}
 
-	int Damage = AttackStrength + random(-AttackVariation, AttackVariation);
+	int Damage = AttackStrength + random(-AttackVariation, AttackVariation)
+			+ GetObjectBonus(this->Wand, BONUS_WAND);
 	if(Target->Damage(Master, Damage, DamageType) > 0){
 		this->ActivateLearning();
 	}

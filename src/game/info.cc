@@ -1677,3 +1677,97 @@ std::vector<int> GetItemDurationTypes(void){
 	}
 	return Result;
 }
+
+// NOTE(rudger): Extra attributes on dropped loot (attributes.cfg). The
+// `BONUS` attribute holds the amount, its meaning follows from the type.
+int GetBonusKind(ObjectType Type){
+	if(Type.isCreatureContainer() || !Type.getFlag(TAKE) || Type.getFlag(CUMULATIVE)){
+		return BONUS_NONE;
+	}
+
+	if(Type.getFlag(WEAPON)){
+		int WeaponType = (int)Type.getAttribute(WEAPONTYPE);
+		if(WeaponType == WEAPON_SWORD || WeaponType == WEAPON_CLUB || WeaponType == WEAPON_AXE){
+			return BONUS_ATTACK;
+		}
+		return BONUS_NONE;
+	}
+
+	if(Type.getFlag(WAND)){
+		return BONUS_WAND;
+	}
+
+	if(Type.getFlag(SHIELD)){
+		return BONUS_ARMOR;
+	}
+
+	if(Type.getFlag(CLOTHES)){
+		int BodyPos = (int)Type.getAttribute(BODYPOSITION);
+		if(BodyPos == INVENTORY_NECK){
+			return BONUS_AMULET;
+		}
+
+		if(BodyPos == INVENTORY_HEAD || BodyPos == INVENTORY_TORSO
+				|| BodyPos == INVENTORY_LEGS || BodyPos == INVENTORY_FEET){
+			return BONUS_ARMOR;
+		}
+		return BONUS_NONE;
+	}
+
+	if(strstr(Type.getName(1), "spellbook") != NULL){
+		return BONUS_MAGIC;
+	}
+	return BONUS_NONE;
+}
+
+int GetObjectBonus(Object Obj, int Kind){
+	if(!Obj.exists()){
+		return 0;
+	}
+
+	ObjectType Type = Obj.getObjectType();
+	if(GetBonusKind(Type) != Kind || Type.getAttributeOffset(BONUS) == -1){
+		return 0;
+	}
+	return (int)Obj.getAttribute(BONUS);
+}
+
+int GetMagicLevelBonus(uint32 CreatureID){
+	int Bonus = 0;
+	for(int Position = INVENTORY_RIGHTHAND; Position <= INVENTORY_LEFTHAND; Position += 1){
+		Bonus += GetObjectBonus(GetBodyObject(CreatureID, Position), BONUS_MAGIC);
+	}
+	return Bonus;
+}
+
+void RollLootBonus(Object Obj){
+	if(!Obj.exists()){
+		return;
+	}
+
+	ObjectType Type = Obj.getObjectType();
+	if(Type.getFlag(CONTAINER)){
+		Object Help = GetFirstContainerObject(Obj);
+		while(Help != NONE){
+			RollLootBonus(Help);
+			Help = Help.getNextObject();
+		}
+	}
+
+	int Kind = GetBonusKind(Type);
+	if(Kind != BONUS_NONE && LootBonusChance > 0 && random(1, 100) <= LootBonusChance){
+		TBonusRange Range = {0, 0};
+		switch(Kind){
+			case BONUS_ATTACK:	Range = WeaponAttackBonus; break;
+			case BONUS_ARMOR:	Range = ArmorBonus; break;
+			case BONUS_AMULET:	Range = AmuletArmorBonus; break;
+			case BONUS_MAGIC:	Range = SpellbookMagicLevelBonus; break;
+			case BONUS_WAND:	Range = WandDamageBonus; break;
+		}
+
+		int Bonus = random(Range.Min, Range.Max);
+		if(Bonus > 0){
+			Obj.setAttribute(BONUS, (uint32)Bonus);
+		}
+	}
+}

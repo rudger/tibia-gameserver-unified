@@ -94,6 +94,20 @@ extern bool SendNpcTrade;
 extern bool SendLootEffect;
 extern bool SendItemDuration;
 extern bool SendItemValues;
+
+// NOTE(rudger): Extra attributes on dropped loot (attributes.cfg).
+struct TBonusRange {
+	int Min;
+	int Max;
+};
+
+extern int LootBonusChance;
+extern TBonusRange WeaponAttackBonus;
+extern TBonusRange ArmorBonus;
+extern TBonusRange AmuletArmorBonus;
+extern TBonusRange SpellbookMagicLevelBonus;
+extern TBonusRange WandDamageBonus;
+void ReadAttributesConfig(void);
 extern bool OneActionDelay;
 extern bool RemoveChargesFromVials;
 extern bool RemoveWeaponAmmunition;
