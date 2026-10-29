@@ -245,13 +245,36 @@ void CRotate(TConnection *Connection, int Direction){
 	}
 }
 
-// NOTE(rudger): one_action_delay = false. An action is built into an empty
-// ToDo list first, with the walk put aside. When it needs no walking, it runs
-// right away and the walk goes on; otherwise it replaces the walk like before.
-// Uses stay limited to one per 100 milliseconds, like the 7.72 delay.
-static bool InstantAction(TPlayer *Player, bool IsUse, const std::function<void(void)> &Build){
-	if(OneActionDelay || (IsUse && Player->EarliestInstantUseTime > ServerMilliseconds)){
+// NOTE(rudger): True while the player still has steps to walk, e.g. the
+// auto walk after a map click.
+static bool IsWalking(TPlayer *Player){
+	if(!Player->LockToDo){
 		return false;
+	}
+
+	for(int i = Player->ActToDo; i < Player->NrToDo; i += 1){
+		if(Player->ToDoList.at(i)->Code == TDGo){
+			return true;
+		}
+	}
+	return Player->HasBufferedGo;
+}
+
+// NOTE(rudger): An action is built into an empty ToDo list first, with the
+// walk put aside. When it needs no walking, it runs right away and the walk
+// goes on. While walking nothing else stops the walk: an action that would
+// need its own walk or has to wait is refused instead. Only walking by hand,
+// a new map click, stop/escape or follow replace the walk.
+//  With one_action_delay = false the same goes when standing still, without
+// the short 7.72 delay. Uses stay limited to one per 100 milliseconds.
+static bool InstantAction(TPlayer *Player, bool IsUse, const std::function<void(void)> &Build){
+	bool Walking = IsWalking(Player);
+	if(OneActionDelay && !Walking){
+		return false;
+	}
+
+	if(IsUse && Player->EarliestInstantUseTime > ServerMilliseconds){
+		return Walking;
 	}
 
 	std::vector<TToDoEntry> Saved;
@@ -290,28 +313,43 @@ static bool InstantAction(TPlayer *Player, bool IsUse, const std::function<void(
 	}
 	Restore();
 
-	bool Instant = true;
+	RESULT Refuse = NOERROR;
+	bool PushCreature = false;
 	for(const TToDoEntry &TD: Action){
 		if(TD.Code == TDMove){
 			if(Object(TD.Move.Obj).getObjectType().isCreatureContainer()){
-				Instant = false;
+				PushCreature = true;
+				if(Player->EarliestInstantPushTime > ServerMilliseconds){
+					Refuse = EXHAUSTED;
+				}
 			}
 		}else if(TD.Code == TDUse){
 			if(TD.Use.Obj2 != 0){
 				Object Obj1(TD.Use.Obj1);
 				Object Obj2(TD.Use.Obj2);
-				if(Player->EarliestMultiuseTime > ServerMilliseconds
-						|| (!Obj1.getObjectType().getFlag(DISTUSE)
-							&& !ObjectInRange(Player->ID, Obj2, 1))){
-					Instant = false;
+				if(!Obj1.getObjectType().getFlag(DISTUSE)
+						&& !ObjectInRange(Player->ID, Obj2, 1)){
+					Refuse = OUTOFRANGE;
+				}else if(Player->EarliestMultiuseTime > ServerMilliseconds){
+					Refuse = EXHAUSTED;
 				}
 			}
-		}else if(TD.Code != TDWait && TD.Code != TDTurn){
-			Instant = false;
+		}else if(TD.Code == TDGo){
+			Refuse = OUTOFRANGE;
+		}else if(TD.Code != TDWait && TD.Code != TDTurn && TD.Code != TDTrade){
+			Refuse = ERROR;
 		}
 	}
 
-	if(!Instant){
+	if(Refuse != NOERROR || (PushCreature && !Walking)){
+		if(Walking){
+			if(Refuse != ERROR){
+				SendResult(Player->Connection, Refuse);
+			}
+			return true;
+		}
+
+		// NOTE(rudger): Like before, the action replaces the ToDo list.
 		if(Player->LockToDo && Player->ToDoClear()){
 			SendSnapback(Player->Connection);
 		}
@@ -326,6 +364,10 @@ static bool InstantAction(TPlayer *Player, bool IsUse, const std::function<void(
 		Player->EarliestInstantUseTime = ServerMilliseconds + 100;
 	}
 
+	if(PushCreature){
+		Player->EarliestInstantPushTime = ServerMilliseconds + 1000;
+	}
+
 	try{
 		for(const TToDoEntry &TD: Action){
 			if(TD.Code == TDMove){
@@ -334,6 +376,8 @@ static bool InstantAction(TPlayer *Player, bool IsUse, const std::function<void(
 				Player->Use(Object(TD.Use.Obj1), Object(TD.Use.Obj2), TD.Use.Dummy);
 			}else if(TD.Code == TDTurn){
 				Player->Turn(Object(TD.Turn.Obj));
+			}else if(TD.Code == TDTrade){
+				Player->Trade(Object(TD.Trade.Obj), TD.Trade.Partner);
 			}
 		}
 	}catch(RESULT r){
@@ -441,6 +485,12 @@ void CTradeObject(TConnection *Connection, TReadBuffer *Buffer){
 	// TODO(fusion): Same as `CMoveObject`.
 	if(ObjX != 0xFFFF){
 		RNum = 1;
+	}
+
+	if(InstantAction(Player, false, [&](void){
+				Player->ToDoTrade(ObjX, ObjY, ObjZ, Type, RNum, TradePartner);
+			})){
+		return;
 	}
 
 	try{
@@ -558,35 +608,6 @@ void CUseObject(TConnection *Connection, TReadBuffer *Buffer){
 	}
 
 	SendHotkeyUseMessage(Connection, Player, ObjX, ObjY, Type, RNum);
-
-	// NOTE(rudger): Opening a container from the inventory while walking (e.g.
-	// auto walk after a map click) used to clear the walk with a snapback.
-	// Open it right away and leave the walk as it is, like later servers do.
-	if(ObjX == 0xFFFF && Type.getFlag(CONTAINER) && Player->LockToDo){
-		try{
-			if(ObjY >= CONTAINER_FIRST && ObjY <= CONTAINER_LAST){
-				Object RootCon = GetBodyContainer(Player->ID, ObjY);
-				if(RootCon != NONE && !ObjectAccessible(Player->ID, RootCon, 1)){
-					throw NOTACCESSIBLE;
-				}
-			}
-
-			Object Obj = GetObject(Player->ID, ObjX, ObjY, ObjZ, RNum, Type);
-			if(!Obj.exists()){
-				throw NOTACCESSIBLE;
-			}
-			Player->Use(Obj, NONE, Dummy);
-		}catch(RESULT r){
-			SendResult(Connection, r);
-		}
-		return;
-	}
-
-	if(InstantAction(Player, true, [&](void){
-				Player->ToDoUse(1, ObjX, ObjY, ObjZ, Type, RNum, Dummy, 0, 0, 0, 0, 0);
-			})){
-		return;
-	}
 
 	try{
 		Player->ToDoWait(100);
@@ -1092,6 +1113,13 @@ void CTalk(TConnection *Connection, TReadBuffer *Buffer){
 		Player->RequestTimestamp = RoundNr;
 		Player->RequestProcessingGamemaster = 0;
 		CreateGamemasterRequest(Player->Name, Text);
+	}else if(IsWalking(Player)){
+		// NOTE(rudger): Talk and cast spells without stopping the walk.
+		try{
+			Talk(Player->ID, Mode, Addressee, Text, true);
+		}catch(RESULT r){
+			SendResult(Connection, r);
+		}
 	}else{
 		try{
 			Player->ToDoTalk(Mode, Addressee, Text, true);
@@ -1337,6 +1365,19 @@ void CAttack(TConnection *Connection, TReadBuffer *Buffer, bool Follow){
 	}
 
 	uint32 TargetID = Buffer->readQuad();
+	if(!Follow && IsWalking(Player)){
+		// NOTE(rudger): Choose the target without stopping the walk, the
+		// attack starts when the walk is done.
+		try{
+			Player->Combat.SetAttackDest(TargetID, Follow);
+		}catch(RESULT r){
+			if(r != NOERROR){
+				SendResult(Connection, r);
+			}
+		}
+		return;
+	}
+
 	try{
 		Player->Combat.SetAttackDest(TargetID, Follow);
 		Player->ToDoAttack();
