@@ -961,6 +961,30 @@ void InsertChainCreature(TCreature *Creature, int CoordX, int CoordY);
 void DeleteChainCreature(TCreature *Creature);
 void MoveChainCreature(TCreature *Creature, int CoordX, int CoordY);
 void ProcessCreatures(void);
+
+// NOTE(rudger): Auto loot (auto_loot), see autoloot.cc.
+constexpr int MAX_AUTOLOOT_RULES = 50;
+
+struct TAutoLootRule {
+	std::string Item;
+	std::string Backpack;
+};
+
+struct TAutoLoot {
+	bool Loaded = false;
+	bool On = false;
+	bool Fallback = true;
+	std::vector<TAutoLootRule> Rules;
+};
+
+TAutoLoot *GetAutoLoot(uint32 CharacterID);
+void GetAutoLootRuleInfo(const TAutoLootRule &Rule, int *ItemType, std::string *ItemName,
+		int *BackpackType, std::string *BackpackName);
+void AutoLootAddRule(TPlayer *Player, const char *Item, const char *Backpack);
+void AutoLootRemoveRule(TPlayer *Player, int Index);
+void AutoLootSetSettings(TPlayer *Player, bool On, bool Fallback);
+void AutoLootSendList(TPlayer *Player);
+void AutoLootCorpse(TPlayer *Player, Object Corpse);
 void AddLootEffect(Object Corpse);
 void RemoveLootEffect(Object Con);
 void ProcessLootEffects(void);

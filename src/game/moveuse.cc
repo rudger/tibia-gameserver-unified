@@ -1583,6 +1583,12 @@ void UseContainer(uint32 CreatureID, Object Con, int NextContainerNr){
 	}
 
 	if(!ContainerClosed){
+		// NOTE(rudger): Auto loot (auto_loot) the listed objects of a corpse
+		// before it opens.
+		if(ConType.getFlag(CORPSE)){
+			AutoLootCorpse(Player, Con);
+		}
+
 		Player->SetOpenContainer(NextContainerNr, Con);
 		SendContainer(Player->Connection, NextContainerNr);
 	}

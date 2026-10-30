@@ -1686,6 +1686,33 @@ void CNpcSell(TConnection *Connection, TReadBuffer *Buffer){
 	}
 }
 
+// NOTE(rudger): Auto loot window (auto_loot).
+void CAutoLootRequest(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	AutoLootSendList(Player);
+}
+
+void CAutoLootAdd(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	char Item[64];
+	char Backpack[64];
+	Buffer->readString(Item, sizeof(Item));
+	Buffer->readString(Backpack, sizeof(Backpack));
+	AutoLootAddRule(Player, Item, Backpack);
+}
+
+void CAutoLootRemove(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	int Index = Buffer->readByte();
+	AutoLootRemoveRule(Player, Index);
+}
+
+void CAutoLootSettings(TConnection *Connection, TReadBuffer *Buffer){
+	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
+	int Flags = Buffer->readByte();
+	AutoLootSetSettings(Player, (Flags & 1) != 0, (Flags & 2) != 0);
+}
+
 void CNpcClose(TConnection *Connection, TReadBuffer *Buffer){
 	TPlayer *Player = (Connection != NULL ? Connection->GetPlayer() : NULL);
 	if(Player != NULL){
@@ -2067,6 +2094,10 @@ void ReceiveData(TConnection *Connection){
 			case CL_CMD_NPC_BUY:				CNpcBuy(Connection, &Buffer); break;
 			case CL_CMD_NPC_SELL:				CNpcSell(Connection, &Buffer); break;
 			case CL_CMD_NPC_CLOSE:				CNpcClose(Connection, &Buffer); break;
+			case CL_CMD_AUTOLOOT_REQUEST:		CAutoLootRequest(Connection, &Buffer); break;
+			case CL_CMD_AUTOLOOT_ADD:			CAutoLootAdd(Connection, &Buffer); break;
+			case CL_CMD_AUTOLOOT_REMOVE:		CAutoLootRemove(Connection, &Buffer); break;
+			case CL_CMD_AUTOLOOT_SETTINGS:		CAutoLootSettings(Connection, &Buffer); break;
 			default:{
 				print(3, "Unbekanntes Kommando %d.\n", Command);
 				break;

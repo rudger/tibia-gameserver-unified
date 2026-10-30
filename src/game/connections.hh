@@ -75,6 +75,10 @@ enum ClientCommand: int {
 	CL_CMD_BUG_REPORT				= 230,
 	CL_CMD_RULE_VIOLATION			= 231,
 	CL_CMD_ERROR_FILE_ENTRY			= 232,
+	CL_CMD_AUTOLOOT_REQUEST			= 240,	// auto_loot
+	CL_CMD_AUTOLOOT_ADD				= 241,	// auto_loot
+	CL_CMD_AUTOLOOT_REMOVE			= 242,	// auto_loot
+	CL_CMD_AUTOLOOT_SETTINGS		= 243,	// auto_loot
 };
 
 enum ServerCommand: int {
@@ -106,6 +110,7 @@ enum ServerCommand: int {
 	SV_CMD_NPC_CLOSE_TRADE			= 124,	// send_npc_trade
 	SV_CMD_DURATION_TYPES			= 137,	// send_item_duration
 	SV_CMD_ITEM_VALUES				= 138,	// send_item_values
+	SV_CMD_AUTOLOOT_LIST			= 136,	// auto_loot
 	SV_CMD_TRADE_OFFER_OWN			= 125,
 	SV_CMD_TRADE_OFFER_PARTNER		= 126,
 	SV_CMD_CLOSE_TRADE				= 127,
@@ -249,6 +254,8 @@ bool BeginSendData(TConnection *Connection);
 struct TShopItem;
 void SendNpcTradeWindow(TConnection *Connection, const std::vector<TShopItem> *Shop);
 void SendNpcGoods(TConnection *Connection, const std::vector<TShopItem> *Shop);
+struct TAutoLoot;
+void SendAutoLootList(TConnection *Connection, TAutoLoot *AutoLoot);
 void SendNpcCloseTrade(TConnection *Connection);
 void FinishSendData(TConnection *Connection);
 void SkipFlush(TConnection *Connection);

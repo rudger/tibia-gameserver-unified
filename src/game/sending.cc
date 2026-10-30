@@ -2012,3 +2012,25 @@ void InitSending(void){
 void ExitSending(void){
 	// no-op
 }
+
+// NOTE: Not part of the 7.72 protocol (auto_loot). The auto loot settings and
+// list for the Auto Loot window of The Forgotten Client.
+void SendAutoLootList(TConnection *Connection, TAutoLoot *AutoLoot){
+	if(AutoLoot == NULL || !BeginSendData(Connection)){
+		return;
+	}
+
+	SendByte(Connection, SV_CMD_AUTOLOOT_LIST);
+	SendByte(Connection, (uint8)((AutoLoot->On ? 1 : 0) | (AutoLoot->Fallback ? 2 : 0)));
+	SendByte(Connection, (uint8)AutoLoot->Rules.size());
+	for(const TAutoLootRule &Rule: AutoLoot->Rules){
+		int ItemType, BackpackType;
+		std::string ItemName, BackpackName;
+		GetAutoLootRuleInfo(Rule, &ItemType, &ItemName, &BackpackType, &BackpackName);
+		SendWord(Connection, (uint16)ItemType);
+		SendString(Connection, ItemName.c_str());
+		SendWord(Connection, (uint16)BackpackType);
+		SendString(Connection, BackpackName.c_str());
+	}
+	FinishSendData(Connection);
+}

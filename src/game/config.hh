@@ -94,6 +94,7 @@ extern bool SendNpcTrade;
 extern bool SendLootEffect;
 extern bool SendItemDuration;
 extern bool SendItemValues;
+extern bool AutoLootEnabled;
 
 // NOTE(rudger): Extra attributes on dropped loot (attributes.cfg).
 struct TBonusRange {

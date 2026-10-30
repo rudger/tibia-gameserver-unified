@@ -203,6 +203,7 @@ bool SendNpcTrade;
 bool SendLootEffect;
 bool SendItemDuration;
 bool SendItemValues;
+bool AutoLootEnabled;
 
 int LootBonusChance = 5;
 TBonusRange WeaponAttackBonus = {1, 3};
@@ -362,6 +363,7 @@ void ReadConfig(void){
 	SendLootEffect = false;
 	SendItemDuration = false;
 	SendItemValues = false;
+	AutoLootEnabled = false;
 	OneActionDelay = true;
 	RemoveChargesFromVials = true;
 	RemoveWeaponAmmunition = true;
@@ -631,6 +633,9 @@ void ReadConfig(void){
 		}else if(strcmp(Identifier, "one_action_delay") == 0 || strcmp(Identifier, "oneactiondelay") == 0){
 			const char *val = Script.readIdentifier();
 			OneActionDelay = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "auto_loot") == 0 || strcmp(Identifier, "autoloot") == 0){
+			const char *val = Script.readIdentifier();
+			AutoLootEnabled = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "send_item_values") == 0 || strcmp(Identifier, "senditemvalues") == 0){
 			const char *val = Script.readIdentifier();
 			SendItemValues = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
