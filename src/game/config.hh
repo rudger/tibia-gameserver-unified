@@ -172,6 +172,15 @@ extern char ServerLocation[64];
 extern int  StatusTimeout;
 extern char LoadedConfigFile[4096];
 
+// Live Cast System Configuration
+extern bool ActiveLiveCasts;
+extern int  LiveCastMaxSpectators;
+
+// Account Manager Configuration
+extern bool AccountManagerEnabled;
+extern bool AccountManagerChooseVocation;
+extern int  AccountManagerMaxCharacters;
+
 void ReadConfig(void);
 
 #endif //TIBIA_CONFIG_HH_

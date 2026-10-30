@@ -9,6 +9,8 @@
 #include "threads.hh"
 #include "writer.hh"
 
+#include <vector>
+
 static Semaphore PlayerMutex(1);
 static vector<TPlayer*> PlayerList(0, 100, 10, NULL);
 static int FirstFreePlayer;
@@ -63,6 +65,9 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 	this->MutingEndRound = 0;
 	this->NumberOfMutings = 0;
 	this->GhostMode = false;
+	this->IsCasting = false;
+	this->CastPassword[0] = 0;
+	this->CastDescription[0] = 0;
 
 	memset(this->Rights, 0, sizeof(this->Rights));
 
@@ -175,6 +180,43 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 		this->Skills[SKILL_LEVEL]->Exp = 100;
 		this->Skills[SKILL_LEVEL]->LastLevel = 100;
 		this->Skills[SKILL_LEVEL]->NextLevel = 200;
+	}else if(PlayerData->LastLoginTime == 0){
+		char InitProf[32] = {};
+		char InitRes[32] = {};
+		if(DB_GetCharacterInitInfo(CharacterID, InitProf, sizeof(InitProf), InitRes, sizeof(InitRes))){
+			uint8 TargetProf = PROFESSION_NONE;
+			if(stricmp(InitProf, "Knight") == 0){
+				TargetProf = PROFESSION_KNIGHT;
+			}else if(stricmp(InitProf, "Paladin") == 0){
+				TargetProf = PROFESSION_PALADIN;
+			}else if(stricmp(InitProf, "Sorcerer") == 0){
+				TargetProf = PROFESSION_SORCERER;
+			}else if(stricmp(InitProf, "Druid") == 0){
+				TargetProf = PROFESSION_DRUID;
+			}
+
+			if(TargetProf != PROFESSION_NONE && this->Profession == PROFESSION_NONE){
+				this->Skills[SKILL_LEVEL]->Act = 8;
+				this->Skills[SKILL_LEVEL]->Exp = 4200;
+				this->Skills[SKILL_LEVEL]->LastLevel = 4200;
+				this->Skills[SKILL_LEVEL]->NextLevel = 6500;
+				this->Skills[SKILL_HITPOINTS]->Advance(7);
+				this->Skills[SKILL_MANA]->Advance(7);
+				this->Skills[SKILL_GO_STRENGTH]->Advance(7);
+				this->Skills[SKILL_CARRY_STRENGTH]->Advance(7);
+				this->Skills[SKILL_HITPOINTS]->SetMax();
+				this->Skills[SKILL_MANA]->SetMax();
+				this->SetProfession(TargetProf);
+
+				if(InitRes[0] == 0 || !GetMarkPosition(InitRes, &this->startx, &this->starty, &this->startz)){
+					GetStartPosition(&this->startx, &this->starty, &this->startz, false);
+				}
+				this->posx = this->startx;
+				this->posy = this->starty;
+				this->posz = this->startz;
+				PlayerData->Dirty = true;
+			}
+		}
 	}
 
 	if(CoordinateFlag(this->posx, this->posy, this->posz, BED)){
@@ -236,6 +278,9 @@ TPlayer::TPlayer(TConnection *Connection, uint32 CharacterID):
 
 TPlayer::~TPlayer(void){
 	LogoutOrder(this);
+	if(this->IsCasting){
+		this->StopCast();
+	}
 	if(this->ConstructError != NOERROR){
 		this->DelInList();
 		return;
@@ -326,6 +371,7 @@ TPlayer::~TPlayer(void){
 	this->DelInList();
 
 	PlayerData->Dirty = true;
+	SavePlayerPoolSlot(PlayerData);
 	// TODO(fusion): Something is telling me that `PlayerData->Sticky` is also poorly managed.
 	DecreasePlayerPoolSlotSticky(PlayerData);
 	ReleasePlayerPoolSlot(PlayerData);
@@ -661,7 +707,6 @@ void TPlayer::LoadInventory(bool SetStandardInventory){
 			error("# Fehler: %s\n", str);
 		}
 	}else if(SetStandardInventory
-			&& this->Profession == PROFESSION_NONE
 			&& !CheckRight(this->ID, ZERO_CAPACITY)){
 		try{
 			Create(GetBodyContainer(this->ID, INVENTORY_RIGHTHAND),
@@ -3307,6 +3352,12 @@ TPlayerIndexEntry *SearchPlayerIndex(const char *Name){
 	return NULL;
 }
 
+void RegisterNewPlayerInIndex(const char *Name, uint32 CharacterID){
+	if(Name != NULL && Name[0] != 0 && CharacterID != 0){
+		InsertPlayerIndex(&PlayerIndexHead, 0, Name, CharacterID);
+	}
+}
+
 bool PlayerExists(const char *Name){
 	if(Name == NULL){
 		error("PlayerExists: Name ist NULL.\n");
@@ -3399,3 +3450,57 @@ void ExitPlayer(void){
 	CreatePlayerList(false);
 	ExitPlayerIndex();
 }
+
+// Live Cast System implementation
+void TPlayer::BroadcastToSpectators(const uint8 *Data, int Size){
+	for(size_t i = 0; i < this->Spectators.size(); ){
+		TConnection *SpecConn = this->Spectators[i];
+		if(SpecConn == NULL || !SpecConn->Live() || SpecConn->Overflow){
+			if(SpecConn != NULL && SpecConn->Overflow){
+				SpecConn->Disconnect();
+			}
+			this->Spectators.erase(this->Spectators.begin() + i);
+			continue;
+		}
+		BroadcastChunkToSpectator(SpecConn, Data, Size);
+		++i;
+	}
+}
+
+bool TPlayer::AddSpectator(TConnection *Connection){
+	if(Connection == NULL) return false;
+	for(TConnection *Conn : this->Spectators){
+		if(Conn == Connection) return true;
+	}
+	this->Spectators.push_back(Connection);
+	return true;
+}
+
+void TPlayer::RemoveSpectator(TConnection *Connection){
+	for(auto it = this->Spectators.begin(); it != this->Spectators.end(); ++it){
+		if(*it == Connection){
+			this->Spectators.erase(it);
+			break;
+		}
+	}
+}
+
+void TPlayer::StopCast(void){
+	this->IsCasting = false;
+	this->CastPassword[0] = 0;
+	this->CastDescription[0] = 0;
+
+	std::vector<TConnection*> CurrentSpectators = this->Spectators;
+	this->Spectators.clear();
+
+	for(TConnection *SpecConn : CurrentSpectators){
+		if(SpecConn != NULL && SpecConn->Live()){
+			SpecConn->SwitchCast(102); // Tenta zapping para outro cast
+			if(SpecConn->CastingPlayerID == this->ID || SpecConn->CastingPlayerID == 0){
+				SendMessage(SpecConn, TALK_FAILURE_MESSAGE, "The live cast broadcast has ended.");
+				SpecConn->Disconnect();
+			}
+		}
+	}
+}
+

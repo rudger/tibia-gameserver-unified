@@ -198,7 +198,7 @@ void AdvanceGame(int Delay){
 			OldAmbiente = Brightness;
 			TConnection *Connection = GetFirstConnection();
 			while(Connection != NULL){
-				if(Connection->Live()){
+				if(Connection->Live() && !Connection->IsCastSpectator){
 					SendAmbiente(Connection);
 				}
 				Connection = GetNextConnection();

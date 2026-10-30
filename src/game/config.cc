@@ -274,6 +274,15 @@ char ServerLocation[64];
 int  StatusTimeout;
 char LoadedConfigFile[4096] = {0};
 
+// Live Cast System Configuration
+bool ActiveLiveCasts = true;
+int  LiveCastMaxSpectators = 25;
+
+// Account Manager Configuration
+bool AccountManagerEnabled = true;
+bool AccountManagerChooseVocation = false;
+int  AccountManagerMaxCharacters = 15;
+
 static char PasswordKey[9] = "Pm-,o%yD";
 
 static void DisguisePassword(char *Password, char *Key){
@@ -416,6 +425,11 @@ void ReadConfig(void){
 	strncpy(ServerURL, "https://otservlist.org", sizeof(ServerURL) - 1);
 	strncpy(ServerLocation, "Brazil", sizeof(ServerLocation) - 1);
 	StatusTimeout = 5000;
+	ActiveLiveCasts = true;
+	LiveCastMaxSpectators = 25;
+	AccountManagerEnabled = true;
+	AccountManagerChooseVocation = false;
+	AccountManagerMaxCharacters = 15;
 
 	LoadedConfigFile[0] = 0;
 	char FileName[4096] = {0};
@@ -852,6 +866,19 @@ void ReadConfig(void){
 			Script.readSymbol(',');
 			strncpy(MANAGER_DATABASE.Port, Script.readString(), sizeof(MANAGER_DATABASE.Port) - 1);
 			Script.readSymbol(')');
+		}else if(strcmp(Identifier, "live_cast_enabled") == 0 || strcmp(Identifier, "active_live_casts") == 0 || strcmp(Identifier, "activelivecasts") == 0){
+			const char *val = Script.readIdentifier();
+			ActiveLiveCasts = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "live_cast_max_spectators") == 0 || strcmp(Identifier, "livecastmaxspectators") == 0){
+			LiveCastMaxSpectators = Script.readNumber();
+		}else if(strcmp(Identifier, "account_manager_enabled") == 0 || strcmp(Identifier, "accountmanager") == 0 || strcmp(Identifier, "account_manager") == 0){
+			const char *val = Script.readIdentifier();
+			AccountManagerEnabled = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "account_manager_choose_vocation") == 0 || strcmp(Identifier, "accountmanagerchoosevocation") == 0){
+			const char *val = Script.readIdentifier();
+			AccountManagerChooseVocation = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+		}else if(strcmp(Identifier, "account_manager_max_characters") == 0 || strcmp(Identifier, "accountmanagermaxcharacters") == 0){
+			AccountManagerMaxCharacters = Script.readNumber();
 		}else if(strcmp(Identifier, "querymanager") == 0){
 			Script.readSymbol('{');
 			do{

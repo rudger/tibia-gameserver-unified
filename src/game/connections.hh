@@ -163,6 +163,24 @@ struct TKnownCreature {
 	TConnection *Connection;
 };
 
+enum AccountManagerState: int {
+	AM_STATE_NONE = 0,
+	AM_STATE_GUEST_MENU,
+	AM_STATE_GUEST_ASK_ACC,
+	AM_STATE_GUEST_ASK_PASS,
+	AM_STATE_GUEST_CONFIRM_ACC,
+	AM_STATE_ACCOUNT_MENU,
+	AM_STATE_ACC_ASK_NEW_PASS,
+	AM_STATE_ACC_CONFIRM_PASS,
+	AM_STATE_CHAR_ASK_NAME,
+	AM_STATE_CHAR_ASK_SEX,
+	AM_STATE_CHAR_ASK_VOCATION,
+	AM_STATE_CHAR_ASK_TOWN,
+	AM_STATE_CHAR_CONFIRM,
+};
+
+#define ACCOUNT_MANAGER_VIRTUAL_ID 0x3FFFFFFFU
+
 struct TConnection {
 	TConnection(void);
 	void Process(void);
@@ -183,6 +201,7 @@ struct TConnection {
 	void Logout(int Delay, bool StopFight);
 	void Close(bool Delay);
 	void Disconnect(void);
+	void SwitchCast(int Direction);
 	TPlayer *GetPlayer(void);
 	const char *GetName(void);
 	void GetPosition(int *x, int *y, int *z);
@@ -236,8 +255,32 @@ struct TConnection {
 	int TerminalHeight;
 	uint32 CharacterID;
 	char Name[31];
+	bool IsCastSpectator;
+	uint32 CastingPlayerID;
+	bool SuppressCastBroadcast;
+	int64 LastCastSwitchMs;
+	int64 LastCastMessageMs;
+	bool IsAccountManager;
+	uint32 ManagerAccountID;
+	AccountManagerState ManagerState;
+	uint32 DraftAccountID;
+	char DraftPassword[32];
+	char DraftCharName[30];
+	int DraftCharSex;
+	int DraftCharVocation;
+	char DraftCharTown[30];
+	int64 LastManagerTalkMs;
 	TKnownCreature KnownCreatureTable[150];
 };
+
+struct TCharacterLoginData;
+
+// Live Cast System helpers
+int GetActiveCastCount(void);
+int GetActiveCastList(struct TCharacterLoginData *OutData, int MaxCount, const char *PasswordFilter);
+
+// Account Manager helpers
+void HandleAccountManagerTalk(TConnection *Connection, const char *Text);
 
 // connections.cc
 TConnection *AssignFreeConnection(void);
@@ -258,6 +301,7 @@ struct TAutoLoot;
 void SendAutoLootList(TConnection *Connection, TAutoLoot *AutoLoot);
 void SendNpcCloseTrade(TConnection *Connection);
 void FinishSendData(TConnection *Connection);
+void BroadcastChunkToSpectator(TConnection *SpecConn, const uint8 *ChunkData, int ChunkSize);
 void SkipFlush(TConnection *Connection);
 void SendMapObject(TConnection *Connection, Object Obj);
 void SendMapPoint(TConnection *Connection, int x, int y, int z);

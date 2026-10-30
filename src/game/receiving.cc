@@ -14,6 +14,16 @@ bool CommandAllowed(TConnection *Connection, int Command){
 		return false;
 	}
 
+	if(Connection->IsCastSpectator || Connection->IsAccountManager){
+		return Command == CL_CMD_LOGOUT
+			|| Command == CL_CMD_PING
+			|| (Command >= CL_CMD_GO_PATH && Command <= CL_CMD_ROTATE_WEST)
+			|| Command == CL_CMD_ATTACK
+			|| Command == CL_CMD_FOLLOW
+			|| Command == CL_CMD_CANCEL
+			|| Command == CL_CMD_TALK;
+	}
+
 	if(Connection->State == CONNECTION_GAME){
 		return Command != CL_CMD_LOGIN_REQUEST
 			&& Command != CL_CMD_LOGIN;
@@ -2029,6 +2039,116 @@ void ReceiveData(TConnection *Connection){
 	}
 
 	Connection->ResetTimer(Command);
+
+	if(Connection->IsCastSpectator){
+		if(Command == CL_CMD_LOGOUT){
+			Connection->Logout(0, true);
+			return;
+		}else if(Command == CL_CMD_PING){
+			SendPing(Connection);
+			return;
+		}else if(Command >= CL_CMD_ROTATE_NORTH && Command <= CL_CMD_ROTATE_WEST){
+			Connection->SwitchCast(Command);
+			return;
+		}else if(Command >= CL_CMD_GO_PATH && Command <= CL_CMD_GO_NORTHWEST){
+			SendSnapback(Connection);
+			return;
+		}else if(Command == CL_CMD_ATTACK || Command == CL_CMD_FOLLOW || Command == CL_CMD_CANCEL){
+			SendClearTarget(Connection);
+			return;
+		}else if(Command == CL_CMD_TALK){
+			try{
+				uint8 Mode = Buffer.readByte();
+				char Addressee[30] = {};
+				if(Mode == TALK_PRIVATE_MESSAGE || Mode == TALK_GAMEMASTER_MESSAGE || Mode == TALK_ANONYMOUS_MESSAGE){
+					Buffer.readString(Addressee, sizeof(Addressee));
+				}
+				if(Mode == TALK_CHANNEL_CALL || Mode == TALK_GAMEMASTER_CHANNELCALL || Mode == TALK_ANONYMOUS_CHANNELCALL){
+					Buffer.readWord();
+				}
+				char Text[256] = {};
+				Buffer.readString(Text, sizeof(Text));
+				if(Text[0] != 0 && Connection->CastingPlayerID != 0){
+					TPlayer *Caster = ::GetPlayer(Connection->CastingPlayerID);
+					if(Caster != NULL){
+						int64 now = GetClockMonotonicMS();
+						constexpr int64 ChatCooldownMs = 2500;
+						if(now - Connection->LastCastMessageMs < ChatCooldownMs){
+							int remainingSecs = (int)((ChatCooldownMs - (now - Connection->LastCastMessageMs) + 999) / 1000);
+							SendMessage(Connection, TALK_FAILURE_MESSAGE, "You need to wait %d second%s to speak again.",
+								remainingSecs, remainingSecs == 1 ? "" : "s");
+							return;
+						}
+						Connection->LastCastMessageMs = now;
+
+						char SpecTag[64] = "Spectator";
+						for(size_t s = 0; s < Caster->Spectators.size(); ++s){
+							if(Caster->Spectators[s] == Connection){
+								snprintf(SpecTag, sizeof(SpecTag), "Spectator [%zu]", s + 1);
+								break;
+							}
+						}
+
+						if(Caster->Connection != NULL){
+							Caster->Connection->SuppressCastBroadcast = true;
+							SendMessage(Caster->Connection, TALK_LOGIN_MESSAGE, "[Cast] %s: %s", SpecTag, Text);
+							Caster->Connection->SuppressCastBroadcast = false;
+						}
+						for(size_t s = 0; s < Caster->Spectators.size(); ++s){
+							TConnection *Spec = Caster->Spectators[s];
+							if(Spec != NULL && Spec->InGame()){
+								if(Spec == Connection){
+									SendMessage(Spec, TALK_LOGIN_MESSAGE, "[You -> Cast]: %s", Text);
+								}else{
+									SendMessage(Spec, TALK_LOGIN_MESSAGE, "[Cast] %s: %s", SpecTag, Text);
+								}
+							}
+						}
+					}
+				}
+			}catch(...){}
+			return;
+		}
+		return;
+	}
+
+	if(Connection->IsAccountManager){
+		if(Command == CL_CMD_LOGOUT){
+			Connection->Logout(0, true);
+			return;
+		}else if(Command == CL_CMD_PING){
+			SendPing(Connection);
+			return;
+		}else if(Command >= CL_CMD_GO_PATH && Command <= CL_CMD_GO_NORTHWEST){
+			if(Command != CL_CMD_GO_STOP){
+				SendMessage(Connection, TALK_FAILURE_MESSAGE, "Sorry, not possible.");
+			}
+			SendSnapback(Connection);
+			return;
+		}else if(Command == CL_CMD_ATTACK || Command == CL_CMD_FOLLOW || Command == CL_CMD_CANCEL){
+			SendClearTarget(Connection);
+			return;
+		}else if(Command == CL_CMD_TALK){
+			try{
+				uint8 Mode = Buffer.readByte();
+				char Addressee[30] = {};
+				if(Mode == TALK_PRIVATE_MESSAGE || Mode == TALK_GAMEMASTER_MESSAGE || Mode == TALK_ANONYMOUS_MESSAGE){
+					Buffer.readString(Addressee, sizeof(Addressee));
+				}
+				if(Mode == TALK_CHANNEL_CALL || Mode == TALK_GAMEMASTER_CHANNELCALL || Mode == TALK_ANONYMOUS_CHANNELCALL){
+					Buffer.readWord();
+				}
+				char Text[256] = {};
+				Buffer.readString(Text, sizeof(Text));
+				if(Text[0] != 0){
+					HandleAccountManagerTalk(Connection, Text);
+				}
+			}catch(...){}
+			return;
+		}
+		return;
+	}
+
 	try{
 		switch(Command){
 			case CL_CMD_LOGOUT:					CQuitGame(Connection, &Buffer); break;

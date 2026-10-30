@@ -52,6 +52,32 @@ bool BeginSendData(TConnection *Connection){
 	return Result;
 }
 
+void BroadcastChunkToSpectator(TConnection *SpecConn, const uint8 *ChunkData, int ChunkSize){
+	if(SpecConn == NULL || !SpecConn->Live() || SpecConn->State == CONNECTION_LOGIN){
+		return;
+	}
+
+	int OutDataCommitted = (SpecConn->NextToCommit - SpecConn->NextToSend);
+	int OutDataCapacity = (int)sizeof(SpecConn->OutData);
+	if((OutDataCommitted + ChunkSize) >= OutDataCapacity){
+		SpecConn->Overflow = true;
+		return;
+	}
+
+	SpecConn->NextToWrite = SpecConn->NextToCommit;
+	for(int i = 0; i < ChunkSize; ++i){
+		SpecConn->OutData[SpecConn->NextToWrite % OutDataCapacity] = ChunkData[i];
+		SpecConn->NextToWrite += 1;
+	}
+	SpecConn->NextToCommit = SpecConn->NextToWrite;
+
+	if(!SpecConn->WillingToSend){
+		SpecConn->WillingToSend = true;
+		SpecConn->NextSendingConnection = FirstSendingConnection;
+		FirstSendingConnection = SpecConn;
+	}
+}
+
 void FinishSendData(TConnection *Connection){
 	if(Connection == NULL){
 		error("FinishSendData: Verbindung ist NULL.\n");
@@ -66,6 +92,21 @@ void FinishSendData(TConnection *Connection){
 	if(Connection->Overflow){
 		print(2, "FinishSendData: Puffer ist voll. Paket wird nicht versandt.\n");
 		return;
+	}
+
+	int ChunkSize = Connection->NextToWrite - Connection->NextToCommit;
+	if(ChunkSize > 0 && Connection->InGame() && !Connection->IsCastSpectator && !Connection->IsAccountManager && !Connection->SuppressCastBroadcast){
+		TPlayer *Player = Connection->GetPlayer();
+		if(Player != NULL && Player->IsCasting && !Player->Spectators.empty()){
+			constexpr int OutDataCap = (int)sizeof(Connection->OutData);
+			uint8 TempChunk[16384];
+			if(ChunkSize <= (int)sizeof(TempChunk)){
+				for(int i = 0; i < ChunkSize; ++i){
+					TempChunk[i] = Connection->OutData[(Connection->NextToCommit + i) % OutDataCap];
+				}
+				Player->BroadcastToSpectators(TempChunk, ChunkSize);
+			}
+		}
 	}
 
 	Connection->NextToCommit = Connection->NextToWrite;
@@ -292,6 +333,57 @@ void SendMapObject(TConnection *Connection, Object Obj){
 }
 
 void SendMapPoint(TConnection *Connection, int x, int y, int z){
+	if(Connection->IsAccountManager){
+		int PlayerX, PlayerY, PlayerZ;
+		Connection->GetPosition(&PlayerX, &PlayerY, &PlayerZ);
+		bool IsCenterTile = (x == PlayerX && y == PlayerY && z == PlayerZ);
+
+		Object Obj = GetFirstObject(x, y, z);
+		bool HasNonCreatureObj = false;
+		Object CheckObj = Obj;
+		while(CheckObj != NONE){
+			if(!CheckObj.getObjectType().isCreatureContainer()){
+				HasNonCreatureObj = true;
+				break;
+			}
+			CheckObj = CheckObj.getNextObject();
+		}
+
+		if(HasNonCreatureObj || IsCenterTile){
+			SkipFlush(Connection);
+			int ObjCount = 0;
+			while(Obj != NONE && ObjCount < MAX_OBJECTS_PER_POINT){
+				if(!Obj.getObjectType().isCreatureContainer()){
+					SendItem(Connection, Obj);
+					ObjCount += 1;
+				}
+				Obj = Obj.getNextObject();
+			}
+			if(IsCenterTile && ObjCount < MAX_OBJECTS_PER_POINT){
+				SendWord(Connection, 97);
+				SendQuad(Connection, 0);
+				SendQuad(Connection, ACCOUNT_MANAGER_VIRTUAL_ID);
+				SendString(Connection, "Account Manager");
+				SendByte(Connection, 100);
+				SendByte(Connection, DIRECTION_SOUTH);
+				TOutfit amOutfit = {};
+				amOutfit.OutfitID = 128;
+				amOutfit.Colors[0] = 78;
+				amOutfit.Colors[1] = 69;
+				amOutfit.Colors[2] = 58;
+				amOutfit.Colors[3] = 76;
+				SendOutfit(Connection, amOutfit);
+				SendByte(Connection, 6);
+				SendByte(Connection, 215);
+				SendWord(Connection, 0);
+				SendByte(Connection, SKULL_NONE);
+				SendByte(Connection, PARTY_SHIELD_NONE);
+			}
+		}
+		Skip += 1;
+		return;
+	}
+
 	Object Obj = GetFirstObject(x, y, z);
 	if(Obj != NONE){
 		SkipFlush(Connection);
@@ -441,7 +533,7 @@ void SendRights(TConnection *Connection){
 	SendByte(Connection, SV_CMD_RIGHTS);
 
 	// NOTE(fusion): See `CheckBanishmentRight`.
-	bool Count = 0;
+	int Count = 0;
 	for(int Reason = 0; Reason <= 31; Reason += 1){
 		uint8 Actions = 0;
 		if(CheckRight(Connection->CharacterID, (RIGHT)(Reason + 18))){
@@ -1239,6 +1331,23 @@ void SendPlayerData(TConnection *Connection){
 		return;
 	}
 
+	if(Connection->IsAccountManager){
+		SendByte(Connection, SV_CMD_PLAYER_DATA);
+		SendWord(Connection, 150);
+		SendWord(Connection, 150);
+		SendWord(Connection, 400);
+		SendQuad(Connection, 0);
+		SendWord(Connection, 1);
+		SendByte(Connection, 0);
+		SendWord(Connection, 0);
+		SendWord(Connection, 0);
+		SendByte(Connection, 0);
+		SendByte(Connection, 0);
+		SendByte(Connection, 100);
+		FinishSendData(Connection);
+		return;
+	}
+
 	TPlayer *Player = Connection->GetPlayer();
 	if(Player == NULL){
 		error("SendStatus: Zu dieser Verbindung gehört kein Spieler.\n");
@@ -1330,6 +1439,16 @@ void SendPlayerData(TConnection *Connection){
 
 void SendPlayerSkills(TConnection *Connection){
 	if(!BeginSendData(Connection)){
+		return;
+	}
+
+	if(Connection->IsAccountManager){
+		SendByte(Connection, SV_CMD_PLAYER_SKILLS);
+		for(int i = 0; i < 7; ++i){
+			SendByte(Connection, 10);
+			SendByte(Connection, 0);
+		}
+		FinishSendData(Connection);
 		return;
 	}
 
@@ -1780,18 +1899,22 @@ void SendMessage(TConnection *Connection, int Mode, const char *Text, ...){
 }
 
 void SendSnapback(TConnection *Connection){
+	if(Connection == NULL){
+		return;
+	}
+
+	TPlayer *Player = Connection->GetPlayer();
+	if(Player == NULL && !Connection->IsAccountManager && !Connection->IsCastSpectator){
+		return;
+	}
+
 	if(!BeginSendData(Connection)){
 		return;
 	}
 
-	// TODO(fusion): Sometimes we check, sometimes we don't.
-	TPlayer *Player = Connection->GetPlayer();
-	if(Player == NULL){
-		return;
-	}
-
+	uint8 Direction = (Player != NULL) ? (uint8)Player->Direction : (uint8)DIRECTION_SOUTH;
 	SendByte(Connection, SV_CMD_SNAPBACK);
-	SendByte(Connection, (uint8)Player->Direction);
+	SendByte(Connection, Direction);
 	FinishSendData(Connection);
 }
 
@@ -1957,7 +2080,7 @@ void BroadcastMessage(int Mode, const char *Text, ...){
 
 	TConnection *Connection = GetFirstConnection();
 	while(Connection != NULL){
-		if(Connection->Live()){
+		if(Connection->Live() && !Connection->IsCastSpectator){
 			SendMessage(Connection, Mode, "%s", Message);
 		}
 		Connection = GetNextConnection();
