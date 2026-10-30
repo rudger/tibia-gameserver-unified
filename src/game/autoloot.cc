@@ -333,17 +333,52 @@ static void CollectLoot(TAutoLoot *AutoLoot, Object Obj, std::vector<Object> *Lo
 	}
 }
 
-static bool MoveLoot(TPlayer *Player, Object Obj, Object Con){
+// NOTE(rudger): Why an object could not be looted.
+enum LootFailure: int {
+	LOOT_DONE			= 0,
+	LOOT_FULL			= 1,
+	LOOT_CAPACITY		= 2,
+	LOOT_NO_BACKPACK	= 3,
+};
+
+static int MoveLoot(TPlayer *Player, Object Obj, Object Con){
 	if(Con == NONE){
-		return false;
+		return LOOT_NO_BACKPACK;
 	}
 
 	try{
 		Move(Player->ID, Obj, Con, -1, false, NONE);
-		return true;
+		return LOOT_DONE;
 	}catch(RESULT r){
-		return false;
+		return (r == TOOHEAVY ? LOOT_CAPACITY : LOOT_FULL);
 	}
+}
+
+// NOTE(rudger): Orange text over the own character (like monster talk), only
+// for this player.
+static void SendLootFailure(TPlayer *Player, const std::vector<std::string> &Names, const char *Reason){
+	if(Names.empty()){
+		return;
+	}
+
+	std::string Text = "Auto Loot: Can't loot ";
+	int Shown = std::min<int>((int)Names.size(), 3);
+	for(int i = 0; i < Shown; i += 1){
+		if(i > 0){
+			Text += ", ";
+		}
+		Text += Names[i];
+	}
+
+	if((int)Names.size() > Shown){
+		Text += " and " + std::to_string(Names.size() - Shown) + " more";
+	}
+
+	Text += " (";
+	Text += Reason;
+	Text += ").";
+	SendTalk(Player->Connection, 0, "", TALK_ANIMAL_LOW,
+			Player->posx, Player->posy, Player->posz, Text.c_str());
 }
 
 void AutoLootCorpse(TPlayer *Player, Object Corpse){
@@ -359,7 +394,9 @@ void AutoLootCorpse(TPlayer *Player, Object Corpse){
 	std::vector<Object> Loot;
 	CollectLoot(AutoLoot, GetFirstContainerObject(Corpse), &Loot, 0);
 
-	std::string Looted, Failed;
+	// NOTE(rudger): Nothing is said when it works, only what could not be
+	// looted and why. The objects stay in the corpse.
+	std::vector<std::string> Full, Capacity, NoBackpack;
 	for(Object Obj: Loot){
 		if(!Obj.exists()){
 			continue;
@@ -375,31 +412,24 @@ void AutoLootCorpse(TPlayer *Player, Object Corpse){
 		std::string Name = Type.getName(Amount);
 
 		Object Con = FindLootContainer(Player, FindContainerTypes(Rule->Backpack));
-		std::string Where = Rule->Backpack;
-		bool Done = MoveLoot(Player, Obj, Con);
-		if(!Done && AutoLoot->Fallback){
+		int Result = MoveLoot(Player, Obj, Con);
+		if(Result != LOOT_DONE && AutoLoot->Fallback){
 			Object Main = GetBodyObject(Player->ID, INVENTORY_BAG);
-			if(Main != NONE && Main.getObjectType().getFlag(CONTAINER)){
-				Done = MoveLoot(Player, Obj, Main);
-				Where = "main backpack";
+			if(Main != NONE && Main != Con && Main.getObjectType().getFlag(CONTAINER)){
+				Result = MoveLoot(Player, Obj, Main);
 			}
 		}
 
-		std::string &List = (Done ? Looted : Failed);
-		if(!List.empty()){
-			List += ", ";
-		}
-		List += Name;
-		if(Done){
-			List += " (" + Where + ")";
+		if(Result == LOOT_FULL){
+			Full.push_back(Name);
+		}else if(Result == LOOT_CAPACITY){
+			Capacity.push_back(Name);
+		}else if(Result == LOOT_NO_BACKPACK){
+			NoBackpack.push_back(Name);
 		}
 	}
 
-	if(!Looted.empty()){
-		SendMessage(Player->Connection, TALK_INFO_MESSAGE, "Auto loot: %.200s.", Looted.c_str());
-	}
-
-	if(!Failed.empty()){
-		SendMessage(Player->Connection, TALK_FAILURE_MESSAGE, "Auto loot: could not take %.180s (no room or too heavy).", Failed.c_str());
-	}
+	SendLootFailure(Player, Capacity, "no capacity");
+	SendLootFailure(Player, Full, "backpack is full");
+	SendLootFailure(Player, NoBackpack, "backpack not found");
 }
