@@ -305,6 +305,80 @@ static void DisguisePassword(char *Password, char *Key){
 	}
 }
 
+// NOTE(rudger): Options of our own extensions. They are read here and not in
+// the chain of `ReadConfig`, which gets too deep for MSVC (error C1061).
+static bool ReadExtensionOption(const char *Identifier, TReadScriptFile &Script){
+	if(strcmp(Identifier, "send_message_level") == 0 || strcmp(Identifier, "sendmessagelevel") == 0){
+		const char *val = Script.readIdentifier();
+		SendMessageLevel = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_npc_trade") == 0 || strcmp(Identifier, "sendnpctrade") == 0){
+		const char *val = Script.readIdentifier();
+		SendNpcTrade = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "one_action_delay") == 0 || strcmp(Identifier, "oneactiondelay") == 0){
+		const char *val = Script.readIdentifier();
+		OneActionDelay = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "auto_loot") == 0 || strcmp(Identifier, "autoloot") == 0){
+		const char *val = Script.readIdentifier();
+		AutoLootEnabled = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_item_values") == 0 || strcmp(Identifier, "senditemvalues") == 0){
+		const char *val = Script.readIdentifier();
+		SendItemValues = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_item_duration") == 0 || strcmp(Identifier, "senditemduration") == 0){
+		const char *val = Script.readIdentifier();
+		SendItemDuration = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_loot_effect") == 0 || strcmp(Identifier, "sendlooteffect") == 0){
+		const char *val = Script.readIdentifier();
+		SendLootEffect = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_outfit_list") == 0 || strcmp(Identifier, "sendoutfitlist") == 0){
+		const char *val = Script.readIdentifier();
+		SendOutfitList = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_stamina") == 0 || strcmp(Identifier, "sendstamina") == 0){
+		const char *val = Script.readIdentifier();
+		SendStamina = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_liquid_type") == 0 || strcmp(Identifier, "sendliquidtype") == 0){
+		const char *val = Script.readIdentifier();
+		SendLiquidType = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_pz_icon") == 0 || strcmp(Identifier, "sendpzicon") == 0){
+		const char *val = Script.readIdentifier();
+		SendPZIcon = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "send_food_time") == 0 || strcmp(Identifier, "sendfoodtime") == 0){
+		const char *val = Script.readIdentifier();
+		SendFoodTime = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "remove_charges_from_runes") == 0 || strcmp(Identifier, "removechargesfromrunes") == 0){
+		const char *val = Script.readIdentifier();
+		RemoveChargesFromRunes = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "remove_charges_from_vials") == 0 || strcmp(Identifier, "removechargesfromvials") == 0 || strcmp(Identifier, "remove_charges_from_potions") == 0 || strcmp(Identifier, "removechargesfrompotions") == 0){
+		const char *val = Script.readIdentifier();
+		RemoveChargesFromVials = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "remove_weapon_ammunition") == 0 || strcmp(Identifier, "removeweaponammunition") == 0){
+		const char *val = Script.readIdentifier();
+		RemoveWeaponAmmunition = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "remove_weapon_charges") == 0 || strcmp(Identifier, "removeweaponcharges") == 0){
+		const char *val = Script.readIdentifier();
+		RemoveWeaponCharges = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "free_capacity") == 0 || strcmp(Identifier, "freecapacity") == 0){
+		const char *val = Script.readIdentifier();
+		FreeCapacity = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "always_light") == 0 || strcmp(Identifier, "alwayslight") == 0 || strcmp(Identifier, "ambient_light") == 0){
+		const char *val = Script.readIdentifier();
+		AlwaysLight = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else if(strcmp(Identifier, "rate_conjure_rune") == 0 || strcmp(Identifier, "rateconjurerune") == 0){
+		RateConjureRune = std::max(Script.readNumber(), 1);
+	}else if(strcmp(Identifier, "rate_conjure_ammo") == 0 || strcmp(Identifier, "rateconjureammo") == 0){
+		RateConjureAmmo = std::max(Script.readNumber(), 1);
+	}else if(strcmp(Identifier, "rate_conjure_food") == 0 || strcmp(Identifier, "rateconjurefood") == 0){
+		RateConjureFood = std::max(Script.readNumber(), 1);
+	}else if(strcmp(Identifier, "rate_npc_rune_price") == 0 || strcmp(Identifier, "ratenpcruneprice") == 0){
+		RateNpcRunePrice = std::max(Script.readNumber(), 1);
+	}else if(strcmp(Identifier, "require_worms_for_fishing") == 0 || strcmp(Identifier, "requirewormsforfishing") == 0){
+		const char *val = Script.readIdentifier();
+		RequireWormsForFishing = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
+	}else{
+		return false;
+	}
+	return true;
+}
+
 void ReadConfig(void){
 	PrivateWorld = false;
 	strncpy(GameAddress, "0.0.0.0", 8);
@@ -466,7 +540,9 @@ void ReadConfig(void){
 			Identifier[sizeof(Identifier) - 1] = 0;
 			Script.readSymbol('=');
 
-		if(strcmp(Identifier, "binpath") == 0 || strcmp(Identifier, "bin_path") == 0){
+		if(ReadExtensionOption(Identifier, Script)){
+			// NOTE(rudger): Handled in `ReadExtensionOption`.
+		}else if(strcmp(Identifier, "binpath") == 0 || strcmp(Identifier, "bin_path") == 0){
 			strncpy(BINPATH, Script.readString(), sizeof(BINPATH) - 1);
 		}else if(strcmp(Identifier, "mappath") == 0 || strcmp(Identifier, "map_path") == 0){
 			strncpy(MAPPATH, Script.readString(), sizeof(MAPPATH) - 1);
@@ -638,71 +714,6 @@ void ReadConfig(void){
 			}else{
 				LearnSpells = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 			}
-		}else if(strcmp(Identifier, "send_message_level") == 0 || strcmp(Identifier, "sendmessagelevel") == 0){
-			const char *val = Script.readIdentifier();
-			SendMessageLevel = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_npc_trade") == 0 || strcmp(Identifier, "sendnpctrade") == 0){
-			const char *val = Script.readIdentifier();
-			SendNpcTrade = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "one_action_delay") == 0 || strcmp(Identifier, "oneactiondelay") == 0){
-			const char *val = Script.readIdentifier();
-			OneActionDelay = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "auto_loot") == 0 || strcmp(Identifier, "autoloot") == 0){
-			const char *val = Script.readIdentifier();
-			AutoLootEnabled = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_item_values") == 0 || strcmp(Identifier, "senditemvalues") == 0){
-			const char *val = Script.readIdentifier();
-			SendItemValues = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_item_duration") == 0 || strcmp(Identifier, "senditemduration") == 0){
-			const char *val = Script.readIdentifier();
-			SendItemDuration = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_loot_effect") == 0 || strcmp(Identifier, "sendlooteffect") == 0){
-			const char *val = Script.readIdentifier();
-			SendLootEffect = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_outfit_list") == 0 || strcmp(Identifier, "sendoutfitlist") == 0){
-			const char *val = Script.readIdentifier();
-			SendOutfitList = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_stamina") == 0 || strcmp(Identifier, "sendstamina") == 0){
-			const char *val = Script.readIdentifier();
-			SendStamina = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_liquid_type") == 0 || strcmp(Identifier, "sendliquidtype") == 0){
-			const char *val = Script.readIdentifier();
-			SendLiquidType = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_pz_icon") == 0 || strcmp(Identifier, "sendpzicon") == 0){
-			const char *val = Script.readIdentifier();
-			SendPZIcon = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "send_food_time") == 0 || strcmp(Identifier, "sendfoodtime") == 0){
-			const char *val = Script.readIdentifier();
-			SendFoodTime = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "remove_charges_from_runes") == 0 || strcmp(Identifier, "removechargesfromrunes") == 0){
-			const char *val = Script.readIdentifier();
-			RemoveChargesFromRunes = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "remove_charges_from_vials") == 0 || strcmp(Identifier, "removechargesfromvials") == 0 || strcmp(Identifier, "remove_charges_from_potions") == 0 || strcmp(Identifier, "removechargesfrompotions") == 0){
-			const char *val = Script.readIdentifier();
-			RemoveChargesFromVials = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "remove_weapon_ammunition") == 0 || strcmp(Identifier, "removeweaponammunition") == 0){
-			const char *val = Script.readIdentifier();
-			RemoveWeaponAmmunition = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "remove_weapon_charges") == 0 || strcmp(Identifier, "removeweaponcharges") == 0){
-			const char *val = Script.readIdentifier();
-			RemoveWeaponCharges = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "free_capacity") == 0 || strcmp(Identifier, "freecapacity") == 0){
-			const char *val = Script.readIdentifier();
-			FreeCapacity = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "always_light") == 0 || strcmp(Identifier, "alwayslight") == 0 || strcmp(Identifier, "ambient_light") == 0){
-			const char *val = Script.readIdentifier();
-			AlwaysLight = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
-		}else if(strcmp(Identifier, "rate_conjure_rune") == 0 || strcmp(Identifier, "rateconjurerune") == 0){
-			RateConjureRune = std::max(Script.readNumber(), 1);
-		}else if(strcmp(Identifier, "rate_conjure_ammo") == 0 || strcmp(Identifier, "rateconjureammo") == 0){
-			RateConjureAmmo = std::max(Script.readNumber(), 1);
-		}else if(strcmp(Identifier, "rate_conjure_food") == 0 || strcmp(Identifier, "rateconjurefood") == 0){
-			RateConjureFood = std::max(Script.readNumber(), 1);
-		}else if(strcmp(Identifier, "rate_npc_rune_price") == 0 || strcmp(Identifier, "ratenpcruneprice") == 0){
-			RateNpcRunePrice = std::max(Script.readNumber(), 1);
-		}else if(strcmp(Identifier, "require_worms_for_fishing") == 0 || strcmp(Identifier, "requirewormsforfishing") == 0){
-			const char *val = Script.readIdentifier();
-			RequireWormsForFishing = (val && (strcmp(val, "true") == 0 || strcmp(val, "yes") == 0 || strcmp(val, "1") == 0));
 		}else if(strcmp(Identifier, "max_summons_per_player") == 0 || strcmp(Identifier, "maxsummonsperplayer") == 0){
 			MaxSummonsPerPlayer = Script.readNumber();
 		}else if(strcmp(Identifier, "attack_interval") == 0 || strcmp(Identifier, "attackinterval") == 0 || strcmp(Identifier, "attack_speed") == 0){
