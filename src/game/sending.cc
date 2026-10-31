@@ -892,7 +892,9 @@ void SendContainer(TConnection *Connection, int ContainerNr){
 
 	SendByte(Connection, SV_CMD_CONTAINER);
 	SendByte(Connection, (uint8)ContainerNr);
-	SendWord(Connection, (uint16)ConType.getDisguise().TypeID);
+	// NOTE: The client reads the container like any object, so it also needs
+	// the duration of e.g. a corpse that can be picked up (send_item_duration).
+	SendItem(Connection, Con);
 	SendString(Connection, ConType.getName(-1));
 	SendByte(Connection, (uint8)ConType.getAttribute(CAPACITY));
 	SendByte(Connection, HasUpContainer ? 1 : 0);
