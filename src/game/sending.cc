@@ -233,17 +233,25 @@ static void SendItem(TConnection *Connection, Object Obj){
 
 	// NOTE: Not part of the 7.72 protocol (send_item_duration). For the types
 	// sent after the init game packet: the seconds an object still lasts (up
-	// to 0x3FFF), 0x8000 set while the time runs (e.g. a worn ring), or the
-	// charges left with 0x4000 set (e.g. an amulet).
+	// to 0x3FFF), 0x8000 set while the time runs (e.g. a worn ring), the
+	// charges left with 0x4000 set (e.g. an amulet), or a long running time
+	// in minutes with 0xC000 set (e.g. a furniture package).
 	if(HasItemDuration(ObjType.getDisguise())){
 		uint16 Duration = 0;
 		if(HasItemDuration(ObjType)){
 			if(ObjType.getFlag(WEAROUT)){
 				Duration = (uint16)(0x4000 | std::min<int>(GetItemCharges(Obj), 0x3FFF));
 			}else{
-				Duration = (uint16)std::min<int>(GetItemDuration(Obj), 0x3FFF);
-				if(ObjType.getFlag(EXPIRE)){
-					Duration |= 0x8000;
+				int Seconds = GetItemDuration(Obj);
+				if(Seconds > 0x3FFF && ObjType.getFlag(EXPIRE)){
+					// NOTE: Longer running times (e.g. a furniture package) in
+					// minutes, with 0x8000 and 0x4000 set.
+					Duration = (uint16)(0xC000 | std::min<int>((Seconds + 59) / 60, 0x3FFF));
+				}else{
+					Duration = (uint16)std::min<int>(Seconds, 0x3FFF);
+					if(ObjType.getFlag(EXPIRE)){
+						Duration |= 0x8000;
+					}
 				}
 			}
 		}

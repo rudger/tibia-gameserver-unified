@@ -1634,9 +1634,9 @@ static void LoadFullItemDurations(void){
 }
 
 bool HasItemDuration(ObjectType Type){
-	// NOTE(rudger): Only light sources and rings that burn out, and rings,
-	// amulets and weapons with charges. Corpses and other expiring objects (fields,
-	// furniture packages, quest items) don't show a time.
+	// NOTE(rudger): Objects you can pick up that run out, and rings, amulets
+	// and weapons with charges. Corpses (and fields, which can't be picked
+	// up) don't show a time.
 	if(!SendItemDuration || Type.isCreatureContainer() || !Type.getFlag(TAKE)
 			|| Type.getFlag(CORPSE)){
 		return false;
@@ -1650,8 +1650,9 @@ bool HasItemDuration(ObjectType Type){
 		return false;
 	}
 
-	bool Expires = (Type.getFlag(EXPIRE) || Type.getFlag(EXPIRESTOP));
-	if(Expires && (Type.getFlag(LIGHT) || BodyPos == INVENTORY_FINGER)){
+	// NOTE(rudger): Everything you can pick up that runs out: light sources,
+	// rings and special objects (furniture packages, crystal arrows, ...).
+	if(Type.getFlag(EXPIRE) || Type.getFlag(EXPIRESTOP)){
 		return true;
 	}
 	// NOTE(rudger): Charges of rings, amulets and weapons that wear out (e.g.
