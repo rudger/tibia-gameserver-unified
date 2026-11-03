@@ -10,6 +10,7 @@ uint8 GetLiquidColor(int LiquidType);
 uint8 GetClientLiquid(int LiquidType);
 bool HasItemDuration(ObjectType Type);
 int GetItemDuration(Object Obj);
+int GetItemCharges(Object Obj);
 
 enum BonusKind: int {
 	BONUS_NONE		= 0,

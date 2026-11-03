@@ -231,15 +231,20 @@ static void SendItem(TConnection *Connection, Object Obj){
 		SendByte(Connection, (uint8)Obj.getAttribute(AMOUNT));
 	}
 
-	// NOTE: Not part of the 7.72 protocol (send_item_duration). The seconds
-	// an object still lasts (up to 0x7FFF), for the types sent after the
-	// init game packet. 0x8000 is set while the time runs (e.g. a worn ring).
+	// NOTE: Not part of the 7.72 protocol (send_item_duration). For the types
+	// sent after the init game packet: the seconds an object still lasts (up
+	// to 0x3FFF), 0x8000 set while the time runs (e.g. a worn ring), or the
+	// charges left with 0x4000 set (e.g. an amulet).
 	if(HasItemDuration(ObjType.getDisguise())){
 		uint16 Duration = 0;
 		if(HasItemDuration(ObjType)){
-			Duration = (uint16)std::min<int>(GetItemDuration(Obj), 0x7FFF);
-			if(ObjType.getFlag(EXPIRE)){
-				Duration |= 0x8000;
+			if(ObjType.getFlag(WEAROUT)){
+				Duration = (uint16)(0x4000 | std::min<int>(GetItemCharges(Obj), 0x3FFF));
+			}else{
+				Duration = (uint16)std::min<int>(GetItemDuration(Obj), 0x3FFF);
+				if(ObjType.getFlag(EXPIRE)){
+					Duration |= 0x8000;
+				}
 			}
 		}
 		SendWord(Connection, Duration);

@@ -1634,18 +1634,36 @@ static void LoadFullItemDurations(void){
 }
 
 bool HasItemDuration(ObjectType Type){
+	// NOTE(rudger): Only light sources and rings that burn out, and rings
+	// and amulets with charges. Corpses and other expiring objects (fields,
+	// furniture packages, quest items) don't show a time.
 	if(!SendItemDuration || Type.isCreatureContainer() || !Type.getFlag(TAKE)
-			|| (!Type.getFlag(EXPIRE) && !Type.getFlag(EXPIRESTOP))){
+			|| Type.getFlag(CORPSE)){
 		return false;
 	}
 
 	// NOTE(rudger): Rings and amulets don't run out without charge removal
 	// (see `Look`).
 	int BodyPos = (int)Type.getAttribute(BODYPOSITION);
-	if(!RemoveWeaponCharges && (BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK)){
+	bool Jewel = (BodyPos == INVENTORY_FINGER || BodyPos == INVENTORY_NECK);
+	if(Jewel && !RemoveWeaponCharges){
 		return false;
 	}
-	return true;
+
+	bool Expires = (Type.getFlag(EXPIRE) || Type.getFlag(EXPIRESTOP));
+	if(Expires && (Type.getFlag(LIGHT) || BodyPos == INVENTORY_FINGER)){
+		return true;
+	}
+	return Jewel && Type.getFlag(WEAROUT);
+}
+
+int GetItemCharges(Object Obj){
+	ObjectType Type = Obj.getObjectType();
+	int Charges = (int)Obj.getAttribute(REMAININGUSES);
+	if(Charges == 0){
+		Charges = (int)Type.getAttribute(TOTALUSES);
+	}
+	return Charges;
 }
 
 int GetItemDuration(Object Obj){
